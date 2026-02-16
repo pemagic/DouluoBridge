@@ -126,6 +126,10 @@ DouluoBridge/
 | 杀·冲锋 | 🗡 杀 按钮 | Shift |
 | 必杀技 | ⚡ 必杀 按钮 | L |
 
+## 🔒 隐私政策
+
+本游戏**不收集任何个人信息**。详见 [隐私政策](PRIVACY_POLICY.md)。
+
 ## 📜 开源协议
 
 MIT License
