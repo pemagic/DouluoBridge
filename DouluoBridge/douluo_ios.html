@@ -442,15 +442,31 @@
                 if ((code === 'ShiftLeft') && player.dashCooldown <= 0) {
                     player.dashActive = 15; player.dashCooldown = 180;
                     playTone(200, 'sawtooth', 0.3, 0.15);
+                    playTone(80, 'sawtooth', 0.5, 0.3); // deep bass slash
                     haptic('heavy');
                     const dashStartX = player.x;
                     const dashEndX = player.x + player.facing * DASH_FORCE * 15;
                     const dashMinX = Math.min(dashStartX, dashEndX) - 40;
                     const dashMaxX = Math.max(dashStartX, dashEndX) + 40;
+                    // Ink-wash slash effect (half-screen arc)
+                    slashEffects.push({
+                        x: player.x + player.w / 2,
+                        y: player.y + player.h / 2,
+                        facing: player.facing,
+                        life: 1.0,  // fades from 1 to 0
+                        maxLife: 1.0,
+                        radius: GAME_WIDTH * 0.35,
+                    });
+                    // Spawn ink splatter particles along slash arc
+                    for (let sp = 0; sp < 30; sp++) {
+                        const ang = (Math.random() - 0.5) * 1.2 + (player.facing > 0 ? 0 : Math.PI);
+                        const spd = 8 + Math.random() * 15;
+                        particles.push({ x: player.x + player.w / 2, y: player.y + player.h / 2, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - 3, life: 0.6 + Math.random() * 0.4, color: ['#1a1a2e', '#4a4a5a', '#888', '#fff'][Math.floor(Math.random() * 4)], size: 3 + Math.random() * 6, decay: 0.02 });
+                    }
                     for (let ei = enemies.length - 1; ei >= 0; ei--) {
                         const e = enemies[ei];
                         if (e.x + e.w > dashMinX && e.x < dashMaxX && Math.abs(e.y - player.y) < 120) {
-                            e.hp -= 80 + player.weaponLevel * 15;  // Dash deals damage instead of instant kill
+                            e.hp -= 80 + player.weaponLevel * 15;
                             e.damageFlash = 8;
                             createParticles(e.x + e.w / 2, e.y + e.h / 2, '#ff4444', 20, 2, 2);
                             if (e.hp <= 0) {
@@ -470,6 +486,8 @@
                         }
                     }
                     haptic('heavy');
+                    setTimeout(() => haptic('heavy'), 80);
+                    setTimeout(() => haptic('medium'), 160);
                 }
                 if (code === 'KeyL' && player.energy >= 100) {
                     player.energy = 0; player.ultActive = 240; player.iframe = 240;
@@ -499,13 +517,15 @@
                 const py = player.y + player.h / 2;
 
                 if (id === 'fire') {
-                    // Fire Palm: forward fire wave
+                    // Fire Palm: wide fire barrage (4x projectiles)
                     const dmg = def.baseDmg + lvl * 15;
-                    const count = 1 + Math.floor(lvl / 3);
+                    const count = (1 + Math.floor(lvl / 3)) * 4;
                     for (let i = 0; i < count; i++) {
-                        projectiles.push({ x: px, y: py + (i - count / 2) * 12, vx: player.facing * (35 + lvl * 2), vy: (i - count / 2) * 2, owner: 'player', color: def.color, life: 40 + lvl * 3, dmg, size: 14 + lvl });
+                        const spread = (i - count / 2) * 8;
+                        const ang = (i - count / 2) * 0.12;
+                        projectiles.push({ x: px, y: py + spread, vx: player.facing * (35 + lvl * 2) * Math.cos(ang), vy: Math.sin(ang) * 12 + (Math.random() - 0.5) * 4, owner: 'player', color: def.color, life: 50 + lvl * 4, dmg, size: 14 + lvl, skillHit: true });
                     }
-                    createParticles(px, py, def.color, 10 + lvl, 2);
+                    createParticles(px, py, def.color, 25 + lvl * 2, 3);
                     sk.cooldown = Math.max(40, def.baseCd - lvl * 8);
                 } else if (id === 'whirlwind') {
                     // Whirlwind: AoE spin attack
@@ -519,9 +539,9 @@
                     createParticles(px, py, def.color, 15, 2.5);
                     sk.cooldown = Math.max(50, def.baseCd - lvl * 10);
                 } else if (id === 'shield') {
-                    // Iron Shirt: temporary damage reduction
-                    sk.active = def.baseDur + lvl * 20;
-                    createParticles(px, py, def.color, 20, 1.5);
+                    // Iron Shirt: 4x duration damage reduction
+                    sk.active = (def.baseDur + lvl * 20) * 4;
+                    createParticles(px, py, def.color, 30, 2);
                     sk.cooldown = Math.max(100, def.baseCd - lvl * 15);
                 } else if (id === 'lightning') {
                     // Lightning: random bolts on nearby enemies
@@ -536,13 +556,14 @@
                     if (targets.length > 0) haptic('medium');
                     sk.cooldown = Math.max(60, def.baseCd - lvl * 12);
                 } else if (id === 'ghost') {
-                    // Ghost Claw: homing projectile
+                    // Ghost Claw: 4x homing projectiles, wider spread
                     const dmg = def.baseDmg + lvl * 18;
-                    const count = 1 + Math.floor(lvl / 4);
+                    const count = (1 + Math.floor(lvl / 4)) * 4;
                     for (let i = 0; i < count; i++) {
-                        projectiles.push({ x: px, y: py - i * 20, vx: player.facing * 15, vy: -5 + i * 3, owner: 'player', color: def.color, life: 80 + lvl * 5, dmg, size: 14, homing: true });
+                        const ang = (i / count - 0.5) * 2.0;
+                        projectiles.push({ x: px, y: py + (i - count / 2) * 10, vx: player.facing * 15 + Math.cos(ang) * 6, vy: Math.sin(ang) * 10, owner: 'player', color: def.color, life: 90 + lvl * 5, dmg, size: 14, homing: true, skillHit: true });
                     }
-                    createParticles(px, py, def.color, 8, 2);
+                    createParticles(px, py, def.color, 20, 3);
                     sk.cooldown = Math.max(60, def.baseCd - lvl * 12);
                 }
 
@@ -637,6 +658,7 @@
         const particles = [];
         const platforms = [];
         const trails = [];
+        const slashEffects = [];  // ink-wash dash slash visuals
         const drops = [];
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1277,8 +1299,15 @@
                     enemies.forEach(e => {
                         if (pj.x < e.x + e.w && pj.x + 70 > e.x && pj.y < e.y + e.h && pj.y + pj.size > e.y) {
                             e.hp -= pj.dmg; pj.life = 0; e.damageFlash = 6;
-                            createParticles(pj.x, pj.y, pj.color, 4);
-                            haptic('light'); // hit feedback
+                            if (pj.skillHit) {
+                                // Enhanced skill hit effect: burst + flash
+                                createParticles(pj.x, pj.y, pj.color, 12, 2.5, 2);
+                                createParticles(pj.x, pj.y, '#fff', 6, 1.5);
+                                haptic('medium');
+                            } else {
+                                createParticles(pj.x, pj.y, pj.color, 4);
+                                haptic('light');
+                            }
                         }
                     });
                 } else if (player.iframe <= 0 && pj.x < player.x + player.w && pj.x + 20 > player.x && pj.y < player.y + player.h && pj.y + 15 > player.y) {
@@ -1296,6 +1325,11 @@
             }
             for (let i = trails.length - 1; i >= 0; i--) {
                 const t = trails[i]; t.life -= 0.1; if (t.life <= 0) trails.splice(i, 1);
+            }
+            // Update slash effects
+            for (let i = slashEffects.length - 1; i >= 0; i--) {
+                slashEffects[i].life -= 0.04;
+                if (slashEffects[i].life <= 0) slashEffects.splice(i, 1);
             }
 
             camX += (player.x - canvas.width / 3.5 - camX) * 0.12;
@@ -1441,6 +1475,43 @@
                 } else {
                     ctx.fillRect(pj.x, pj.y, 70, pj.size || 10);
                 }
+                ctx.restore();
+            });
+
+            // Draw ink-wash slash effects (screen-space, after camera restore)
+            slashEffects.forEach(s => {
+                const sx = s.x - camX;
+                const sy = s.y - camY;
+                const progress = 1 - s.life / s.maxLife;
+                const alpha = s.life * 0.9;
+                ctx.save();
+                ctx.translate(sx, sy);
+                // Sweeping ink arc
+                const startAngle = s.facing > 0 ? -0.8 : Math.PI - 0.8;
+                const sweep = 1.6 * Math.min(1, progress * 3);
+                const r = s.radius * (0.4 + progress * 0.6);
+                // Outer ink stroke (thick, dark)
+                ctx.globalAlpha = alpha * 0.7;
+                ctx.strokeStyle = '#1a1a2e';
+                ctx.lineWidth = 28 - progress * 20;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(0, 0, r, startAngle, startAngle + sweep);
+                ctx.stroke();
+                // Inner white edge (bright slash line)
+                ctx.globalAlpha = alpha;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 6 - progress * 4;
+                ctx.beginPath();
+                ctx.arc(0, 0, r, startAngle, startAngle + sweep);
+                ctx.stroke();
+                // Ink splatter glow
+                ctx.globalAlpha = alpha * 0.3;
+                ctx.strokeStyle = '#888';
+                ctx.lineWidth = 40 - progress * 30;
+                ctx.beginPath();
+                ctx.arc(0, 0, r * 0.95, startAngle + 0.1, startAngle + sweep - 0.1);
+                ctx.stroke();
                 ctx.restore();
             });
 
@@ -1864,7 +1935,7 @@
             kills = 0; combo = 0; comboTimer = 0; gameTime = 0;
             currentLevel = 1; levelKills = 0; bossActive = false; bossSpawned = false;
             enemies.length = 0; projectiles.length = 0; particles.length = 0;
-            trails.length = 0; drops.length = 0;
+            trails.length = 0; drops.length = 0; slashEffects.length = 0;
             // Reset skills
             for (const sk of Object.values(playerSkills)) { sk.level = 0; sk.cooldown = 0; if (sk.active !== undefined) sk.active = 0; }
             // Hide native controls
