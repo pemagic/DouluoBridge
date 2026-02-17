@@ -65,10 +65,14 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
         ])
     }
     
+    private var attackButton: ActionButton!
+    private var skillButtons: [ActionButton] = []
+    
     private func setupControls() {
         let safeBottom: CGFloat = 20
         let buttonSize: CGFloat = 78
-        let smallButtonSize: CGFloat = 66
+        let smallButtonSize: CGFloat = 60
+        let skillSize: CGFloat = 48
         
         // Virtual Joystick (bottom-left)
         joystick = VirtualJoystick(frame: CGRect(x: 0, y: 0, width: 160, height: 160))
@@ -84,11 +88,31 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
             joystick.heightAnchor.constraint(equalToConstant: 160)
         ])
         
-        // Kill button (bottom-right, main action) - ink wash warm brown
+        // Attack button (bottom-right, MAIN action - holdable for rapid fire)
+        attackButton = ActionButton(
+            label: "🏹",
+            sublabel: "攻",
+            color: UIColor(red: 0.65, green: 0.20, blue: 0.15, alpha: 1.0),
+            keyCode: "KeyJ",
+            holdable: true
+        )
+        attackButton.onKeyEvent = { [weak self] code, pressed in
+            self?.sendKey(code, pressed: pressed)
+        }
+        view.addSubview(attackButton)
+        attackButton.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            attackButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -30),
+            attackButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -(safeBottom + 20)),
+            attackButton.widthAnchor.constraint(equalToConstant: buttonSize),
+            attackButton.heightAnchor.constraint(equalToConstant: buttonSize)
+        ])
+        
+        // Dash/Kill button (left of attack)
         dashButton = ActionButton(
             label: "🗡",
             sublabel: "杀",
-            color: UIColor(red: 0.40, green: 0.28, blue: 0.15, alpha: 1.0), // warm ink brown
+            color: UIColor(red: 0.40, green: 0.28, blue: 0.15, alpha: 1.0),
             keyCode: "ShiftLeft",
             holdable: false
         )
@@ -98,17 +122,17 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
         view.addSubview(dashButton)
         dashButton.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            dashButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -30),
-            dashButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -(safeBottom + 20)),
-            dashButton.widthAnchor.constraint(equalToConstant: buttonSize),
-            dashButton.heightAnchor.constraint(equalToConstant: buttonSize)
+            dashButton.trailingAnchor.constraint(equalTo: attackButton.leadingAnchor, constant: -12),
+            dashButton.bottomAnchor.constraint(equalTo: attackButton.bottomAnchor),
+            dashButton.widthAnchor.constraint(equalToConstant: smallButtonSize),
+            dashButton.heightAnchor.constraint(equalToConstant: smallButtonSize)
         ])
         
-        // Jump button (above-left of kill) - ink wash dark gray
+        // Jump button (above attack)
         jumpButton = ActionButton(
             label: "⬆",
             sublabel: "跳",
-            color: UIColor(red: 0.30, green: 0.28, blue: 0.25, alpha: 1.0), // ink dark gray
+            color: UIColor(red: 0.30, green: 0.28, blue: 0.25, alpha: 1.0),
             keyCode: "Space",
             holdable: false
         )
@@ -118,11 +142,42 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
         view.addSubview(jumpButton)
         jumpButton.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            jumpButton.trailingAnchor.constraint(equalTo: dashButton.leadingAnchor, constant: -14),
-            jumpButton.bottomAnchor.constraint(equalTo: dashButton.topAnchor, constant: 8),
+            jumpButton.trailingAnchor.constraint(equalTo: attackButton.trailingAnchor),
+            jumpButton.bottomAnchor.constraint(equalTo: attackButton.topAnchor, constant: -8),
             jumpButton.widthAnchor.constraint(equalToConstant: smallButtonSize),
             jumpButton.heightAnchor.constraint(equalToConstant: smallButtonSize)
         ])
+        
+        // 5 Skill buttons (row above dash+attack area)
+        let skills: [(String, String, UIColor, String)] = [
+            ("🔥", "火", UIColor(red: 1.0, green: 0.27, blue: 0.0, alpha: 1.0), "KeyQ"),
+            ("🌀", "风", UIColor(red: 0.0, green: 0.80, blue: 1.0, alpha: 1.0), "KeyE"),
+            ("🛡", "盾", UIColor(red: 1.0, green: 0.80, blue: 0.0, alpha: 1.0), "KeyR"),
+            ("⚡", "雷", UIColor(red: 0.67, green: 0.40, blue: 1.0, alpha: 1.0), "KeyT"),
+            ("💀", "魂", UIColor(red: 0.20, green: 1.0, blue: 0.53, alpha: 1.0), "KeyY"),
+        ]
+        
+        for (i, skill) in skills.enumerated() {
+            let btn = ActionButton(
+                label: skill.0,
+                sublabel: skill.1,
+                color: skill.2,
+                keyCode: skill.3,
+                holdable: false
+            )
+            btn.onKeyEvent = { [weak self] code, pressed in
+                self?.sendKey(code, pressed: pressed)
+            }
+            view.addSubview(btn)
+            btn.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                btn.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: CGFloat(-30 - i * Int(skillSize + 6))),
+                btn.bottomAnchor.constraint(equalTo: jumpButton.topAnchor, constant: -8),
+                btn.widthAnchor.constraint(equalToConstant: skillSize),
+                btn.heightAnchor.constraint(equalToConstant: skillSize)
+            ])
+            skillButtons.append(btn)
+        }
     }
     
     private func loadGame() {

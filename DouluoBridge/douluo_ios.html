@@ -273,7 +273,7 @@
 
         /* Pause/Home buttons */
         .hud-top-right {
-            position: absolute;
+            position: fixed;
             top: 12px;
             right: 12px;
             display: flex;
@@ -439,10 +439,9 @@
                     player.vy = JUMP_FORCE; player.jumpCount++; playTone(400, 'sine', 0.1, 0.1);
                 }
                 if ((code === 'ShiftLeft') && player.dashCooldown <= 0) {
-                    player.dashActive = 15; player.dashCooldown = 180; // 3 second cooldown (60fps)
+                    player.dashActive = 15; player.dashCooldown = 180;
                     playTone(200, 'sawtooth', 0.3, 0.15);
                     haptic('heavy');
-                    // AoE lethal strike - kill all enemies in dash path
                     const dashStartX = player.x;
                     const dashEndX = player.x + player.facing * DASH_FORCE * 15;
                     const dashMinX = Math.min(dashStartX, dashEndX) - 40;
@@ -465,10 +464,80 @@
                     createParticles(player.x, player.y, '#fff', 50, 3);
                     haptic('heavy');
                 }
+                // Manual attack (KeyJ)
+                if (code === 'KeyJ') {
+                    playerShoot();
+                }
+                // Skill activations
+                activateSkill(code);
             } else {
                 keys[code] = false;
             }
         };
+
+        // === Skill activation ===
+        function activateSkill(code) {
+            for (const [id, def] of Object.entries(SKILL_DEFS)) {
+                if (code !== def.key) continue;
+                const sk = playerSkills[id];
+                if (sk.level <= 0 || sk.cooldown > 0) return;
+                const lvl = sk.level;
+                const px = player.x + player.w / 2;
+                const py = player.y + player.h / 2;
+
+                if (id === 'fire') {
+                    // Fire Palm: forward fire wave
+                    const dmg = def.baseDmg + lvl * 15;
+                    const count = 1 + Math.floor(lvl / 3);
+                    for (let i = 0; i < count; i++) {
+                        projectiles.push({ x: px, y: py + (i - count / 2) * 12, vx: player.facing * (35 + lvl * 2), vy: (i - count / 2) * 2, owner: 'player', color: def.color, life: 40 + lvl * 3, dmg, size: 14 + lvl });
+                    }
+                    createParticles(px, py, def.color, 10 + lvl, 2);
+                    sk.cooldown = Math.max(40, def.baseCd - lvl * 8);
+                } else if (id === 'whirlwind') {
+                    // Whirlwind: AoE spin attack
+                    const dmg = def.baseDmg + lvl * 12;
+                    const radius = 100 + lvl * 15;
+                    const count = 4 + Math.floor(lvl / 2);
+                    for (let i = 0; i < count; i++) {
+                        const a = (i / count) * Math.PI * 2;
+                        projectiles.push({ x: px, y: py, vx: Math.cos(a) * 20, vy: Math.sin(a) * 20, owner: 'player', color: def.color, life: 25 + lvl * 2, dmg, size: 12 + lvl });
+                    }
+                    createParticles(px, py, def.color, 15, 2.5);
+                    sk.cooldown = Math.max(50, def.baseCd - lvl * 10);
+                } else if (id === 'shield') {
+                    // Iron Shirt: temporary damage reduction
+                    sk.active = def.baseDur + lvl * 20;
+                    createParticles(px, py, def.color, 20, 1.5);
+                    sk.cooldown = Math.max(100, def.baseCd - lvl * 15);
+                } else if (id === 'lightning') {
+                    // Lightning: random bolts on nearby enemies
+                    const dmg = def.baseDmg + lvl * 20;
+                    const bolts = 1 + Math.floor(lvl / 2);
+                    let targets = enemies.filter(e => isOnScreen(e)).slice(0, bolts);
+                    targets.forEach(e => {
+                        e.hp -= dmg;
+                        e.damageFlash = 10;
+                        createParticles(e.x + e.w / 2, e.y + e.h / 2, def.color, 12, 2);
+                    });
+                    if (targets.length > 0) haptic('medium');
+                    sk.cooldown = Math.max(60, def.baseCd - lvl * 12);
+                } else if (id === 'ghost') {
+                    // Ghost Claw: homing projectile
+                    const dmg = def.baseDmg + lvl * 18;
+                    const count = 1 + Math.floor(lvl / 4);
+                    for (let i = 0; i < count; i++) {
+                        projectiles.push({ x: px, y: py - i * 20, vx: player.facing * 15, vy: -5 + i * 3, owner: 'player', color: def.color, life: 80 + lvl * 5, dmg, size: 14, homing: true });
+                    }
+                    createParticles(px, py, def.color, 8, 2);
+                    sk.cooldown = Math.max(60, def.baseCd - lvl * 12);
+                }
+
+                playTone(300 + lvl * 50, 'sawtooth', 0.15, 0.2);
+                haptic('medium');
+                return;
+            }
+        }
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -530,6 +599,22 @@
             weaponLevel: 1, facing: 1, grounded: false, jumpCount: 0,
             dashCooldown: 0, dashActive: 0, shootTimer: 0, iframe: 0,
             animTime: 0, ultActive: 0
+        };
+
+        // === 5-Skill System (10 levels each) ===
+        const SKILL_DEFS = {
+            fire: { name: '火焰掌', emoji: '🔥', color: '#ff4400', key: 'KeyQ', baseCd: 120, baseDmg: 40 },
+            whirlwind: { name: '旋风腿', emoji: '🌀', color: '#00ccff', key: 'KeyE', baseCd: 150, baseDmg: 30 },
+            shield: { name: '铁布衫', emoji: '🛡', color: '#ffcc00', key: 'KeyR', baseCd: 300, baseDur: 60 },
+            lightning: { name: '雷击术', emoji: '⚡', color: '#aa66ff', key: 'KeyT', baseCd: 180, baseDmg: 60 },
+            ghost: { name: '幽冥爪', emoji: '💀', color: '#33ff88', key: 'KeyY', baseCd: 200, baseDmg: 50 },
+        };
+        const playerSkills = {
+            fire: { level: 0, cooldown: 0 },
+            whirlwind: { level: 0, cooldown: 0 },
+            shield: { level: 0, cooldown: 0, active: 0 },
+            lightning: { level: 0, cooldown: 0 },
+            ghost: { level: 0, cooldown: 0 },
         };
 
         const enemies = [];
@@ -785,7 +870,7 @@
                 enemyTier: lvl.enemyTier,
                 hp: isBoss ? lvl.bossHp : (type === 'heavy' ? 450 : (type === 'martial' ? 200 : 120)) * (1 + lvlBonus),
                 maxHp: isBoss ? lvl.bossHp : 0,
-                baseSpeed: isBoss ? (6 * lvl.bossSpeed) : (8 + Math.random() * 6) * (type === 'chaser' ? 1.8 : (type === 'heavy' ? 0.4 : (type === 'martial' ? 0.7 : 0.7))) * (1 + lvlBonus * 0.5),
+                baseSpeed: isBoss ? (6 * lvl.bossSpeed) : (8 + Math.random() * 6) * (type === 'chaser' ? 1.8 : (type === 'heavy' ? 0.4 : (type === 'martial' ? 0.7 : 0.7))),
                 shootTimer: isBoss ? 30 : (40 + Math.random() * 60),
                 damageFlash: 0, animPhase: Math.random() * Math.PI * 2,
                 aimTimer: 0,
@@ -802,15 +887,20 @@
             const lvl = LEVELS[currentLevel - 1];
             const comboBonus = combo * 0.005;
             const rand = Math.random();
-            // Weapon drops only if under level cap
             const atCap = player.weaponLevel >= lvl.weaponCap;
-            const weaponProb = atCap ? 0 : 0.12 + comboBonus;
+            const weaponProb = atCap ? 0 : 0.10 + comboBonus;
             const healthProb = 0.08 + (100 - player.hp) * 0.002 + comboBonus;
+            const skillProb = 0.15 + comboBonus;
 
             if (rand < weaponProb) {
                 drops.push({ x, y: y - 40, w: 32, h: 32, vy: -10, vx: (Math.random() - 0.5) * 8, type: 'weapon', life: 800 });
             } else if (rand < weaponProb + healthProb) {
                 drops.push({ x, y: y - 40, w: 28, h: 28, vy: -12, vx: (Math.random() - 0.5) * 6, type: 'health', life: 800 });
+            } else if (rand < weaponProb + healthProb + skillProb) {
+                // Random skill drop
+                const skillIds = Object.keys(SKILL_DEFS);
+                const skillId = skillIds[Math.floor(Math.random() * skillIds.length)];
+                drops.push({ x, y: y - 40, w: 30, h: 30, vy: -11, vx: (Math.random() - 0.5) * 7, type: 'skill', skillId, life: 800 });
             }
         }
 
@@ -918,7 +1008,7 @@
                 if (e.type === 'chaser') {
                     e.vx += (dir * e.baseSpeed - e.vx) * 0.12;
                     if (Math.abs(dist) < 60 && Math.abs(distY) < 70) {
-                        if (player.iframe <= 0) { player.hp -= 15; player.iframe = 30; }
+                        if (player.iframe <= 0) { player.hp -= (playerSkills.shield.active > 0 ? 8 : 15); player.iframe = 30; }
                         e.hp = 0;
                     }
                 } else if (e.type === 'martial') {
@@ -931,7 +1021,8 @@
                             e.martialCombo = (e.martialCombo + 1) % 4;
                             e.martialTimer = 0;
                             if (player.iframe <= 0) {
-                                player.hp -= (e.martialCombo === 3) ? 25 : 12;
+                                const rawDmg = (e.martialCombo === 3) ? 25 : 12;
+                                player.hp -= playerSkills.shield.active > 0 ? Math.ceil(rawDmg * 0.5) : rawDmg;
                                 player.iframe = 20;
                                 player.vx += dir * -8;
                                 if (e.martialCombo === 3) player.vy = -15;
@@ -952,53 +1043,58 @@
                         e.aimTimer = 0;
                     }
                 } else if (e.type === 'boss') {
-                    e.vx += (dir * e.baseSpeed - e.vx) * 0.12;
+                    const bossRage = e.hp < e.maxHp * 0.5;
+                    const speedMult = bossRage ? 1.5 : 1.0;
+                    e.vx += (dir * e.baseSpeed * speedMult - e.vx) * 0.12;
                     e.shootTimer--;
+                    // Rage visual pulse
+                    if (bossRage && gameTime % 20 < 3) e.damageFlash = 2;
                     const bt = e.bossType;
                     if (e.shootTimer <= 0 && isOnScreen(e)) {
                         const angle = Math.atan2(distY, dist);
+                        const rageCdMult = bossRage ? 0.5 : 1.0;
                         if (bt === 'bandit_chief') {
                             // Charge slam - single heavy shot
                             projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * 28, vy: Math.sin(angle) * 28, owner: 'enemy', color: '#cc8833', life: 80, dmg: 25, size: 18 });
-                            e.shootTimer = 40;
+                            e.shootTimer = 40 * rageCdMult;
                         } else if (bt === 'wolf_king') {
                             // Triple claw swipe
                             for (let a = -0.2; a <= 0.2; a += 0.2) {
                                 projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle + a) * 24, vy: Math.sin(angle + a) * 24, owner: 'enemy', color: '#aaaaaa', life: 60, dmg: 15 });
                             }
-                            e.shootTimer = 30;
+                            e.shootTimer = 30 * rageCdMult;
                         } else if (bt === 'iron_fist') {
                             // Ground pound - 4 shockwaves left/right
                             for (let s = -1; s <= 1; s += 2) {
                                 projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h, vx: s * 18, vy: -4, owner: 'enemy', color: '#ff8800', life: 80, dmg: 20, size: 16 });
                                 projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h, vx: s * 12, vy: -8, owner: 'enemy', color: '#ffaa33', life: 80, dmg: 15 });
                             }
-                            e.shootTimer = 35;
+                            e.shootTimer = 35 * rageCdMult;
                         } else if (bt === 'shield_general') {
                             // Shield bash + 2 side shots
                             projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * 20, vy: Math.sin(angle) * 20, owner: 'enemy', color: '#4488cc', life: 100, dmg: 30, size: 20 });
                             for (let a = -0.5; a <= 0.5; a += 1) {
                                 projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle + a) * 16, vy: Math.sin(angle + a) * 16, owner: 'enemy', color: '#66aaee', life: 80, dmg: 10 });
                             }
-                            e.shootTimer = 45;
+                            e.shootTimer = 45 * rageCdMult;
                         } else if (bt === 'phantom_archer') {
                             // Arrow rain - 5 shots arcing down
                             for (let i = -2; i <= 2; i++) {
                                 projectiles.push({ x: e.x + e.w / 2 + i * 30, y: e.y, vx: i * 4, vy: -20, owner: 'enemy', color: '#33cc99', life: 120, dmg: 12 });
                             }
-                            e.shootTimer = 28;
+                            e.shootTimer = 28 * rageCdMult;
                         } else if (bt === 'twin_blade') {
                             // X-slash pattern
                             for (let a = 0; a < Math.PI * 2; a += Math.PI / 2) {
                                 projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(a) * 22, vy: Math.sin(a) * 22, owner: 'enemy', color: '#cc44cc', life: 80, dmg: 18 });
                             }
-                            e.shootTimer = 22;
+                            e.shootTimer = 22 * rageCdMult;
                         } else if (bt === 'thunder_monk') {
                             // Lightning ring - 8 directions
                             for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
                                 projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(a) * 18, vy: Math.sin(a) * 18, owner: 'enemy', color: '#ffcc00', life: 90, dmg: 15 });
                             }
-                            e.shootTimer = 30;
+                            e.shootTimer = 30 * rageCdMult;
                         } else if (bt === 'blood_demon') {
                             // Spiral blood shots
                             const spin = gameTime * 0.1;
@@ -1006,25 +1102,25 @@
                                 const sa = spin + i * Math.PI * 2 / 3;
                                 projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(sa) * 20, vy: Math.sin(sa) * 20, owner: 'enemy', color: '#cc0000', life: 100, dmg: 18 });
                             }
-                            e.shootTimer = 18;
+                            e.shootTimer = 18 * rageCdMult;
                         } else if (bt === 'shadow_lord') {
                             // Shadow split - aimed + 2 flanking
                             projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * 30, vy: Math.sin(angle) * 30, owner: 'enemy', color: '#6633cc', life: 90, dmg: 25, size: 16 });
                             for (let d = -1; d <= 1; d += 2) {
                                 projectiles.push({ x: e.x + e.w / 2 + d * 60, y: e.y, vx: Math.cos(angle) * 22, vy: Math.sin(angle) * 22, owner: 'enemy', color: '#9966ff', life: 80, dmg: 12 });
                             }
-                            e.shootTimer = 20;
+                            e.shootTimer = 20 * rageCdMult;
                         } else { // sword_saint
                             // 12-direction blade storm
                             for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
                                 projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(a) * 24, vy: Math.sin(a) * 24, owner: 'enemy', color: '#ffffff', life: 80, dmg: 15 });
                             }
-                            e.shootTimer = 25;
+                            e.shootTimer = 25 * rageCdMult;
                         }
                     }
                     // Boss melee slam
                     if (Math.abs(dist) < 100 && Math.abs(distY) < 100 && player.iframe <= 0) {
-                        player.hp -= 20; player.iframe = 40;
+                        player.hp -= playerSkills.shield.active > 0 ? 10 : 20; player.iframe = 40;
                         player.vx += dir * -15; player.vy = -10;
                         createParticles(player.x, player.y, e.color, 10, 2);
                         haptic('heavy');
@@ -1102,18 +1198,52 @@
                             playTone(1200, 'square', 0.4, 0.2);
                             createParticles(player.x, player.y, '#fbbf24', 15, 2);
                         }
+                    } else if (d.type === 'skill') {
+                        const sk = playerSkills[d.skillId];
+                        if (sk && sk.level < 10) {
+                            sk.level++;
+                            playTone(600 + sk.level * 100, 'square', 0.3, 0.25);
+                            createParticles(player.x, player.y, SKILL_DEFS[d.skillId].color, 20, 2);
+                        } else {
+                            // Max level - give energy instead
+                            player.energy = Math.min(100, player.energy + 10);
+                        }
                     }
                     drops.splice(i, 1); continue;
                 }
                 if (d.life <= 0) drops.splice(i, 1);
             }
 
-            // Auto-fire: always shoot when enemies are nearby
-            playerShoot();
+            // Manual attack: shoot when holding KeyJ
+            if (keys['KeyJ']) playerShoot();
             if (player.shootTimer > 0) player.shootTimer--;
 
+            // Skill cooldowns & shield active
+            for (const sk of Object.values(playerSkills)) {
+                if (sk.cooldown > 0) sk.cooldown--;
+                if (sk.active !== undefined && sk.active > 0) sk.active--;
+            }
+
             for (let i = projectiles.length - 1; i >= 0; i--) {
-                const pj = projectiles[i]; pj.x += pj.vx; pj.y += pj.vy; pj.life--;
+                const pj = projectiles[i];
+                // Homing logic
+                if (pj.homing && pj.owner === 'player' && enemies.length > 0) {
+                    let closest = null, minDist = 999999;
+                    enemies.forEach(e => {
+                        const d = Math.hypot(e.x - pj.x, e.y - pj.y);
+                        if (d < minDist) { minDist = d; closest = e; }
+                    });
+                    if (closest) {
+                        const a = Math.atan2(closest.y + closest.h / 2 - pj.y, closest.x + closest.w / 2 - pj.x);
+                        const spd = Math.hypot(pj.vx, pj.vy);
+                        pj.vx += Math.cos(a) * 2;
+                        pj.vy += Math.sin(a) * 2;
+                        const ns = Math.hypot(pj.vx, pj.vy);
+                        pj.vx = pj.vx / ns * spd;
+                        pj.vy = pj.vy / ns * spd;
+                    }
+                }
+                pj.x += pj.vx; pj.y += pj.vy; pj.life--;
                 if (pj.owner === 'player') {
                     enemies.forEach(e => {
                         if (pj.x < e.x + e.w && pj.x + 70 > e.x && pj.y < e.y + e.h && pj.y + pj.size > e.y) {
@@ -1123,7 +1253,8 @@
                         }
                     });
                 } else if (player.iframe <= 0 && pj.x < player.x + player.w && pj.x + 20 > player.x && pj.y < player.y + player.h && pj.y + 15 > player.y) {
-                    player.hp -= pj.dmg; player.iframe = 35; pj.life = 0;
+                    const finalDmg = playerSkills.shield.active > 0 ? Math.ceil(pj.dmg * 0.5) : pj.dmg;
+                    player.hp -= finalDmg; player.iframe = 35; pj.life = 0;
                     createParticles(player.x + player.w / 2, player.y + player.h / 2, '#f00', 15);
                     haptic('heavy'); // player hit feedback
                 }
@@ -1232,6 +1363,12 @@
                 if (d.type === 'health') {
                     ctx.shadowBlur = 20; ctx.shadowColor = '#22c55e'; ctx.fillStyle = '#22c55e';
                     ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(-6, -6, 8, 0, Math.PI, true); ctx.arc(6, -6, 8, 0, Math.PI, true); ctx.lineTo(0, 10); ctx.fill();
+                } else if (d.type === 'skill') {
+                    const skDef = SKILL_DEFS[d.skillId];
+                    ctx.shadowBlur = 20; ctx.shadowColor = skDef.color; ctx.fillStyle = skDef.color;
+                    ctx.beginPath(); ctx.arc(0, 0, 14 + Math.sin(gameTime * 0.15) * 3, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(skDef.emoji, 0, 0);
                 } else {
                     ctx.shadowBlur = 25; ctx.shadowColor = '#fbbf24'; ctx.fillStyle = '#fbbf24';
                     ctx.rotate(gameTime * 0.05); ctx.fillRect(-16, -16, 32, 32);
@@ -1240,7 +1377,20 @@
                 ctx.restore();
             });
 
-            if (player.iframe % 4 < 2) drawPlayer(player.x, player.y, player.w, player.h, player.facing, player.animTime);
+            if (player.iframe % 4 < 2) {
+                drawPlayer(player.x, player.y, player.w, player.h, player.facing, player.animTime);
+                // Shield visual
+                if (playerSkills.shield.active > 0) {
+                    ctx.save();
+                    ctx.strokeStyle = '#ffcc00';
+                    ctx.lineWidth = 3;
+                    ctx.globalAlpha = 0.4 + Math.sin(gameTime * 0.2) * 0.2;
+                    ctx.beginPath();
+                    ctx.arc(player.x + player.w / 2, player.y + player.h / 2, 45, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
 
             enemies.forEach(e => {
                 drawPixelStickman(e);
@@ -1282,14 +1432,47 @@
                     ctx.save();
                     ctx.fillStyle = '#333';
                     ctx.fillRect(bx - 10, by, e.w + 20, 8);
-                    ctx.fillStyle = '#ff0000';
+                    const rage = e.hp < e.maxHp * 0.5;
+                    ctx.fillStyle = rage ? '#ff4400' : '#ff0000';
                     ctx.fillRect(bx - 10, by, (e.w + 20) * (e.hp / e.maxHp), 8);
                     ctx.fillStyle = '#fff';
                     ctx.font = '12px sans-serif';
-                    ctx.fillText('BOSS', bx + e.w / 2 - 16, by - 4);
+                    ctx.fillText(rage ? 'BOSS 狂暴!' : 'BOSS', bx + e.w / 2 - 16, by - 4);
                     ctx.restore();
                 }
             });
+
+            // Draw skill HUD on canvas (bottom-left above joystick)
+            ctx.save();
+            ctx.globalAlpha = 0.9;
+            let skX = 20;
+            const skY = canvas.height - 50;
+            for (const [id, def] of Object.entries(SKILL_DEFS)) {
+                const sk = playerSkills[id];
+                if (sk.level <= 0) { skX += 50; continue; }
+                // Background
+                ctx.fillStyle = sk.cooldown > 0 ? 'rgba(40,35,28,0.6)' : 'rgba(40,35,28,0.3)';
+                ctx.fillRect(skX, skY, 44, 44);
+                ctx.strokeStyle = def.color;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(skX, skY, 44, 44);
+                // Cooldown overlay
+                if (sk.cooldown > 0) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    const cdRatio = sk.cooldown / Math.max(40, def.baseCd - sk.level * 8);
+                    ctx.fillRect(skX, skY, 44, 44 * cdRatio);
+                }
+                // Emoji + level
+                ctx.fillStyle = '#fff';
+                ctx.font = '18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(def.emoji, skX + 22, skY + 22);
+                ctx.font = '10px sans-serif';
+                ctx.fillStyle = def.color;
+                ctx.fillText('Lv' + sk.level, skX + 22, skY + 40);
+                skX += 50;
+            }
+            ctx.restore();
 
             requestAnimationFrame(() => { if (gameRunning) { update(); draw(); } });
         }
