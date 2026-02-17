@@ -270,6 +270,104 @@
                 box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
             }
         }
+
+        /* Pause/Home buttons */
+        .hud-top-right {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 10px;
+            z-index: 200;
+        }
+
+        .hud-btn {
+            pointer-events: auto;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 2px solid rgba(80, 70, 55, 0.6);
+            background: rgba(40, 35, 28, 0.5);
+            color: #c0b090;
+            font-size: 18px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        .hud-btn:active {
+            background: rgba(80, 70, 55, 0.7);
+        }
+
+        /* Level banner */
+        #level-banner {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 300;
+            background: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        #level-banner.visible {
+            display: flex;
+        }
+
+        #level-banner h2 {
+            color: #c0b090;
+            font-size: 48px;
+            font-weight: 900;
+            text-shadow: 0 0 20px rgba(200, 180, 140, 0.5);
+        }
+
+        #level-banner p {
+            color: #a09080;
+            font-size: 20px;
+            margin-top: 10px;
+        }
+
+        /* Pause overlay */
+        #pause-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 280;
+            background: rgba(0, 0, 0, 0.6);
+            align-items: center;
+            justify-content: center;
+        }
+
+        #pause-overlay.visible {
+            display: flex;
+        }
+
+        #pause-overlay h2 {
+            color: #c0b090;
+            font-size: 56px;
+            font-weight: 900;
+        }
+
+        #level-display {
+            color: #c0b090;
+            font-size: 14px;
+            font-weight: 900;
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
     </style>
 </head>
 
@@ -300,6 +398,22 @@
             <div id="combo-container">
                 <div id="combo-counter" class="font-game">10 COMBO</div>
             </div>
+            <div id="level-display" class="font-game">第一关</div>
+            <div class="hud-top-right">
+                <button class="hud-btn" id="btn-pause" onclick="togglePause()">⏸</button>
+                <button class="hud-btn" id="btn-home" onclick="returnHome()">🏠</button>
+            </div>
+        </div>
+
+        <!-- Pause Overlay -->
+        <div id="pause-overlay">
+            <h2 class="font-game">暂 停</h2>
+        </div>
+
+        <!-- Level Banner -->
+        <div id="level-banner">
+            <h2 id="level-title" class="font-game"></h2>
+            <p id="level-subtitle" class="font-game"></p>
         </div>
 
         <!-- Game Over -->
@@ -383,6 +497,7 @@
         const NEON_COLORS = ['#ff00ff', '#00ffff', '#ffff00', '#00ff00', '#ff0000', '#ff8800', '#00ff88', '#8800ff', '#ffffff'];
 
         let gameRunning = false;
+        let gamePaused = false;
         let kills = 0;
         let combo = 0;
         let comboTimer = 0;
@@ -390,6 +505,24 @@
         let hitstop = 0;
         let camX = 0, camY = 0;
         let spawnCooldown = 0;
+
+        // === 10-Level System ===
+        let currentLevel = 1;
+        let levelKills = 0; // kills this level
+        let bossActive = false;
+        let bossSpawned = false;
+        const LEVELS = [
+            { name: '第一关·初入江湖', killTarget: 15, weaponCap: 2, enemies: ['scout'], bossHp: 600, bossSpeed: 1.0 },
+            { name: '第二关·崭露锋芒', killTarget: 20, weaponCap: 3, enemies: ['scout', 'chaser'], bossHp: 900, bossSpeed: 1.1 },
+            { name: '第三关·拳脚相加', killTarget: 25, weaponCap: 4, enemies: ['scout', 'chaser', 'martial'], bossHp: 1200, bossSpeed: 1.2 },
+            { name: '第四关·铁甲连城', killTarget: 30, weaponCap: 5, enemies: ['scout', 'chaser', 'martial', 'heavy'], bossHp: 1600, bossSpeed: 1.3 },
+            { name: '第五关·百步穿杨', killTarget: 35, weaponCap: 6, enemies: ['scout', 'chaser', 'martial', 'heavy', 'sniper'], bossHp: 2000, bossSpeed: 1.4 },
+            { name: '第六关·刀光剑影', killTarget: 40, weaponCap: 7, enemies: ['chaser', 'martial', 'heavy', 'sniper'], bossHp: 2500, bossSpeed: 1.5 },
+            { name: '第七关·龙争虎斗', killTarget: 45, weaponCap: 8, enemies: ['martial', 'heavy', 'sniper', 'chaser'], bossHp: 3200, bossSpeed: 1.7 },
+            { name: '第八关·万夫莫敌', killTarget: 50, weaponCap: 9, enemies: ['martial', 'heavy', 'sniper'], bossHp: 4000, bossSpeed: 1.9 },
+            { name: '第九关·天下无双', killTarget: 55, weaponCap: 9, enemies: ['martial', 'heavy', 'sniper'], bossHp: 5000, bossSpeed: 2.1 },
+            { name: '第十关·剑神归位', killTarget: 60, weaponCap: 10, enemies: ['martial', 'heavy', 'sniper'], bossHp: 7000, bossSpeed: 2.5 },
+        ];
 
         const keys = {};
         const player = {
@@ -608,49 +741,54 @@
         }
 
         function createParticles(x, y, color, count, speedScale = 1, sizeScale = 1) {
-            for (let i = 0; i < count; i++) {
-                if (particles.length > 600) particles.shift();
+            // Performance: cap particle count and reduce when many enemies dying
+            const maxCount = Math.min(count, particles.length > 300 ? Math.ceil(count * 0.4) : count);
+            for (let i = 0; i < maxCount; i++) {
+                if (particles.length > 350) particles.shift();
                 particles.push({
                     x, y, vx: (Math.random() - 0.5) * 25 * speedScale, vy: (Math.random() - 0.5) * 25 * speedScale,
-                    size: (2 + Math.random() * 4) * sizeScale, life: 1, decay: 0.02 + Math.random() * 0.02, color
+                    size: (2 + Math.random() * 4) * sizeScale, life: 1, decay: 0.03 + Math.random() * 0.03, color
                 });
             }
         }
 
-        function spawnEnemy() {
+        function spawnEnemy(isBoss = false) {
             const side = Math.random() > 0.5 ? 1 : -1;
             const x = player.x + side * (900 + Math.random() * 400);
-
-            const pool = ['scout'];
-            if (player.weaponLevel >= 2) pool.push('chaser');
-            if (player.weaponLevel >= 3) pool.push('martial');
-            if (player.weaponLevel >= 4) pool.push('heavy');
-            if (player.weaponLevel >= 6) pool.push('sniper');
-
-            const type = pool[Math.floor(Math.random() * pool.length)];
-            const lvlBonus = (player.weaponLevel - 1) * 0.15;
+            const lvl = LEVELS[currentLevel - 1];
+            const pool = lvl.enemies;
+            const type = isBoss ? 'boss' : pool[Math.floor(Math.random() * pool.length)];
+            const lvlBonus = (currentLevel - 1) * 0.12;
             const BULLET_COLORS = ['#ff4466', '#44aaff', '#ffcc00', '#66ff88', '#ff66ff', '#ff8844', '#44ffdd', '#aa66ff'];
 
             const e = {
-                x, y: -200, vx: 0, vy: 0, w: type === 'heavy' ? 80 : 50, h: type === 'heavy' ? 90 : 70, type,
-                hp: (type === 'heavy' ? 450 : (type === 'martial' ? 200 : 120)) * (1 + lvlBonus),
-                baseSpeed: (8 + Math.random() * 6) * (type === 'chaser' ? 1.8 : (type === 'heavy' ? 0.4 : (type === 'martial' ? 0.7 : 0.7))) * (1 + lvlBonus * 0.5),
-                shootTimer: 40 + Math.random() * 60,
+                x, y: -200, vx: 0, vy: 0,
+                w: isBoss ? 100 : (type === 'heavy' ? 80 : 50),
+                h: isBoss ? 120 : (type === 'heavy' ? 90 : 70),
+                type: isBoss ? 'boss' : type,
+                isBoss: isBoss,
+                hp: isBoss ? lvl.bossHp : (type === 'heavy' ? 450 : (type === 'martial' ? 200 : 120)) * (1 + lvlBonus),
+                maxHp: isBoss ? lvl.bossHp : 0,
+                baseSpeed: isBoss ? (6 * lvl.bossSpeed) : (8 + Math.random() * 6) * (type === 'chaser' ? 1.8 : (type === 'heavy' ? 0.4 : (type === 'martial' ? 0.7 : 0.7))) * (1 + lvlBonus * 0.5),
+                shootTimer: isBoss ? 30 : (40 + Math.random() * 60),
                 damageFlash: 0, animPhase: Math.random() * Math.PI * 2,
                 aimTimer: 0,
                 jumpCooldown: 60 + Math.random() * 120,
                 grounded: false,
                 martialCombo: 0, martialTimer: 0,
                 bulletColor: BULLET_COLORS[Math.floor(Math.random() * BULLET_COLORS.length)],
-                color: NEON_COLORS[Math.floor(Math.random() * NEON_COLORS.length)]
+                color: isBoss ? '#ff0000' : NEON_COLORS[Math.floor(Math.random() * NEON_COLORS.length)]
             };
             enemies.push(e);
         }
 
         function spawnDrop(x, y) {
+            const lvl = LEVELS[currentLevel - 1];
             const comboBonus = combo * 0.005;
             const rand = Math.random();
-            const weaponProb = player.weaponLevel >= 10 ? 0.02 : 0.12 + comboBonus;
+            // Weapon drops only if under level cap
+            const atCap = player.weaponLevel >= lvl.weaponCap;
+            const weaponProb = atCap ? 0 : 0.12 + comboBonus;
             const healthProb = 0.08 + (100 - player.hp) * 0.002 + comboBonus;
 
             if (rand < weaponProb) {
@@ -700,18 +838,33 @@
             playTone(400 + (lvl * 80), 'triangle', 0.05, 0.06);
         }
 
+        // Screen visibility check for enemies
+        function isOnScreen(e) {
+            const sx = e.x - camX;
+            const sy = e.y - camY;
+            return sx > -100 && sx < GAME_WIDTH + 100 && sy > -100 && sy < GAME_HEIGHT + 100;
+        }
+
         function update() {
-            if (!gameRunning) return;
+            if (!gameRunning || gamePaused) return;
             if (hitstop > 0) { hitstop--; return; }
 
             gameTime++;
             if (comboTimer > 0) comboTimer--; else combo = 0;
             if (player.ultActive > 0) player.ultActive--;
 
+            // Level system: check boss spawn
+            const lvl = LEVELS[currentLevel - 1];
+            if (!bossActive && !bossSpawned && levelKills >= lvl.killTarget) {
+                bossActive = true;
+                bossSpawned = true;
+                spawnEnemy(true);
+            }
+
             spawnCooldown--;
-            const maxEnemies = 15 + player.weaponLevel * 5;
-            const spawnRate = Math.max(5, 40 - player.weaponLevel * 3);
-            if (enemies.length < maxEnemies && spawnCooldown <= 0) {
+            const maxEnemies = bossActive ? 5 : Math.min(12, 6 + currentLevel * 2);
+            const spawnRate = bossActive ? 80 : Math.max(15, 50 - currentLevel * 3);
+            if (enemies.length < maxEnemies && spawnCooldown <= 0 && !bossSpawned) {
                 spawnEnemy();
                 spawnCooldown = spawnRate;
             }
@@ -775,12 +928,30 @@
                     if (Math.abs(dist) < 500) e.vx += (-dir * e.baseSpeed - e.vx) * 0.1;
                     else if (Math.abs(dist) > 700) e.vx += (dir * e.baseSpeed - e.vx) * 0.1;
                     e.aimTimer++;
-                    if (e.aimTimer > 80) {
-                        // 360° aimed shot toward player
+                    if (e.aimTimer > 80 && isOnScreen(e)) {
                         const angle = Math.atan2(distY, dist);
                         const spd = 38;
                         projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd, owner: 'enemy', color: e.bulletColor, life: 100, dmg: 30 });
                         e.aimTimer = 0;
+                    }
+                } else if (e.type === 'boss') {
+                    // Boss AI: aggressive chase + multi-shot
+                    e.vx += (dir * e.baseSpeed - e.vx) * 0.12;
+                    e.shootTimer--;
+                    if (e.shootTimer <= 0 && isOnScreen(e)) {
+                        // Triple spread shot
+                        for (let a = -0.3; a <= 0.3; a += 0.3) {
+                            const angle = Math.atan2(distY, dist) + a;
+                            projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * 22, vy: Math.sin(angle) * 22, owner: 'enemy', color: '#ff0000', life: 100, dmg: 20 });
+                        }
+                        e.shootTimer = 25;
+                    }
+                    // Boss melee slam
+                    if (Math.abs(dist) < 100 && Math.abs(distY) < 100 && player.iframe <= 0) {
+                        player.hp -= 20; player.iframe = 40;
+                        player.vx += dir * -15; player.vy = -10;
+                        createParticles(player.x, player.y, '#ff0000', 10, 2);
+                        haptic('heavy');
                     }
                 } else {
                     e.vx += (dir * e.baseSpeed - e.vx) * 0.1;
@@ -801,10 +972,10 @@
                     }
                 });
 
-                // 360° shooting for scout and heavy
-                if (e.type !== 'chaser' && e.type !== 'sniper' && e.type !== 'martial') {
+                // 360° shooting for scout and heavy - ONLY when on screen
+                if (e.type !== 'chaser' && e.type !== 'sniper' && e.type !== 'martial' && e.type !== 'boss') {
                     e.shootTimer--;
-                    if (e.shootTimer <= 0 && Math.abs(dist) < 1000) {
+                    if (e.shootTimer <= 0 && isOnScreen(e)) {
                         const angle = Math.atan2(distY, dist);
                         const spd = 14;
                         projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd, owner: 'enemy', color: e.bulletColor, life: 120, dmg: 12 });
@@ -813,12 +984,23 @@
                 }
 
                 if (e.hp <= 0) {
-                    enemies.splice(i, 1); kills++; combo++; comboTimer = 150; hitstop = 4;
-                    player.energy = Math.min(100, player.energy + 4);
-                    createParticles(e.x + e.w / 2, e.y + e.h / 2, e.color, 12, 1.2, 2);
+                    const wasBoss = e.isBoss;
+                    enemies.splice(i, 1); kills++; levelKills++; combo++; comboTimer = 150; hitstop = wasBoss ? 12 : 4;
+                    player.energy = Math.min(100, player.energy + (wasBoss ? 50 : 4));
+                    createParticles(e.x + e.w / 2, e.y + e.h / 2, e.color, wasBoss ? 25 : 8, wasBoss ? 2 : 1.2, wasBoss ? 3 : 2);
                     spawnDrop(e.x + e.w / 2, e.y + e.h / 2);
                     playTone(60, 'sine', 0.1, 0.3);
-                    haptic('medium'); // kill feedback
+                    haptic(wasBoss ? 'heavy' : 'medium');
+                    // Boss killed = level complete
+                    if (wasBoss) {
+                        bossActive = false;
+                        if (currentLevel < 10) {
+                            completeLevel();
+                        } else {
+                            // Game won!
+                            endGame(true);
+                        }
+                    }
                 }
             }
 
@@ -838,10 +1020,11 @@
                 if (Math.abs(d.x - player.x) < 50 && Math.abs(d.y - player.y) < 70) {
                     if (d.type === 'health') { player.hp = Math.min(100, player.hp + 30); playTone(800, 'sine', 0.2, 0.2); }
                     else if (d.type === 'weapon') {
-                        if (player.weaponLevel < 10) {
+                        const cap = LEVELS[currentLevel - 1].weaponCap;
+                        if (player.weaponLevel < cap) {
                             player.weaponLevel++;
                             playTone(1200, 'square', 0.4, 0.2);
-                            createParticles(player.x, player.y, '#fbbf24', 30, 2);
+                            createParticles(player.x, player.y, '#fbbf24', 15, 2);
                         }
                     }
                     drops.splice(i, 1); continue;
@@ -890,8 +1073,16 @@
 
             const realms = ["初入江湖", "炼体", "筑基", "金丹", "元婴", "化神", "合体", "大乘", "渡劫", "剑神圆满"];
             ui.rank.innerText = `境界：${realms[player.weaponLevel - 1]} [Lv.${player.weaponLevel}]`;
+            // Level progress display (reuse lvl from above)
+            if (bossActive) {
+                document.getElementById('level-display').innerText = `${lvl.name} — BOSS战！`;
+            } else if (bossSpawned) {
+                document.getElementById('level-display').innerText = `${lvl.name}`;
+            } else {
+                document.getElementById('level-display').innerText = `${lvl.name}  [${levelKills}/${lvl.killTarget}]`;
+            }
 
-            if (player.hp <= 0 || player.y > 2500) endGame();
+            if (player.hp <= 0 || player.y > 2500) endGame(false);
         }
 
         // Draw ink wash background with mountains
@@ -998,8 +1189,32 @@
                 ctx.restore();
             });
 
-            particles.forEach(pt => { ctx.globalAlpha = pt.life; ctx.fillStyle = pt.color; ctx.fillRect(pt.x, pt.y, pt.size, pt.size); });
+            // Performance: batch particle draw
+            for (let i = 0; i < particles.length; i++) {
+                const pt = particles[i];
+                ctx.globalAlpha = pt.life;
+                ctx.fillStyle = pt.color;
+                ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
+            }
             ctx.restore();
+
+            // Draw boss HP bar
+            enemies.forEach(e => {
+                if (e.isBoss && e.maxHp > 0) {
+                    const bx = e.x - camX;
+                    const by = e.y - camY - 20;
+                    ctx.save();
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(bx - 10, by, e.w + 20, 8);
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(bx - 10, by, (e.w + 20) * (e.hp / e.maxHp), 8);
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '12px sans-serif';
+                    ctx.fillText('BOSS', bx + e.w / 2 - 16, by - 4);
+                    ctx.restore();
+                }
+            });
+
             requestAnimationFrame(() => { if (gameRunning) { update(); draw(); } });
         }
 
@@ -1129,21 +1344,86 @@
 
         function startGame() {
             ui.menu.classList.add('hidden'); ui.hud.classList.add('visible');
-            initPlatforms(); gameRunning = true; resize(); draw();
-            // Resume audio context on iOS (requires user gesture)
+            currentLevel = 1; levelKills = 0; bossActive = false; bossSpawned = false;
+            initPlatforms(); gameRunning = true; gamePaused = false; resize();
+            showLevelBanner();
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            // Start Chinese BGM
             BGM.start();
         }
-        // Expose startGame globally for native bridge
         window.startGame = startGame;
 
-        function endGame() {
+        function endGame(won) {
             gameRunning = false; ui.hud.classList.remove('visible'); ui.over.classList.add('visible');
-            ui.stats.innerText = `最终斩敌: ${kills} | 最终境界: Lv.${player.weaponLevel}`;
+            if (won) {
+                document.querySelector('#game-over h1').innerText = '天下无敌';
+                ui.stats.innerText = `通关！斩敌: ${kills} | 最终境界: Lv.${player.weaponLevel}`;
+            } else {
+                document.querySelector('#game-over h1').innerText = '气尽人亡';
+                ui.stats.innerText = `第${currentLevel}关落败 | 斩敌: ${kills} | 境界: Lv.${player.weaponLevel}`;
+            }
             BGM.stop();
-            haptic('error'); // death feedback
+            haptic('error');
         }
+
+        function completeLevel() {
+            gamePaused = true;
+            currentLevel++;
+            levelKills = 0;
+            bossSpawned = false;
+            bossActive = false;
+            // Heal player between levels
+            player.hp = Math.min(100, player.hp + 30);
+            // Clear remaining enemies
+            enemies.length = 0;
+            projectiles.length = 0;
+            showLevelBanner();
+        }
+
+        function showLevelBanner() {
+            const lvl = LEVELS[currentLevel - 1];
+            const banner = document.getElementById('level-banner');
+            document.getElementById('level-title').innerText = lvl.name;
+            document.getElementById('level-subtitle').innerText = `武器上限: Lv.${lvl.weaponCap} | 击杀目标: ${lvl.killTarget}`;
+            banner.classList.add('visible');
+            setTimeout(() => {
+                banner.classList.remove('visible');
+                gamePaused = false;
+                draw();
+            }, 2000);
+        }
+
+        function togglePause() {
+            if (!gameRunning) return;
+            gamePaused = !gamePaused;
+            const overlay = document.getElementById('pause-overlay');
+            if (gamePaused) {
+                overlay.classList.add('visible');
+            } else {
+                overlay.classList.remove('visible');
+                draw();
+            }
+        }
+        window.togglePause = togglePause;
+
+        function returnHome() {
+            gameRunning = false;
+            gamePaused = false;
+            BGM.stop();
+            document.getElementById('pause-overlay').classList.remove('visible');
+            ui.hud.classList.remove('visible');
+            ui.over.classList.remove('visible');
+            ui.menu.classList.remove('hidden');
+            // Reset game state
+            player.x = 400; player.y = 300; player.vx = 0; player.vy = 0;
+            player.hp = 100; player.energy = 0; player.weaponLevel = 1;
+            player.dashCooldown = 0; player.dashActive = 0; player.shootTimer = 0;
+            player.iframe = 0; player.ultActive = 0; player.jumpCount = 0;
+            kills = 0; combo = 0; comboTimer = 0; gameTime = 0;
+            currentLevel = 1; levelKills = 0; bossActive = false; bossSpawned = false;
+            enemies.length = 0; projectiles.length = 0; particles.length = 0;
+            trails.length = 0; drops.length = 0;
+        }
+        window.returnHome = returnHome;
 
         function resize() {
             canvas.width = GAME_WIDTH;
