@@ -544,16 +544,27 @@
                     createParticles(px, py, def.color, 30, 2);
                     sk.cooldown = Math.max(100, def.baseCd - lvl * 15);
                 } else if (id === 'lightning') {
-                    // Lightning: random bolts on nearby enemies
+                    // Lightning: FULL SCREEN - strike ALL visible enemies
                     const dmg = def.baseDmg + lvl * 20;
-                    const bolts = 1 + Math.floor(lvl / 2);
-                    let targets = enemies.filter(e => isOnScreen(e)).slice(0, bolts);
+                    let targets = enemies.filter(e => isOnScreen(e));
                     targets.forEach(e => {
                         e.hp -= dmg;
-                        e.damageFlash = 10;
-                        createParticles(e.x + e.w / 2, e.y + e.h / 2, def.color, 12, 2);
+                        e.damageFlash = 12;
+                        createParticles(e.x + e.w / 2, e.y + e.h / 2, def.color, 15, 2.5);
+                        createParticles(e.x + e.w / 2, e.y + e.h / 2, '#fff', 8, 1.5);
+                        // Visual lightning bolt from sky to enemy
+                        lightningBolts.push({
+                            tx: e.x + e.w / 2, ty: e.y,
+                            life: 15, maxLife: 15,
+                            segments: generateLightningPath(e.x + e.w / 2, camY - 50, e.x + e.w / 2, e.y)
+                        });
                     });
-                    if (targets.length > 0) haptic('medium');
+                    if (targets.length > 0) {
+                        screenFlash = 12;
+                        haptic('heavy');
+                        playTone(80, 'sawtooth', 0.4, 0.3);
+                        playTone(120, 'square', 0.2, 0.2);
+                    }
                     sk.cooldown = Math.max(60, def.baseCd - lvl * 12);
                 } else if (id === 'ghost') {
                     // Ghost Claw: 4x homing projectiles, wider spread
@@ -617,16 +628,66 @@
         let bossActive = false;
         let bossSpawned = false;
         const LEVELS = [
-            { name: '第一关·初入江湖', killTarget: 15, weaponCap: 2, enemyTier: 1, enemies: ['scout'], bossHp: 600, bossSpeed: 1.0, bossType: 'bandit_chief' },
-            { name: '第二关·崭露锋芒', killTarget: 20, weaponCap: 3, enemyTier: 1, enemies: ['scout', 'chaser'], bossHp: 900, bossSpeed: 1.1, bossType: 'wolf_king' },
-            { name: '第三关·拳脚相加', killTarget: 25, weaponCap: 4, enemyTier: 1, enemies: ['scout', 'chaser', 'martial'], bossHp: 1200, bossSpeed: 1.2, bossType: 'iron_fist' },
-            { name: '第四关·铁甲连城', killTarget: 30, weaponCap: 5, enemyTier: 2, enemies: ['scout', 'chaser', 'martial', 'heavy'], bossHp: 1600, bossSpeed: 1.3, bossType: 'shield_general' },
-            { name: '第五关·百步穿杨', killTarget: 35, weaponCap: 6, enemyTier: 2, enemies: ['scout', 'chaser', 'martial', 'heavy', 'sniper'], bossHp: 2000, bossSpeed: 1.4, bossType: 'phantom_archer' },
-            { name: '第六关·刀光剑影', killTarget: 40, weaponCap: 7, enemyTier: 2, enemies: ['chaser', 'martial', 'heavy', 'sniper'], bossHp: 2500, bossSpeed: 1.5, bossType: 'twin_blade' },
-            { name: '第七关·龙争虎斗', killTarget: 45, weaponCap: 8, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper', 'chaser'], bossHp: 3200, bossSpeed: 1.7, bossType: 'thunder_monk' },
-            { name: '第八关·万夫莫敌', killTarget: 50, weaponCap: 9, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 4000, bossSpeed: 1.9, bossType: 'blood_demon' },
-            { name: '第九关·天下无双', killTarget: 55, weaponCap: 9, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 5000, bossSpeed: 2.1, bossType: 'shadow_lord' },
-            { name: '第十关·剑神归位', killTarget: 60, weaponCap: 10, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 7000, bossSpeed: 2.5, bossType: 'sword_saint' },
+            {
+                name: '第一关·初入江湖', killTarget: 15, weaponCap: 2, enemyTier: 1, enemies: ['scout'], bossHp: 600, bossSpeed: 1.0, bossType: 'bandit_chief',
+                bgColors: ['#e8dcc8', '#d8ccb4', '#c8b89a', '#b0a080'], mtnColors: ['#7a9a6a', '#8aaa7a', '#6a8a5a'], enemyColors: ['#6a8844', '#7a9954', '#5a7744', '#88aa66', '#779944'],
+                platGround: ['#c8b99a', '#b8a88a', '#d4c4a8'], platFloat: ['#a09080', '#90806a', '#c0b090'],
+                bgm: { drone: 49.0, filter: 2500, vol: 0.04, melodies: [0, 4] }
+            },
+            {
+                name: '第二关·崭露锋芒', killTarget: 20, weaponCap: 3, enemyTier: 1, enemies: ['scout', 'chaser'], bossHp: 900, bossSpeed: 1.1, bossType: 'wolf_king',
+                bgColors: ['#dce8d0', '#c8d8bc', '#b4c8a0', '#a0b888'], mtnColors: ['#6a8a6a', '#7a9a7a', '#5a7a5a'], enemyColors: ['#88aa44', '#77994e', '#669944', '#99bb55', '#88aa55'],
+                platGround: ['#b8c8a0', '#a8b890', '#c4d4a8'], platFloat: ['#90a080', '#80906a', '#b0c090'],
+                bgm: { drone: 49.0, filter: 2400, vol: 0.04, melodies: [0, 2, 4] }
+            },
+            {
+                name: '第三关·拳脚相加', killTarget: 25, weaponCap: 4, enemyTier: 1, enemies: ['scout', 'chaser', 'martial'], bossHp: 1200, bossSpeed: 1.2, bossType: 'iron_fist',
+                bgColors: ['#e0c8a0', '#d0b890', '#c0a878', '#aa9060'], mtnColors: ['#8a7050', '#9a8060', '#7a6040'], enemyColors: ['#aa7744', '#996644', '#bb8855', '#cc9966', '#aa8844'],
+                platGround: ['#c0a880', '#b09870', '#d0b890'], platFloat: ['#a09070', '#907a5a', '#b0a080'],
+                bgm: { drone: 46.2, filter: 2200, vol: 0.042, melodies: [2, 6] }
+            },
+            {
+                name: '第四关·铁甲连城', killTarget: 30, weaponCap: 5, enemyTier: 2, enemies: ['scout', 'chaser', 'martial', 'heavy'], bossHp: 1600, bossSpeed: 1.3, bossType: 'shield_general',
+                bgColors: ['#c8d0d8', '#b0b8c8', '#98a0b0', '#808898'], mtnColors: ['#707888', '#606878', '#808898'], enemyColors: ['#5588aa', '#4477aa', '#6699bb', '#5599cc', '#4488aa'],
+                platGround: ['#a0a8b8', '#9098a8', '#b0b8c8'], platFloat: ['#808898', '#707888', '#909aa8'],
+                bgm: { drone: 41.2, filter: 1800, vol: 0.045, melodies: [6, 2, 7] }
+            },
+            {
+                name: '第五关·百步穿杨', killTarget: 35, weaponCap: 6, enemyTier: 2, enemies: ['scout', 'chaser', 'martial', 'heavy', 'sniper'], bossHp: 2000, bossSpeed: 1.4, bossType: 'phantom_archer',
+                bgColors: ['#c8a878', '#b89868', '#a08050', '#886838'], mtnColors: ['#705030', '#604020', '#805838'], enemyColors: ['#886644', '#775533', '#997755', '#aa8866', '#887755'],
+                platGround: ['#a08060', '#907050', '#b09070'], platFloat: ['#806848', '#705838', '#908068'],
+                bgm: { drone: 41.2, filter: 1500, vol: 0.048, melodies: [6, 7, 1] }
+            },
+            {
+                name: '第六关·刀光剑影', killTarget: 40, weaponCap: 7, enemyTier: 2, enemies: ['chaser', 'martial', 'heavy', 'sniper'], bossHp: 2500, bossSpeed: 1.5, bossType: 'twin_blade',
+                bgColors: ['#4a5568', '#3a4558', '#2a3548', '#1a2538'], mtnColors: ['#2a3a50', '#1a2a40', '#3a4a60'], enemyColors: ['#7755aa', '#6644aa', '#8866bb', '#9977cc', '#7766aa'],
+                platGround: ['#505868', '#404858', '#606878'], platFloat: ['#3a4258', '#2a3248', '#4a5268'],
+                bgm: { drone: 36.7, filter: 1200, vol: 0.05, melodies: [7, 6, 3] }
+            },
+            {
+                name: '第七关·龙争虎斗', killTarget: 45, weaponCap: 8, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper', 'chaser'], bossHp: 3200, bossSpeed: 1.7, bossType: 'thunder_monk',
+                bgColors: ['#3a2848', '#2a1838', '#1a0828', '#100018'], mtnColors: ['#2a1848', '#1a0838', '#3a2858'], enemyColors: ['#aa3344', '#993355', '#bb4455', '#cc5566', '#aa4466'],
+                platGround: ['#3a2838', '#2a1828', '#4a3848'], platFloat: ['#2a1828', '#1a0818', '#3a2838'],
+                bgm: { drone: 36.7, filter: 1000, vol: 0.052, melodies: [7, 3, 5] }
+            },
+            {
+                name: '第八关·万夫莫敌', killTarget: 50, weaponCap: 9, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 4000, bossSpeed: 1.9, bossType: 'blood_demon',
+                bgColors: ['#3a1010', '#2a0808', '#1a0000', '#100000'], mtnColors: ['#3a0808', '#2a0000', '#4a1010'], enemyColors: ['#cc2222', '#bb1133', '#dd3344', '#ee4455', '#cc3355'],
+                platGround: ['#3a1818', '#2a0808', '#4a2020'], platFloat: ['#2a1010', '#1a0000', '#3a1818'],
+                bgm: { drone: 32.7, filter: 800, vol: 0.055, melodies: [3, 5, 7] }
+            },
+            {
+                name: '第九关·天下无双', killTarget: 55, weaponCap: 9, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 5000, bossSpeed: 2.1, bossType: 'shadow_lord',
+                bgColors: ['#101828', '#081018', '#000810', '#000008'], mtnColors: ['#081830', '#001020', '#102040'], enemyColors: ['#4466cc', '#3355bb', '#5577dd', '#6688ee', '#4477cc'],
+                platGround: ['#182028', '#101818', '#202830'], platFloat: ['#101820', '#081018', '#182028'],
+                bgm: { drone: 32.7, filter: 600, vol: 0.058, melodies: [5, 7, 3] }
+            },
+            {
+                name: '第十关·剑神归位', killTarget: 60, weaponCap: 10, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 7000, bossSpeed: 2.5, bossType: 'sword_saint',
+                bgColors: ['#0a0a10', '#050508', '#020204', '#000000'], mtnColors: ['#0a0a18', '#050510', '#101020'], enemyColors: ['#ccccdd', '#bbbbcc', '#ddddee', '#ffffff', '#aaaacc'],
+                platGround: ['#101018', '#080810', '#181820'], platFloat: ['#080810', '#040408', '#101018'],
+                bgm: { drone: 27.5, filter: 500, vol: 0.06, melodies: [5, 3, 7] }
+            },
         ];
 
         const keys = {};
@@ -658,7 +719,9 @@
         const particles = [];
         const platforms = [];
         const trails = [];
-        const slashEffects = [];  // ink-wash dash slash visuals
+        const slashEffects = [];  // calligraphy sword qi visuals
+        const lightningBolts = []; // visual lightning strikes
+        let screenFlash = 0;  // white flash timer
         const drops = [];
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -737,7 +800,9 @@
                 this.droneGain.connect(audioCtx.destination);
                 this.droneOsc = audioCtx.createOscillator();
                 this.droneOsc.type = 'sine';
-                this.droneOsc.frequency.value = 49.0; // G1 - deep warm bass
+                // Initialize with current level's drone freq
+                const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
+                this.droneOsc.frequency.value = lvl.bgm.drone;
                 this.droneOsc.connect(this.droneGain);
                 this.droneOsc.start();
                 // Gentle pulsing on the drone
@@ -790,8 +855,12 @@
 
                 // Warm silk string timbre
                 filter.type = 'lowpass';
-                filter.frequency.setValueAtTime(2500, time);
-                filter.frequency.exponentialRampToValueAtTime(350, time + duration);
+                const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
+                const baseCutoff = lvl.bgm.filter;
+                const baseVol = lvl.bgm.vol;
+
+                filter.frequency.setValueAtTime(baseCutoff, time);
+                filter.frequency.exponentialRampToValueAtTime(baseCutoff * 0.15, time + duration);
                 filter.Q.value = 0.8;
 
                 const harmGain = audioCtx.createGain();
@@ -817,13 +886,17 @@
                         this.phraseRest--;
                         continue;
                     }
-                    const melody = this.melodies[this.currentMelody];
+                    const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
+                    // Dynamic melody selection from level pool
+                    const melodyPool = lvl.bgm.melodies;
+                    const melodyIdx = melodyPool[this.currentMelody % melodyPool.length];
+                    const melody = this.melodies[melodyIdx];
                     const rhythm = this.rhythms[this.currentRhythm];
                     const noteIdx = melody[this.melodyPos];
                     const freq = this.scale[noteIdx];
                     const beatDur = rhythm[this.melodyPos % rhythm.length];
                     const noteDur = beatDur * 0.8 + 0.2;
-                    const vol = 0.04 + Math.random() * 0.015;
+                    const vol = baseVol + Math.random() * 0.015;
                     this.pluckNote(freq, this.nextNoteTime, noteDur, vol);
                     // Harmony on strong beats
                     if (this.melodyPos % 4 === 0 && noteIdx >= 2) {
@@ -849,8 +922,9 @@
 
         function initPlatforms() {
             platforms.length = 0;
-            const groundColors = ['#c8b99a', '#b8a88a', '#d4c4a8', '#bfae94'];
-            const floatColors = ['#a09080', '#90806a', '#c0b090'];
+            const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
+            const groundColors = lvl.platGround;
+            const floatColors = lvl.platFloat;
             for (let i = 0; i < 500; i++) {
                 // Ground platforms - ink wash stone style
                 platforms.push({ x: i * 600, y: 700 + Math.random() * 100, w: 650, h: 600, color: groundColors[i % groundColors.length], isGround: true });
@@ -874,12 +948,18 @@
             }
         }
 
-        // Tier colors: tier1=green tones, tier2=blue tones, tier3=red/purple tones
-        const TIER_COLORS = {
-            1: ['#66aa44', '#88cc66', '#44aa66', '#55bb55', '#77cc44'],
-            2: ['#4488cc', '#5599dd', '#3377bb', '#6699cc', '#4477aa'],
-            3: ['#cc4444', '#aa33aa', '#dd5555', '#bb2266', '#cc3388']
-        };
+        // Generate zigzag lightning path from (x1,y1) to (x2,y2)
+        function generateLightningPath(x1, y1, x2, y2) {
+            const segs = [];
+            const steps = 8 + Math.floor(Math.random() * 6);
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const jitterX = i === 0 || i === steps ? 0 : (Math.random() - 0.5) * 60;
+                const jitterY = i === 0 || i === steps ? 0 : (Math.random() - 0.5) * 15;
+                segs.push({ x: x1 + (x2 - x1) * t + jitterX, y: y1 + (y2 - y1) * t + jitterY });
+            }
+            return segs;
+        }
 
         function spawnEnemy(isBoss = false) {
             const side = Math.random() > 0.5 ? 1 : -1;
@@ -889,7 +969,7 @@
             const type = isBoss ? 'boss' : pool[Math.floor(Math.random() * pool.length)];
             const lvlBonus = (currentLevel - 1) * 0.12;
             const BULLET_COLORS = ['#ff4466', '#44aaff', '#ffcc00', '#66ff88', '#ff66ff', '#ff8844', '#44ffdd', '#aa66ff'];
-            const tierColors = TIER_COLORS[lvl.enemyTier];
+            const tierColors = lvl.enemyColors;
 
             const BOSS_COLORS = {
                 bandit_chief: '#cc8833', wolf_king: '#888888', iron_fist: '#ff8800',
@@ -1331,6 +1411,12 @@
                 slashEffects[i].life -= 0.04;
                 if (slashEffects[i].life <= 0) slashEffects.splice(i, 1);
             }
+            // Update lightning bolts
+            for (let i = lightningBolts.length - 1; i >= 0; i--) {
+                lightningBolts[i].life--;
+                if (lightningBolts[i].life <= 0) lightningBolts.splice(i, 1);
+            }
+            if (screenFlash > 0) screenFlash--;
 
             camX += (player.x - canvas.width / 3.5 - camX) * 0.12;
             camY += (player.y - canvas.height / 2 - camY) * 0.1;
@@ -1357,21 +1443,24 @@
 
         // Draw ink wash background with mountains
         function drawInkWashBg() {
-            // Sky gradient - rice paper tone
+            const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
+            const cols = lvl.bgColors;
+            // Sky gradient
             const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            grad.addColorStop(0, '#e8dcc8');
-            grad.addColorStop(0.3, '#d8ccb4');
-            grad.addColorStop(0.6, '#c8b89a');
-            grad.addColorStop(1, '#b0a080');
+            grad.addColorStop(0, cols[0]);
+            grad.addColorStop(0.3, cols[1]);
+            grad.addColorStop(0.6, cols[2]);
+            grad.addColorStop(1, cols[3]);
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             // Distant mountains - layered ink wash
             const mtnOffset = camX * 0.05;
             ctx.globalAlpha = 0.15;
+            const mtnCols = lvl.mtnColors;
             for (let layer = 0; layer < 3; layer++) {
                 const ly = 200 + layer * 120;
                 const speed = 0.02 + layer * 0.015;
-                ctx.fillStyle = ['#4a4a4a', '#6a6a6a', '#8a8a7a'][layer];
+                ctx.fillStyle = mtnCols[layer % mtnCols.length];
                 ctx.beginPath();
                 ctx.moveTo(0, ly + 200);
                 for (let x = 0; x <= canvas.width; x += 40) {
@@ -1462,56 +1551,108 @@
             projectiles.forEach(pj => {
                 ctx.save();
                 ctx.fillStyle = pj.color; ctx.shadowBlur = 15; ctx.shadowColor = pj.color;
-                if (pj.owner === 'enemy') {
-                    // Colorful circular enemy bullets
+                if (pj.homing) {
+                    // Ghost claw drawing
+                    ctx.translate(pj.x, pj.y);
+                    ctx.rotate(Math.atan2(pj.vy, pj.vx));
                     ctx.beginPath();
-                    ctx.arc(pj.x, pj.y, (pj.size || 10) / 2, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.globalAlpha = 0.4;
-                    ctx.beginPath();
-                    ctx.arc(pj.x, pj.y, (pj.size || 10), 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.globalAlpha = 1;
+                    ctx.moveTo(10, 0); ctx.lineTo(-10, 8); ctx.lineTo(-5, 0); ctx.lineTo(-10, -8); ctx.fill();
+                } else if (!pj.skillHit) {
+                    // Standard projectile
+                    ctx.beginPath(); ctx.arc(pj.x, pj.y, pj.size || 10, 0, Math.PI * 2); ctx.fill();
                 } else {
-                    ctx.fillRect(pj.x, pj.y, 70, pj.size || 10);
+                    // Skill projectile (Fire/Wind)
+                    ctx.translate(pj.x, pj.y);
+                    ctx.rotate(Math.atan2(pj.vy, pj.vx));
+                    ctx.beginPath();
+                    ctx.moveTo(15, 0); ctx.lineTo(-10, 10); ctx.lineTo(-5, 0); ctx.lineTo(-10, -10); ctx.fill();
                 }
                 ctx.restore();
             });
 
-            // Draw ink-wash slash effects (screen-space, after camera restore)
+            // Draw Lightning Bolts
+            ctx.save();
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            lightningBolts.forEach(bolt => {
+                const alpha = bolt.life / 15;
+                ctx.globalAlpha = alpha;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#aa66ff';
+                // Inner white core
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                let first = true;
+                bolt.segments.forEach(pt => {
+                    const px = pt.x - camX;
+                    const py = pt.y - camY;
+                    if (first) { ctx.moveTo(px, py); first = false; }
+                    else ctx.lineTo(px, py);
+                });
+                ctx.stroke();
+                // Outer glow
+                ctx.strokeStyle = '#aa66ff';
+                ctx.lineWidth = 8;
+                ctx.globalAlpha = alpha * 0.5;
+                ctx.stroke();
+            });
+            ctx.restore();
+
+            // Draw Calligraphy Slash Effects (Screen Space)
             slashEffects.forEach(s => {
                 const sx = s.x - camX;
                 const sy = s.y - camY;
-                const progress = 1 - s.life / s.maxLife;
-                const alpha = s.life * 0.9;
+                const progress = 1 - s.life / s.maxLife; // 0 to 1
+                const alpha = Math.min(1, s.life * 1.5);
+
                 ctx.save();
                 ctx.translate(sx, sy);
-                // Sweeping ink arc
-                const startAngle = s.facing > 0 ? -0.8 : Math.PI - 0.8;
-                const sweep = 1.6 * Math.min(1, progress * 3);
-                const r = s.radius * (0.4 + progress * 0.6);
-                // Outer ink stroke (thick, dark)
-                ctx.globalAlpha = alpha * 0.7;
-                ctx.strokeStyle = '#1a1a2e';
-                ctx.lineWidth = 28 - progress * 20;
+                const scale = s.facing;
+                ctx.scale(scale, 1);
+
+                // Advanced Calligraphy Brush Stroke
+                // Shape: Start thick (heavy ink), taper to thin sharp point
+                // Curve: Cubic Bezier for dynamic "swoosh"
+
+                const p0 = { x: -200, y: 100 }; // Start low-back
+                const p1 = { x: -50, y: -150 };  // Control high-back
+                const p2 = { x: 150, y: -150 };  // Control high-front
+                const p3 = { x: 300, y: 50 };   // End mid-front
+
+                // Animate drawing: only draw up to current progress
+                // Simplified: Draw full shape but mask or scale opacity? 
+                // Better: Draw full stroke but fade out. The motion is effectively instant in "logic" but visual is a trace.
+
+                // 1. Ink Wash Base (The "water" part of ink)
+                ctx.globalAlpha = alpha * 0.3;
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 70;
                 ctx.lineCap = 'round';
                 ctx.beginPath();
-                ctx.arc(0, 0, r, startAngle, startAngle + sweep);
+                ctx.moveTo(p0.x, p0.y);
+                ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
                 ctx.stroke();
-                // Inner white edge (bright slash line)
-                ctx.globalAlpha = alpha;
+
+                // 2. Main Ink Stroke (The heavy "ink" part)
+                // We simulate variable width by drawing multiple offset curves or just a tapered line
+                ctx.globalAlpha = alpha * 0.9;
+                ctx.strokeStyle = '#1a1a1a';
+                ctx.lineWidth = 25;
+                ctx.beginPath();
+                ctx.moveTo(p0.x + 10, p0.y + 10);
+                ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x - 20, p3.y); // Stop slightly short for taper look
+                ctx.stroke();
+
+                // 3. Dry Brush / White Streak (The "velocity" lines)
+                ctx.globalAlpha = alpha * 0.8;
                 ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 6 - progress * 4;
+                ctx.lineWidth = 4;
                 ctx.beginPath();
-                ctx.arc(0, 0, r, startAngle, startAngle + sweep);
+                ctx.moveTo(p0.x + 5, p0.y - 5);
+                ctx.bezierCurveTo(p1.x + 5, p1.y + 5, p2.x - 5, p2.y + 5, p3.x - 10, p3.y);
                 ctx.stroke();
-                // Ink splatter glow
-                ctx.globalAlpha = alpha * 0.3;
-                ctx.strokeStyle = '#888';
-                ctx.lineWidth = 40 - progress * 30;
-                ctx.beginPath();
-                ctx.arc(0, 0, r * 0.95, startAngle + 0.1, startAngle + sweep - 0.1);
-                ctx.stroke();
+
                 ctx.restore();
             });
 
@@ -1547,6 +1688,10 @@
             ctx.globalAlpha = 0.9;
             let skX = 20;
             const skY = canvas.height - 50;
+            if (screenFlash > 0) {
+                ctx.fillStyle = `rgba(255,255,255,${screenFlash / 20})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
             for (const [id, def] of Object.entries(SKILL_DEFS)) {
                 const sk = playerSkills[id];
                 if (sk.level <= 0) { skX += 50; continue; }
@@ -1887,6 +2032,14 @@
             // Clear remaining enemies
             enemies.length = 0;
             projectiles.length = 0;
+            // Regenerate platforms for new level colors
+            initPlatforms();
+            // Update BGM drone for new level (smooth glissando)
+            if (BGM.droneOsc) {
+                const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
+                const nextFreq = lvl.bgm.drone;
+                BGM.droneOsc.frequency.exponentialRampToValueAtTime(nextFreq, audioCtx.currentTime + 2.0);
+            }
             showLevelBanner();
         }
 
