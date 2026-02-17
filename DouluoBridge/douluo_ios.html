@@ -1823,9 +1823,11 @@
             document.getElementById('level-title').innerText = lvl.name;
             document.getElementById('level-subtitle').innerText = `武器上限: Lv.${lvl.weaponCap} | 击杀目标: ${lvl.killTarget}`;
             banner.classList.add('visible');
+            try { window.webkit.messageHandlers.gameState.postMessage('transition'); } catch (e) { }
             setTimeout(() => {
                 banner.classList.remove('visible');
                 gamePaused = false;
+                try { window.webkit.messageHandlers.gameState.postMessage('playing'); } catch (e) { }
                 if (!gameLoopRunning) draw();
             }, 2000);
         }

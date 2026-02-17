@@ -295,9 +295,25 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
                 }
             }
         } else if message.name == "gameState", let state = message.body as? String {
-            // JS sends: "playing" when game starts, "ended" when game ends
+            // JS sends: "playing", "ended", or "transition"
             DispatchQueue.main.async {
-                self.setControlsVisible(state == "playing", animated: true)
+                switch state {
+                case "playing":
+                    self.setControlsVisible(true, animated: true)
+                case "ended":
+                    self.setControlsVisible(false, animated: true)
+                case "transition":
+                    // Level transition: dim controls, disable input
+                    UIView.animate(withDuration: 0.3) {
+                        for ctrl in self.allControls {
+                            ctrl.alpha = 0.25
+                        }
+                    }
+                    for ctrl in self.allControls {
+                        ctrl.isUserInteractionEnabled = false
+                    }
+                default: break
+                }
             }
         }
     }
