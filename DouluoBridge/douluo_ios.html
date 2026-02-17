@@ -1787,7 +1787,7 @@
             showLevelBanner();
             if (audioCtx.state === 'suspended') audioCtx.resume();
             BGM.start();
-            try { window.webkit.messageHandlers.gameState.postMessage('playing'); } catch (e) { }
+            try { window.webkit.messageHandlers.gameState.postMessage('transition'); } catch (e) { }
         }
         window.startGame = startGame;
 
