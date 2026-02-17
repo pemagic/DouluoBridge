@@ -11,6 +11,9 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
     // Skill buttons in SKILL_DEFS order: [fire, whirlwind, shield, lightning, ghost]
     private var skillButtons: [ActionButton] = []
     
+    // All controls to show/hide
+    private var allControls: [UIView] = []
+    
     // Haptic generators
     private let lightImpact = UIImpactFeedbackGenerator(style: .light)
     private let mediumImpact = UIImpactFeedbackGenerator(style: .medium)
@@ -30,6 +33,9 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
         setupWebView()
         setupControls()
         loadGame()
+        
+        // Start with controls hidden (show after game starts)
+        setControlsVisible(false, animated: false)
     }
     
     override var prefersStatusBarHidden: Bool { true }
@@ -47,6 +53,7 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
         // Register message handlers
         config.userContentController.add(self, name: "haptic")
         config.userContentController.add(self, name: "skillCooldown")
+        config.userContentController.add(self, name: "gameState")
         
         webView = WKWebView(frame: .zero, configuration: config)
         webView.isOpaque = false
@@ -72,8 +79,8 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
     private func setupControls() {
         let safeBottom: CGFloat = 20
         let bigSize: CGFloat = 78
-        let skillSize: CGFloat = 52
-        let gap: CGFloat = 8
+        let skillSize: CGFloat = 48
+        let gap: CGFloat = 4  // Tight gap between buttons
         
         // ── Virtual Joystick (bottom-left) ──
         joystick = VirtualJoystick(frame: CGRect(x: 0, y: 0, width: 160, height: 160))
@@ -88,6 +95,7 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
             joystick.widthAnchor.constraint(equalToConstant: 160),
             joystick.heightAnchor.constraint(equalToConstant: 160)
         ])
+        allControls.append(joystick)
         
         // ── Main column (far right): Attack + Jump, same size ──
         
@@ -106,8 +114,9 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
             attackButton.widthAnchor.constraint(equalToConstant: bigSize),
             attackButton.heightAnchor.constraint(equalToConstant: bigSize)
         ])
+        allControls.append(attackButton)
         
-        // Jump button (same size as attack, directly above)
+        // Jump button (same size as attack, directly above with tight gap)
         jumpButton = ActionButton(
             label: "⬆", sublabel: "跳",
             color: UIColor(red: 0.30, green: 0.28, blue: 0.25, alpha: 1.0),
@@ -122,10 +131,11 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
             jumpButton.widthAnchor.constraint(equalToConstant: bigSize),
             jumpButton.heightAnchor.constraint(equalToConstant: bigSize)
         ])
+        allControls.append(jumpButton)
         
-        // ── 6 smaller buttons: 2 rows × 3, to the left of attack+jump column ──
+        // ── 6 smaller buttons: 2 rows × 3, closely packed left of attack+jump ──
         //
-        //  Screen right side layout:
+        //  Screen right side layout (tight spacing):
         //    col3     col2     col1     main
         //   [⚡雷]  [🛡盾]  [🌀风]  [⬆跳 78]
         //   [💀魂]  [🔥火]  [🗡杀]  [🏹攻 78]
@@ -139,6 +149,7 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
             if locked { btn.setLocked(true) }
             view.addSubview(btn)
             btn.translatesAutoresizingMaskIntoConstraints = false
+            // Tight offset: first col butts right against attack, subsequent cols close behind
             let offset = -gap - CGFloat(col) * (skillSize + gap)
             NSLayoutConstraint.activate([
                 btn.trailingAnchor.constraint(equalTo: attackButton.leadingAnchor, constant: offset),
@@ -146,6 +157,7 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
                 btn.widthAnchor.constraint(equalToConstant: skillSize),
                 btn.heightAnchor.constraint(equalToConstant: skillSize)
             ])
+            allControls.append(btn)
             return btn
         }
         
@@ -179,6 +191,27 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
         skillButtons.append(makeButton("💀", "魂",
             UIColor(red: 0.20, green: 1.0, blue: 0.53, alpha: 1.0),
             "KeyY", col: 3, row: attackButton, locked: true))
+    }
+    
+    // MARK: - Control Visibility
+    
+    private func setControlsVisible(_ visible: Bool, animated: Bool) {
+        let targetAlpha: CGFloat = visible ? 1.0 : 0.0
+        if animated {
+            UIView.animate(withDuration: 0.3) {
+                for ctrl in self.allControls {
+                    ctrl.alpha = targetAlpha
+                }
+            }
+        } else {
+            for ctrl in allControls {
+                ctrl.alpha = targetAlpha
+            }
+        }
+        // Enable/disable touch
+        for ctrl in allControls {
+            ctrl.isUserInteractionEnabled = visible
+        }
     }
     
     private func loadGame() {
@@ -256,11 +289,15 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
                   index >= 0, index < skillButtons.count else { return }
             DispatchQueue.main.async {
                 let btn = self.skillButtons[index]
-                // Unlock/lock based on skill level
                 btn.setLocked(level <= 0)
                 if level > 0 {
                     btn.setCooldown(ratio: CGFloat(ratio), seconds: seconds)
                 }
+            }
+        } else if message.name == "gameState", let state = message.body as? String {
+            // JS sends: "playing" when game starts, "ended" when game ends
+            DispatchQueue.main.async {
+                self.setControlsVisible(state == "playing", animated: true)
             }
         }
     }

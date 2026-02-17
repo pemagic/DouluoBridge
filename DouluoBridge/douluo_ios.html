@@ -1772,6 +1772,7 @@
             showLevelBanner();
             if (audioCtx.state === 'suspended') audioCtx.resume();
             BGM.start();
+            try { window.webkit.messageHandlers.gameState.postMessage('playing'); } catch (e) { }
         }
         window.startGame = startGame;
 
@@ -1786,6 +1787,7 @@
             }
             BGM.stop();
             haptic('error');
+            try { window.webkit.messageHandlers.gameState.postMessage('ended'); } catch (e) { }
         }
 
         function completeLevel() {
