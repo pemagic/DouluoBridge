@@ -364,9 +364,10 @@
             font-size: 14px;
             font-weight: 900;
             position: absolute;
-            top: 10px;
+            top: 48px;
             left: 50%;
             transform: translateX(-50%);
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
         }
     </style>
 </head>
@@ -449,11 +450,23 @@
                     for (let ei = enemies.length - 1; ei >= 0; ei--) {
                         const e = enemies[ei];
                         if (e.x + e.w > dashMinX && e.x < dashMaxX && Math.abs(e.y - player.y) < 120) {
+                            e.hp -= 80 + player.weaponLevel * 15;  // Dash deals damage instead of instant kill
+                            e.damageFlash = 8;
                             createParticles(e.x + e.w / 2, e.y + e.h / 2, '#ff4444', 20, 2, 2);
-                            enemies.splice(ei, 1);
-                            kills++; combo++; comboTimer = 150;
-                            player.energy = Math.min(100, player.energy + 4);
-                            spawnDrop(e.x + e.w / 2, e.y + e.h / 2);
+                            if (e.hp <= 0) {
+                                const wasBoss = e.isBoss;
+                                enemies.splice(ei, 1);
+                                kills++; levelKills++; combo++; comboTimer = 150;
+                                player.energy = Math.min(100, player.energy + (wasBoss ? 50 : 4));
+                                spawnDrop(e.x + e.w / 2, e.y + e.h / 2);
+                                hitstop = wasBoss ? 12 : 4;
+                                haptic(wasBoss ? 'heavy' : 'medium');
+                                if (wasBoss) {
+                                    bossActive = false;
+                                    if (currentLevel < 10) { completeLevel(); }
+                                    else { endGame(true); }
+                                }
+                            }
                         }
                     }
                     haptic('heavy');
@@ -1847,6 +1860,10 @@
             currentLevel = 1; levelKills = 0; bossActive = false; bossSpawned = false;
             enemies.length = 0; projectiles.length = 0; particles.length = 0;
             trails.length = 0; drops.length = 0;
+            // Reset skills
+            for (const sk of Object.values(playerSkills)) { sk.level = 0; sk.cooldown = 0; if (sk.active !== undefined) sk.active = 0; }
+            // Hide native controls
+            try { window.webkit.messageHandlers.gameState.postMessage('ended'); } catch (e) { }
         }
         window.returnHome = returnHome;
 
