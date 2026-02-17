@@ -10,6 +10,7 @@ class ActionButton: UIView {
     
     private var isPressed = false
     private var holdTimer: Timer?
+    private(set) var isLocked = false
     
     private let emojiLabel = UILabel()
     private let textLabel = UILabel()
@@ -19,6 +20,10 @@ class ActionButton: UIView {
     private let cooldownOverlay = UIView()
     private let cooldownLabel = UILabel()
     private var cooldownHeightConstraint: NSLayoutConstraint?
+    
+    // Lock overlay (grey out when skill not obtained)
+    private let lockOverlay = UIView()
+    private let lockIcon = UILabel()
     
     init(label: String, sublabel: String, color: UIColor, keyCode: String, holdable: Bool) {
         self.keyCode = keyCode
@@ -56,7 +61,7 @@ class ActionButton: UIView {
         glowLayer.shadowOffset = .zero
         layer.addSublayer(glowLayer)
         
-        // Cooldown overlay (dark gradient from top, height = ratio of cooldown)
+        // Cooldown overlay (dark gradient from top)
         cooldownOverlay.backgroundColor = UIColor.black.withAlphaComponent(0.55)
         cooldownOverlay.isUserInteractionEnabled = false
         cooldownOverlay.isHidden = true
@@ -108,11 +113,45 @@ class ActionButton: UIView {
             textLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
             textLabel.topAnchor.constraint(equalTo: emojiLabel.bottomAnchor, constant: -2),
         ])
+        
+        // Lock overlay (greyed out state for unactivated skills)
+        lockOverlay.backgroundColor = UIColor(white: 0.15, alpha: 0.7)
+        lockOverlay.layer.cornerRadius = 18
+        lockOverlay.isUserInteractionEnabled = false
+        lockOverlay.isHidden = true
+        addSubview(lockOverlay)
+        lockOverlay.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            lockOverlay.topAnchor.constraint(equalTo: topAnchor),
+            lockOverlay.bottomAnchor.constraint(equalTo: bottomAnchor),
+            lockOverlay.leadingAnchor.constraint(equalTo: leadingAnchor),
+            lockOverlay.trailingAnchor.constraint(equalTo: trailingAnchor),
+        ])
+        
+        lockIcon.text = "🔒"
+        lockIcon.font = .systemFont(ofSize: 16)
+        lockIcon.textAlignment = .center
+        lockIcon.isUserInteractionEnabled = false
+        lockOverlay.addSubview(lockIcon)
+        lockIcon.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            lockIcon.centerXAnchor.constraint(equalTo: lockOverlay.centerXAnchor),
+            lockIcon.centerYAnchor.constraint(equalTo: lockOverlay.centerYAnchor),
+        ])
     }
     
     override func layoutSubviews() {
         super.layoutSubviews()
         glowLayer.frame = bounds
+    }
+    
+    // MARK: - Lock State API
+    
+    /// Set locked state (grey out, show lock icon, block input)
+    func setLocked(_ locked: Bool) {
+        isLocked = locked
+        lockOverlay.isHidden = !locked
+        alpha = locked ? 0.6 : 1.0
     }
     
     // MARK: - Cooldown API
@@ -137,6 +176,7 @@ class ActionButton: UIView {
     // MARK: - Touch Handling
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if isLocked { return }
         pressDown()
     }
     

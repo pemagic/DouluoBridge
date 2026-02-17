@@ -1234,7 +1234,7 @@
                     const maxCd = Math.max(40, def.baseCd - sk.level * 8);
                     const ratio = sk.level > 0 ? (sk.cooldown / maxCd) : 0;
                     const seconds = sk.level > 0 ? (sk.cooldown / 60) : 0;
-                    try { window.webkit.messageHandlers.skillCooldown.postMessage({ index: si, ratio: ratio, seconds: seconds }); } catch (e) { }
+                    try { window.webkit.messageHandlers.skillCooldown.postMessage({ index: si, ratio: ratio, seconds: seconds, level: sk.level }); } catch (e) { }
                 }
             }
 

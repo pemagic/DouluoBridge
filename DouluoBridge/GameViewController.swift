@@ -7,6 +7,9 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
     private var joystick: VirtualJoystick!
     private var jumpButton: ActionButton!
     private var dashButton: ActionButton!
+    private var attackButton: ActionButton!
+    // Skill buttons in SKILL_DEFS order: [fire, whirlwind, shield, lightning, ghost]
+    private var skillButtons: [ActionButton] = []
     
     // Haptic generators
     private let lightImpact = UIImpactFeedbackGenerator(style: .light)
@@ -41,7 +44,7 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         
-        // Register haptic message handler
+        // Register message handlers
         config.userContentController.add(self, name: "haptic")
         config.userContentController.add(self, name: "skillCooldown")
         
@@ -66,16 +69,13 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
         ])
     }
     
-    private var attackButton: ActionButton!
-    private var skillButtons: [ActionButton] = []
-    
     private func setupControls() {
         let safeBottom: CGFloat = 20
-        let buttonSize: CGFloat = 78
-        let smallButtonSize: CGFloat = 60
-        let skillSize: CGFloat = 48
+        let bigSize: CGFloat = 78
+        let skillSize: CGFloat = 52
+        let gap: CGFloat = 8
         
-        // Virtual Joystick (bottom-left)
+        // ── Virtual Joystick (bottom-left) ──
         joystick = VirtualJoystick(frame: CGRect(x: 0, y: 0, width: 160, height: 160))
         joystick.onDirectionChange = { [weak self] direction in
             self?.handleJoystickDirection(direction)
@@ -89,108 +89,96 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
             joystick.heightAnchor.constraint(equalToConstant: 160)
         ])
         
-        // Attack button (bottom-right, MAIN action - holdable for rapid fire)
+        // ── Main column (far right): Attack + Jump, same size ──
+        
+        // Attack button (bottom-right, holdable rapid fire)
         attackButton = ActionButton(
-            label: "🏹",
-            sublabel: "攻",
+            label: "🏹", sublabel: "攻",
             color: UIColor(red: 0.65, green: 0.20, blue: 0.15, alpha: 1.0),
-            keyCode: "KeyJ",
-            holdable: true
+            keyCode: "KeyJ", holdable: true
         )
-        attackButton.onKeyEvent = { [weak self] code, pressed in
-            self?.sendKey(code, pressed: pressed)
-        }
+        attackButton.onKeyEvent = { [weak self] code, pressed in self?.sendKey(code, pressed: pressed) }
         view.addSubview(attackButton)
         attackButton.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            attackButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -30),
-            attackButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -(safeBottom + 20)),
-            attackButton.widthAnchor.constraint(equalToConstant: buttonSize),
-            attackButton.heightAnchor.constraint(equalToConstant: buttonSize)
+            attackButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
+            attackButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -(safeBottom + 16)),
+            attackButton.widthAnchor.constraint(equalToConstant: bigSize),
+            attackButton.heightAnchor.constraint(equalToConstant: bigSize)
         ])
         
-        // Dash/Kill button (left of attack)
-        dashButton = ActionButton(
-            label: "🗡",
-            sublabel: "杀",
-            color: UIColor(red: 0.40, green: 0.28, blue: 0.15, alpha: 1.0),
-            keyCode: "ShiftLeft",
-            holdable: false
-        )
-        dashButton.onKeyEvent = { [weak self] code, pressed in
-            self?.sendKey(code, pressed: pressed)
-        }
-        view.addSubview(dashButton)
-        dashButton.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            dashButton.trailingAnchor.constraint(equalTo: attackButton.leadingAnchor, constant: -12),
-            dashButton.bottomAnchor.constraint(equalTo: attackButton.bottomAnchor),
-            dashButton.widthAnchor.constraint(equalToConstant: smallButtonSize),
-            dashButton.heightAnchor.constraint(equalToConstant: smallButtonSize)
-        ])
-        
-        // Jump button (above attack)
+        // Jump button (same size as attack, directly above)
         jumpButton = ActionButton(
-            label: "⬆",
-            sublabel: "跳",
+            label: "⬆", sublabel: "跳",
             color: UIColor(red: 0.30, green: 0.28, blue: 0.25, alpha: 1.0),
-            keyCode: "Space",
-            holdable: false
+            keyCode: "Space", holdable: false
         )
-        jumpButton.onKeyEvent = { [weak self] code, pressed in
-            self?.sendKey(code, pressed: pressed)
-        }
+        jumpButton.onKeyEvent = { [weak self] code, pressed in self?.sendKey(code, pressed: pressed) }
         view.addSubview(jumpButton)
         jumpButton.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             jumpButton.trailingAnchor.constraint(equalTo: attackButton.trailingAnchor),
-            jumpButton.bottomAnchor.constraint(equalTo: attackButton.topAnchor, constant: -8),
-            jumpButton.widthAnchor.constraint(equalToConstant: smallButtonSize),
-            jumpButton.heightAnchor.constraint(equalToConstant: smallButtonSize)
+            jumpButton.bottomAnchor.constraint(equalTo: attackButton.topAnchor, constant: -gap),
+            jumpButton.widthAnchor.constraint(equalToConstant: bigSize),
+            jumpButton.heightAnchor.constraint(equalToConstant: bigSize)
         ])
         
-        // 5 Skill buttons (fan/arc layout from bottom-right)
-        let skills: [(String, String, UIColor, String)] = [
-            ("🔥", "火", UIColor(red: 1.0, green: 0.27, blue: 0.0, alpha: 1.0), "KeyQ"),
-            ("🌀", "风", UIColor(red: 0.0, green: 0.80, blue: 1.0, alpha: 1.0), "KeyE"),
-            ("🛡", "盾", UIColor(red: 1.0, green: 0.80, blue: 0.0, alpha: 1.0), "KeyR"),
-            ("⚡", "雷", UIColor(red: 0.67, green: 0.40, blue: 1.0, alpha: 1.0), "KeyT"),
-            ("💀", "魂", UIColor(red: 0.20, green: 1.0, blue: 0.53, alpha: 1.0), "KeyY"),
-        ]
+        // ── 6 smaller buttons: 2 rows × 3, to the left of attack+jump column ──
+        //
+        //  Screen right side layout:
+        //    col3     col2     col1     main
+        //   [⚡雷]  [🛡盾]  [🌀风]  [⬆跳 78]
+        //   [💀魂]  [🔥火]  [🗡杀]  [🏹攻 78]
+        //
         
-        // Fan layout: arc from ~200° to ~320° (bottom-left to upper-left of attack area)
-        // Center point is at the left edge of the attack button
-        let fanRadius: CGFloat = 115
-        let startAngle: CGFloat = 200 * .pi / 180  // bottom-left
-        let endAngle: CGFloat = 320 * .pi / 180    // upper-left
-        
-        for (i, skill) in skills.enumerated() {
-            let btn = ActionButton(
-                label: skill.0,
-                sublabel: skill.1,
-                color: skill.2,
-                keyCode: skill.3,
-                holdable: false
-            )
-            btn.onKeyEvent = { [weak self] code, pressed in
-                self?.sendKey(code, pressed: pressed)
-            }
+        // Helper to create and position a button
+        func makeButton(_ label: String, _ sublabel: String, _ color: UIColor,
+                       _ keyCode: String, col: Int, row: UIView, locked: Bool = false) -> ActionButton {
+            let btn = ActionButton(label: label, sublabel: sublabel, color: color, keyCode: keyCode, holdable: false)
+            btn.onKeyEvent = { [weak self] code, pressed in self?.sendKey(code, pressed: pressed) }
+            if locked { btn.setLocked(true) }
             view.addSubview(btn)
             btn.translatesAutoresizingMaskIntoConstraints = false
-            
-            let t = CGFloat(i) / CGFloat(skills.count - 1)
-            let angle = startAngle + (endAngle - startAngle) * t
-            let dx = cos(angle) * fanRadius
-            let dy = sin(angle) * fanRadius
-            
+            let offset = -gap - CGFloat(col) * (skillSize + gap)
             NSLayoutConstraint.activate([
-                btn.centerXAnchor.constraint(equalTo: dashButton.centerXAnchor, constant: dx),
-                btn.centerYAnchor.constraint(equalTo: dashButton.centerYAnchor, constant: dy),
+                btn.trailingAnchor.constraint(equalTo: attackButton.leadingAnchor, constant: offset),
+                btn.centerYAnchor.constraint(equalTo: row.centerYAnchor),
                 btn.widthAnchor.constraint(equalToConstant: skillSize),
                 btn.heightAnchor.constraint(equalToConstant: skillSize)
             ])
-            skillButtons.append(btn)
+            return btn
         }
+        
+        // Bottom row col1: 🗡杀 (dash, always active)
+        dashButton = makeButton("🗡", "杀",
+            UIColor(red: 0.40, green: 0.28, blue: 0.15, alpha: 1.0),
+            "ShiftLeft", col: 1, row: attackButton)
+        
+        // Build skill buttons in SKILL_DEFS order: fire, whirlwind, shield, lightning, ghost
+        // Bottom row col2: 🔥火 (fire, index 0)
+        skillButtons.append(makeButton("🔥", "火",
+            UIColor(red: 1.0, green: 0.27, blue: 0.0, alpha: 1.0),
+            "KeyQ", col: 2, row: attackButton, locked: true))
+        
+        // Top row col1: 🌀风 (whirlwind, index 1)
+        skillButtons.append(makeButton("🌀", "风",
+            UIColor(red: 0.0, green: 0.80, blue: 1.0, alpha: 1.0),
+            "KeyE", col: 1, row: jumpButton, locked: true))
+        
+        // Top row col2: 🛡盾 (shield, index 2)
+        skillButtons.append(makeButton("🛡", "盾",
+            UIColor(red: 1.0, green: 0.80, blue: 0.0, alpha: 1.0),
+            "KeyR", col: 2, row: jumpButton, locked: true))
+        
+        // Top row col3: ⚡雷 (lightning, index 3)
+        skillButtons.append(makeButton("⚡", "雷",
+            UIColor(red: 0.67, green: 0.40, blue: 1.0, alpha: 1.0),
+            "KeyT", col: 3, row: jumpButton, locked: true))
+        
+        // Bottom row col3: 💀魂 (ghost, index 4)
+        skillButtons.append(makeButton("💀", "魂",
+            UIColor(red: 0.20, green: 1.0, blue: 0.53, alpha: 1.0),
+            "KeyY", col: 3, row: attackButton, locked: true))
     }
     
     private func loadGame() {
@@ -245,35 +233,34 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
         }
     }
     
-    // MARK: - Haptic Feedback (JS → Native)
+    // MARK: - Message Handlers (JS → Native)
     
     func userContentController(_ userContentController: WKUserContentController,
                                didReceive message: WKScriptMessage) {
         if message.name == "haptic", let type = message.body as? String {
             switch type {
-            case "light":
-                lightImpact.impactOccurred()
-            case "medium":
-                mediumImpact.impactOccurred()
-            case "heavy":
-                heavyImpact.impactOccurred()
-            case "success":
-                notificationFeedback.notificationOccurred(.success)
-            case "warning":
-                notificationFeedback.notificationOccurred(.warning)
-            case "error":
-                notificationFeedback.notificationOccurred(.error)
-            default:
-                lightImpact.impactOccurred()
+            case "light": lightImpact.impactOccurred()
+            case "medium": mediumImpact.impactOccurred()
+            case "heavy": heavyImpact.impactOccurred()
+            case "success": notificationFeedback.notificationOccurred(.success)
+            case "warning": notificationFeedback.notificationOccurred(.warning)
+            case "error": notificationFeedback.notificationOccurred(.error)
+            default: lightImpact.impactOccurred()
             }
         } else if message.name == "skillCooldown", let data = message.body as? [String: Any] {
-            // JS sends: { index: 0-4, ratio: 0.0-1.0, seconds: 2.5 }
+            // JS sends: { index: 0-4, ratio: 0.0-1.0, seconds: 2.5, level: 3 }
             guard let index = data["index"] as? Int,
                   let ratio = data["ratio"] as? Double,
                   let seconds = data["seconds"] as? Double,
+                  let level = data["level"] as? Int,
                   index >= 0, index < skillButtons.count else { return }
             DispatchQueue.main.async {
-                self.skillButtons[index].setCooldown(ratio: CGFloat(ratio), seconds: seconds)
+                let btn = self.skillButtons[index]
+                // Unlock/lock based on skill level
+                btn.setLocked(level <= 0)
+                if level > 0 {
+                    btn.setCooldown(ratio: CGFloat(ratio), seconds: seconds)
+                }
             }
         }
     }
