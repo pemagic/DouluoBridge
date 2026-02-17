@@ -588,6 +588,7 @@
         let hitstop = 0;
         let camX = 0, camY = 0;
         let spawnCooldown = 0;
+        let spawnGrace = 0;  // frames of spawn immunity after level transition
 
         // === 10-Level System ===
         let currentLevel = 1;
@@ -975,7 +976,8 @@
 
             // Level system: check boss spawn
             const lvl = LEVELS[currentLevel - 1];
-            if (!bossActive && !bossSpawned && levelKills >= lvl.killTarget) {
+            if (spawnGrace > 0) { spawnGrace--; }
+            else if (!bossActive && !bossSpawned && levelKills >= lvl.killTarget) {
                 bossActive = true;
                 bossSpawned = true;
                 spawnEnemy(true);
@@ -985,7 +987,7 @@
             // Only increase enemy COUNT per level, NOT game speed
             const maxEnemies = bossActive ? 5 : Math.min(15, 5 + currentLevel * 2);
             const spawnRate = bossActive ? 80 : 50; // constant spawn rate
-            if (enemies.length < maxEnemies && spawnCooldown <= 0 && !bossSpawned) {
+            if (spawnGrace <= 0 && enemies.length < maxEnemies && spawnCooldown <= 0 && !bossSpawned) {
                 spawnEnemy();
                 spawnCooldown = spawnRate;
             }
@@ -1827,6 +1829,7 @@
             setTimeout(() => {
                 banner.classList.remove('visible');
                 gamePaused = false;
+                spawnGrace = 90;  // ~1.5s safe time after controls reappear
                 try { window.webkit.messageHandlers.gameState.postMessage('playing'); } catch (e) { }
                 if (!gameLoopRunning) draw();
             }, 2000);
