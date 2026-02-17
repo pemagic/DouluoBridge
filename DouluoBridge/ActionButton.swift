@@ -15,6 +15,11 @@ class ActionButton: UIView {
     private let textLabel = UILabel()
     private let glowLayer = CALayer()
     
+    // Cooldown overlay
+    private let cooldownOverlay = UIView()
+    private let cooldownLabel = UILabel()
+    private var cooldownHeightConstraint: NSLayoutConstraint?
+    
     init(label: String, sublabel: String, color: UIColor, keyCode: String, holdable: Bool) {
         self.keyCode = keyCode
         self.holdable = holdable
@@ -30,6 +35,7 @@ class ActionButton: UIView {
     
     private func setupView(label: String, sublabel: String) {
         isMultipleTouchEnabled = false
+        clipsToBounds = true
         
         // Ink wash rice paper background
         backgroundColor = UIColor(red: 0.88, green: 0.84, blue: 0.78, alpha: 0.25)
@@ -49,6 +55,35 @@ class ActionButton: UIView {
         glowLayer.shadowOpacity = 0
         glowLayer.shadowOffset = .zero
         layer.addSublayer(glowLayer)
+        
+        // Cooldown overlay (dark gradient from top, height = ratio of cooldown)
+        cooldownOverlay.backgroundColor = UIColor.black.withAlphaComponent(0.55)
+        cooldownOverlay.isUserInteractionEnabled = false
+        cooldownOverlay.isHidden = true
+        addSubview(cooldownOverlay)
+        cooldownOverlay.translatesAutoresizingMaskIntoConstraints = false
+        let hc = cooldownOverlay.heightAnchor.constraint(equalToConstant: 0)
+        cooldownHeightConstraint = hc
+        NSLayoutConstraint.activate([
+            cooldownOverlay.topAnchor.constraint(equalTo: topAnchor),
+            cooldownOverlay.leadingAnchor.constraint(equalTo: leadingAnchor),
+            cooldownOverlay.trailingAnchor.constraint(equalTo: trailingAnchor),
+            hc
+        ])
+        
+        // Cooldown time label
+        cooldownLabel.text = ""
+        cooldownLabel.font = .boldSystemFont(ofSize: 10)
+        cooldownLabel.textColor = .white
+        cooldownLabel.textAlignment = .center
+        cooldownLabel.isUserInteractionEnabled = false
+        cooldownLabel.isHidden = true
+        addSubview(cooldownLabel)
+        cooldownLabel.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            cooldownLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
+            cooldownLabel.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
+        ])
         
         // Label (emoji or character)
         emojiLabel.text = label
@@ -78,6 +113,25 @@ class ActionButton: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         glowLayer.frame = bounds
+    }
+    
+    // MARK: - Cooldown API
+    
+    /// Update cooldown display. ratio: 0.0 = ready, 1.0 = full cooldown
+    func setCooldown(ratio: CGFloat, seconds: Double) {
+        let clamped = max(0, min(1, ratio))
+        if clamped <= 0 {
+            cooldownOverlay.isHidden = true
+            cooldownLabel.isHidden = true
+            layer.borderColor = UIColor(red: 0.35, green: 0.30, blue: 0.22, alpha: 0.6).cgColor
+        } else {
+            cooldownOverlay.isHidden = false
+            cooldownLabel.isHidden = false
+            cooldownHeightConstraint?.constant = bounds.height * clamped
+            cooldownLabel.text = String(format: "%.1fs", seconds)
+            layer.borderColor = UIColor(red: 0.2, green: 0.18, blue: 0.15, alpha: 0.3).cgColor
+        }
+        layoutIfNeeded()
     }
     
     // MARK: - Touch Handling

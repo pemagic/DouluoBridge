@@ -43,6 +43,7 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
         
         // Register haptic message handler
         config.userContentController.add(self, name: "haptic")
+        config.userContentController.add(self, name: "skillCooldown")
         
         webView = WKWebView(frame: .zero, configuration: config)
         webView.isOpaque = false
@@ -148,7 +149,7 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
             jumpButton.heightAnchor.constraint(equalToConstant: smallButtonSize)
         ])
         
-        // 5 Skill buttons (row above dash+attack area)
+        // 5 Skill buttons (fan/arc layout from bottom-right)
         let skills: [(String, String, UIColor, String)] = [
             ("🔥", "火", UIColor(red: 1.0, green: 0.27, blue: 0.0, alpha: 1.0), "KeyQ"),
             ("🌀", "风", UIColor(red: 0.0, green: 0.80, blue: 1.0, alpha: 1.0), "KeyE"),
@@ -156,6 +157,12 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
             ("⚡", "雷", UIColor(red: 0.67, green: 0.40, blue: 1.0, alpha: 1.0), "KeyT"),
             ("💀", "魂", UIColor(red: 0.20, green: 1.0, blue: 0.53, alpha: 1.0), "KeyY"),
         ]
+        
+        // Fan layout: arc from ~200° to ~320° (bottom-left to upper-left of attack area)
+        // Center point is at the left edge of the attack button
+        let fanRadius: CGFloat = 115
+        let startAngle: CGFloat = 200 * .pi / 180  // bottom-left
+        let endAngle: CGFloat = 320 * .pi / 180    // upper-left
         
         for (i, skill) in skills.enumerated() {
             let btn = ActionButton(
@@ -170,9 +177,15 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
             }
             view.addSubview(btn)
             btn.translatesAutoresizingMaskIntoConstraints = false
+            
+            let t = CGFloat(i) / CGFloat(skills.count - 1)
+            let angle = startAngle + (endAngle - startAngle) * t
+            let dx = cos(angle) * fanRadius
+            let dy = sin(angle) * fanRadius
+            
             NSLayoutConstraint.activate([
-                btn.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: CGFloat(-30 - i * Int(skillSize + 6))),
-                btn.bottomAnchor.constraint(equalTo: jumpButton.topAnchor, constant: -8),
+                btn.centerXAnchor.constraint(equalTo: dashButton.centerXAnchor, constant: dx),
+                btn.centerYAnchor.constraint(equalTo: dashButton.centerYAnchor, constant: dy),
                 btn.widthAnchor.constraint(equalToConstant: skillSize),
                 btn.heightAnchor.constraint(equalToConstant: skillSize)
             ])
@@ -236,23 +249,32 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
     
     func userContentController(_ userContentController: WKUserContentController,
                                didReceive message: WKScriptMessage) {
-        guard message.name == "haptic", let type = message.body as? String else { return }
-        
-        switch type {
-        case "light":
-            lightImpact.impactOccurred()
-        case "medium":
-            mediumImpact.impactOccurred()
-        case "heavy":
-            heavyImpact.impactOccurred()
-        case "success":
-            notificationFeedback.notificationOccurred(.success)
-        case "warning":
-            notificationFeedback.notificationOccurred(.warning)
-        case "error":
-            notificationFeedback.notificationOccurred(.error)
-        default:
-            lightImpact.impactOccurred()
+        if message.name == "haptic", let type = message.body as? String {
+            switch type {
+            case "light":
+                lightImpact.impactOccurred()
+            case "medium":
+                mediumImpact.impactOccurred()
+            case "heavy":
+                heavyImpact.impactOccurred()
+            case "success":
+                notificationFeedback.notificationOccurred(.success)
+            case "warning":
+                notificationFeedback.notificationOccurred(.warning)
+            case "error":
+                notificationFeedback.notificationOccurred(.error)
+            default:
+                lightImpact.impactOccurred()
+            }
+        } else if message.name == "skillCooldown", let data = message.body as? [String: Any] {
+            // JS sends: { index: 0-4, ratio: 0.0-1.0, seconds: 2.5 }
+            guard let index = data["index"] as? Int,
+                  let ratio = data["ratio"] as? Double,
+                  let seconds = data["seconds"] as? Double,
+                  index >= 0, index < skillButtons.count else { return }
+            DispatchQueue.main.async {
+                self.skillButtons[index].setCooldown(ratio: CGFloat(ratio), seconds: seconds)
+            }
         }
     }
 }

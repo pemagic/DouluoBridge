@@ -567,6 +567,7 @@
 
         let gameRunning = false;
         let gamePaused = false;
+        let gameLoopRunning = false;
         let kills = 0;
         let combo = 0;
         let comboTimer = 0;
@@ -1224,6 +1225,19 @@
                 if (sk.active !== undefined && sk.active > 0) sk.active--;
             }
 
+            // Send skill cooldown to native buttons (every 10 frames for performance)
+            if (gameTime % 10 === 0 && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.skillCooldown) {
+                const skillIds = Object.keys(SKILL_DEFS);
+                for (let si = 0; si < skillIds.length; si++) {
+                    const sk = playerSkills[skillIds[si]];
+                    const def = SKILL_DEFS[skillIds[si]];
+                    const maxCd = Math.max(40, def.baseCd - sk.level * 8);
+                    const ratio = sk.level > 0 ? (sk.cooldown / maxCd) : 0;
+                    const seconds = sk.level > 0 ? (sk.cooldown / 60) : 0;
+                    try { window.webkit.messageHandlers.skillCooldown.postMessage({ index: si, ratio: ratio, seconds: seconds }); } catch (e) { }
+                }
+            }
+
             for (let i = projectiles.length - 1; i >= 0; i--) {
                 const pj = projectiles[i];
                 // Homing logic
@@ -1474,7 +1488,13 @@
             }
             ctx.restore();
 
-            requestAnimationFrame(() => { if (gameRunning) { update(); draw(); } });
+            if (!gameLoopRunning) {
+                gameLoopRunning = true;
+                requestAnimationFrame(() => {
+                    gameLoopRunning = false;
+                    if (gameRunning) { update(); draw(); }
+                });
+            }
         }
 
         function drawPlayer(x, y, w, h, facing, anim) {
@@ -1791,7 +1811,7 @@
             setTimeout(() => {
                 banner.classList.remove('visible');
                 gamePaused = false;
-                draw();
+                if (!gameLoopRunning) draw();
             }, 2000);
         }
 
@@ -1803,7 +1823,7 @@
                 overlay.classList.add('visible');
             } else {
                 overlay.classList.remove('visible');
-                draw();
+                if (!gameLoopRunning) draw();
             }
         }
         window.togglePause = togglePause;
