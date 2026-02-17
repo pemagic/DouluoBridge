@@ -67,8 +67,8 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
     
     private func setupControls() {
         let safeBottom: CGFloat = 20
-        let buttonSize: CGFloat = 70
-        let smallButtonSize: CGFloat = 56
+        let buttonSize: CGFloat = 78
+        let smallButtonSize: CGFloat = 66
         
         // Virtual Joystick (bottom-left)
         joystick = VirtualJoystick(frame: CGRect(x: 0, y: 0, width: 160, height: 160))
@@ -84,11 +84,11 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
             joystick.heightAnchor.constraint(equalToConstant: 160)
         ])
         
-        // Kill button (bottom-right, main action) - larger button, ink vermillion
+        // Kill button (bottom-right, main action) - ink wash warm brown
         dashButton = ActionButton(
             label: "🗡",
             sublabel: "杀",
-            color: UIColor(red: 0.55, green: 0.20, blue: 0.15, alpha: 1.0), // dark vermillion
+            color: UIColor(red: 0.40, green: 0.28, blue: 0.15, alpha: 1.0), // warm ink brown
             keyCode: "ShiftLeft",
             holdable: false
         )
@@ -104,11 +104,11 @@ class GameViewController: UIViewController, WKScriptMessageHandler {
             dashButton.heightAnchor.constraint(equalToConstant: buttonSize)
         ])
         
-        // Jump button (above-left of kill) - slate gray
+        // Jump button (above-left of kill) - ink wash dark gray
         jumpButton = ActionButton(
             label: "⬆",
             sublabel: "跳",
-            color: UIColor(red: 0.40, green: 0.42, blue: 0.45, alpha: 1.0), // slate gray
+            color: UIColor(red: 0.30, green: 0.28, blue: 0.25, alpha: 1.0), // ink dark gray
             keyCode: "Space",
             holdable: false
         )

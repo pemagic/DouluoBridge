@@ -31,30 +31,36 @@ class ActionButton: UIView {
     private func setupView(label: String, sublabel: String) {
         isMultipleTouchEnabled = false
         
-        // Background
-        backgroundColor = accentColor.withAlphaComponent(0.15)
-        layer.cornerRadius = 16
-        layer.borderColor = accentColor.withAlphaComponent(0.5).cgColor
-        layer.borderWidth = 2
+        // Ink wash rice paper background
+        backgroundColor = UIColor(red: 0.88, green: 0.84, blue: 0.78, alpha: 0.25)
+        layer.cornerRadius = 18
+        layer.borderColor = UIColor(red: 0.35, green: 0.30, blue: 0.22, alpha: 0.6).cgColor
+        layer.borderWidth = 2.5
         
-        // Glow layer
+        // Ink shadow (brush stroke feel)
+        layer.shadowColor = UIColor(red: 0.2, green: 0.18, blue: 0.12, alpha: 1.0).cgColor
+        layer.shadowRadius = 6
+        layer.shadowOpacity = 0.2
+        layer.shadowOffset = CGSize(width: 1, height: 2)
+        
+        // Glow layer for press feedback
         glowLayer.shadowColor = accentColor.cgColor
-        glowLayer.shadowRadius = 12
+        glowLayer.shadowRadius = 10
         glowLayer.shadowOpacity = 0
         glowLayer.shadowOffset = .zero
         layer.addSublayer(glowLayer)
         
-        // Emoji label
+        // Label (emoji or character)
         emojiLabel.text = label
-        emojiLabel.font = .systemFont(ofSize: 24)
+        emojiLabel.font = .systemFont(ofSize: 28)
         emojiLabel.textAlignment = .center
         emojiLabel.isUserInteractionEnabled = false
         addSubview(emojiLabel)
         
-        // Text label
+        // Calligraphy sub-label
         textLabel.text = sublabel
-        textLabel.font = .boldSystemFont(ofSize: 10)
-        textLabel.textColor = accentColor.withAlphaComponent(0.9)
+        textLabel.font = UIFont(name: "PingFangSC-Semibold", size: 13) ?? .boldSystemFont(ofSize: 13)
+        textLabel.textColor = UIColor(red: 0.30, green: 0.25, blue: 0.18, alpha: 0.85)
         textLabel.textAlignment = .center
         textLabel.isUserInteractionEnabled = false
         addSubview(textLabel)
@@ -94,13 +100,13 @@ class ActionButton: UIView {
         
         onKeyEvent?(keyCode, true)
         
-        // Visual feedback
+        // Visual feedback - ink spreading
         UIView.animate(withDuration: 0.08) {
-            self.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
-            self.backgroundColor = self.accentColor.withAlphaComponent(0.4)
-            self.layer.borderColor = self.accentColor.withAlphaComponent(0.9).cgColor
+            self.transform = CGAffineTransform(scaleX: 0.92, y: 0.92)
+            self.backgroundColor = UIColor(red: 0.35, green: 0.30, blue: 0.22, alpha: 0.35)
+            self.layer.borderColor = UIColor(red: 0.25, green: 0.20, blue: 0.12, alpha: 0.8).cgColor
         }
-        glowLayer.shadowOpacity = 0.8
+        glowLayer.shadowOpacity = 0.5
         
         // For holdable buttons (attack), set up rapid-fire timer
         if holdable {
@@ -120,11 +126,11 @@ class ActionButton: UIView {
         
         onKeyEvent?(keyCode, false)
         
-        // Visual feedback
-        UIView.animate(withDuration: 0.12) {
+        // Visual feedback - ink recede
+        UIView.animate(withDuration: 0.15) {
             self.transform = .identity
-            self.backgroundColor = self.accentColor.withAlphaComponent(0.15)
-            self.layer.borderColor = self.accentColor.withAlphaComponent(0.5).cgColor
+            self.backgroundColor = UIColor(red: 0.88, green: 0.84, blue: 0.78, alpha: 0.25)
+            self.layer.borderColor = UIColor(red: 0.35, green: 0.30, blue: 0.22, alpha: 0.6).cgColor
         }
         glowLayer.shadowOpacity = 0
     }

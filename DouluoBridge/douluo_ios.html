@@ -512,16 +512,16 @@
         let bossActive = false;
         let bossSpawned = false;
         const LEVELS = [
-            { name: '第一关·初入江湖', killTarget: 15, weaponCap: 2, enemies: ['scout'], bossHp: 600, bossSpeed: 1.0 },
-            { name: '第二关·崭露锋芒', killTarget: 20, weaponCap: 3, enemies: ['scout', 'chaser'], bossHp: 900, bossSpeed: 1.1 },
-            { name: '第三关·拳脚相加', killTarget: 25, weaponCap: 4, enemies: ['scout', 'chaser', 'martial'], bossHp: 1200, bossSpeed: 1.2 },
-            { name: '第四关·铁甲连城', killTarget: 30, weaponCap: 5, enemies: ['scout', 'chaser', 'martial', 'heavy'], bossHp: 1600, bossSpeed: 1.3 },
-            { name: '第五关·百步穿杨', killTarget: 35, weaponCap: 6, enemies: ['scout', 'chaser', 'martial', 'heavy', 'sniper'], bossHp: 2000, bossSpeed: 1.4 },
-            { name: '第六关·刀光剑影', killTarget: 40, weaponCap: 7, enemies: ['chaser', 'martial', 'heavy', 'sniper'], bossHp: 2500, bossSpeed: 1.5 },
-            { name: '第七关·龙争虎斗', killTarget: 45, weaponCap: 8, enemies: ['martial', 'heavy', 'sniper', 'chaser'], bossHp: 3200, bossSpeed: 1.7 },
-            { name: '第八关·万夫莫敌', killTarget: 50, weaponCap: 9, enemies: ['martial', 'heavy', 'sniper'], bossHp: 4000, bossSpeed: 1.9 },
-            { name: '第九关·天下无双', killTarget: 55, weaponCap: 9, enemies: ['martial', 'heavy', 'sniper'], bossHp: 5000, bossSpeed: 2.1 },
-            { name: '第十关·剑神归位', killTarget: 60, weaponCap: 10, enemies: ['martial', 'heavy', 'sniper'], bossHp: 7000, bossSpeed: 2.5 },
+            { name: '第一关·初入江湖', killTarget: 15, weaponCap: 2, enemyTier: 1, enemies: ['scout'], bossHp: 600, bossSpeed: 1.0, bossType: 'bandit_chief' },
+            { name: '第二关·崭露锋芒', killTarget: 20, weaponCap: 3, enemyTier: 1, enemies: ['scout', 'chaser'], bossHp: 900, bossSpeed: 1.1, bossType: 'wolf_king' },
+            { name: '第三关·拳脚相加', killTarget: 25, weaponCap: 4, enemyTier: 1, enemies: ['scout', 'chaser', 'martial'], bossHp: 1200, bossSpeed: 1.2, bossType: 'iron_fist' },
+            { name: '第四关·铁甲连城', killTarget: 30, weaponCap: 5, enemyTier: 2, enemies: ['scout', 'chaser', 'martial', 'heavy'], bossHp: 1600, bossSpeed: 1.3, bossType: 'shield_general' },
+            { name: '第五关·百步穿杨', killTarget: 35, weaponCap: 6, enemyTier: 2, enemies: ['scout', 'chaser', 'martial', 'heavy', 'sniper'], bossHp: 2000, bossSpeed: 1.4, bossType: 'phantom_archer' },
+            { name: '第六关·刀光剑影', killTarget: 40, weaponCap: 7, enemyTier: 2, enemies: ['chaser', 'martial', 'heavy', 'sniper'], bossHp: 2500, bossSpeed: 1.5, bossType: 'twin_blade' },
+            { name: '第七关·龙争虎斗', killTarget: 45, weaponCap: 8, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper', 'chaser'], bossHp: 3200, bossSpeed: 1.7, bossType: 'thunder_monk' },
+            { name: '第八关·万夫莫敌', killTarget: 50, weaponCap: 9, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 4000, bossSpeed: 1.9, bossType: 'blood_demon' },
+            { name: '第九关·天下无双', killTarget: 55, weaponCap: 9, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 5000, bossSpeed: 2.1, bossType: 'shadow_lord' },
+            { name: '第十关·剑神归位', killTarget: 60, weaponCap: 10, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 7000, bossSpeed: 2.5, bossType: 'sword_saint' },
         ];
 
         const keys = {};
@@ -752,6 +752,13 @@
             }
         }
 
+        // Tier colors: tier1=green tones, tier2=blue tones, tier3=red/purple tones
+        const TIER_COLORS = {
+            1: ['#66aa44', '#88cc66', '#44aa66', '#55bb55', '#77cc44'],
+            2: ['#4488cc', '#5599dd', '#3377bb', '#6699cc', '#4477aa'],
+            3: ['#cc4444', '#aa33aa', '#dd5555', '#bb2266', '#cc3388']
+        };
+
         function spawnEnemy(isBoss = false) {
             const side = Math.random() > 0.5 ? 1 : -1;
             const x = player.x + side * (900 + Math.random() * 400);
@@ -760,13 +767,22 @@
             const type = isBoss ? 'boss' : pool[Math.floor(Math.random() * pool.length)];
             const lvlBonus = (currentLevel - 1) * 0.12;
             const BULLET_COLORS = ['#ff4466', '#44aaff', '#ffcc00', '#66ff88', '#ff66ff', '#ff8844', '#44ffdd', '#aa66ff'];
+            const tierColors = TIER_COLORS[lvl.enemyTier];
+
+            const BOSS_COLORS = {
+                bandit_chief: '#cc8833', wolf_king: '#888888', iron_fist: '#ff8800',
+                shield_general: '#4488cc', phantom_archer: '#33cc99', twin_blade: '#cc44cc',
+                thunder_monk: '#ffcc00', blood_demon: '#cc0000', shadow_lord: '#6633cc', sword_saint: '#ffffff'
+            };
 
             const e = {
                 x, y: -200, vx: 0, vy: 0,
-                w: isBoss ? 100 : (type === 'heavy' ? 80 : 50),
-                h: isBoss ? 120 : (type === 'heavy' ? 90 : 70),
+                w: isBoss ? 110 : (type === 'heavy' ? 80 : 50),
+                h: isBoss ? 130 : (type === 'heavy' ? 90 : 70),
                 type: isBoss ? 'boss' : type,
                 isBoss: isBoss,
+                bossType: isBoss ? lvl.bossType : null,
+                enemyTier: lvl.enemyTier,
                 hp: isBoss ? lvl.bossHp : (type === 'heavy' ? 450 : (type === 'martial' ? 200 : 120)) * (1 + lvlBonus),
                 maxHp: isBoss ? lvl.bossHp : 0,
                 baseSpeed: isBoss ? (6 * lvl.bossSpeed) : (8 + Math.random() * 6) * (type === 'chaser' ? 1.8 : (type === 'heavy' ? 0.4 : (type === 'martial' ? 0.7 : 0.7))) * (1 + lvlBonus * 0.5),
@@ -777,7 +793,7 @@
                 grounded: false,
                 martialCombo: 0, martialTimer: 0,
                 bulletColor: BULLET_COLORS[Math.floor(Math.random() * BULLET_COLORS.length)],
-                color: isBoss ? '#ff0000' : NEON_COLORS[Math.floor(Math.random() * NEON_COLORS.length)]
+                color: isBoss ? (BOSS_COLORS[lvl.bossType] || '#ff0000') : tierColors[Math.floor(Math.random() * tierColors.length)]
             };
             enemies.push(e);
         }
@@ -862,8 +878,9 @@
             }
 
             spawnCooldown--;
-            const maxEnemies = bossActive ? 5 : Math.min(12, 6 + currentLevel * 2);
-            const spawnRate = bossActive ? 80 : Math.max(15, 50 - currentLevel * 3);
+            // Only increase enemy COUNT per level, NOT game speed
+            const maxEnemies = bossActive ? 5 : Math.min(15, 5 + currentLevel * 2);
+            const spawnRate = bossActive ? 80 : 50; // constant spawn rate
             if (enemies.length < maxEnemies && spawnCooldown <= 0 && !bossSpawned) {
                 spawnEnemy();
                 spawnCooldown = spawnRate;
@@ -935,22 +952,81 @@
                         e.aimTimer = 0;
                     }
                 } else if (e.type === 'boss') {
-                    // Boss AI: aggressive chase + multi-shot
                     e.vx += (dir * e.baseSpeed - e.vx) * 0.12;
                     e.shootTimer--;
+                    const bt = e.bossType;
                     if (e.shootTimer <= 0 && isOnScreen(e)) {
-                        // Triple spread shot
-                        for (let a = -0.3; a <= 0.3; a += 0.3) {
-                            const angle = Math.atan2(distY, dist) + a;
-                            projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * 22, vy: Math.sin(angle) * 22, owner: 'enemy', color: '#ff0000', life: 100, dmg: 20 });
+                        const angle = Math.atan2(distY, dist);
+                        if (bt === 'bandit_chief') {
+                            // Charge slam - single heavy shot
+                            projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * 28, vy: Math.sin(angle) * 28, owner: 'enemy', color: '#cc8833', life: 80, dmg: 25, size: 18 });
+                            e.shootTimer = 40;
+                        } else if (bt === 'wolf_king') {
+                            // Triple claw swipe
+                            for (let a = -0.2; a <= 0.2; a += 0.2) {
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle + a) * 24, vy: Math.sin(angle + a) * 24, owner: 'enemy', color: '#aaaaaa', life: 60, dmg: 15 });
+                            }
+                            e.shootTimer = 30;
+                        } else if (bt === 'iron_fist') {
+                            // Ground pound - 4 shockwaves left/right
+                            for (let s = -1; s <= 1; s += 2) {
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h, vx: s * 18, vy: -4, owner: 'enemy', color: '#ff8800', life: 80, dmg: 20, size: 16 });
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h, vx: s * 12, vy: -8, owner: 'enemy', color: '#ffaa33', life: 80, dmg: 15 });
+                            }
+                            e.shootTimer = 35;
+                        } else if (bt === 'shield_general') {
+                            // Shield bash + 2 side shots
+                            projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * 20, vy: Math.sin(angle) * 20, owner: 'enemy', color: '#4488cc', life: 100, dmg: 30, size: 20 });
+                            for (let a = -0.5; a <= 0.5; a += 1) {
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle + a) * 16, vy: Math.sin(angle + a) * 16, owner: 'enemy', color: '#66aaee', life: 80, dmg: 10 });
+                            }
+                            e.shootTimer = 45;
+                        } else if (bt === 'phantom_archer') {
+                            // Arrow rain - 5 shots arcing down
+                            for (let i = -2; i <= 2; i++) {
+                                projectiles.push({ x: e.x + e.w / 2 + i * 30, y: e.y, vx: i * 4, vy: -20, owner: 'enemy', color: '#33cc99', life: 120, dmg: 12 });
+                            }
+                            e.shootTimer = 28;
+                        } else if (bt === 'twin_blade') {
+                            // X-slash pattern
+                            for (let a = 0; a < Math.PI * 2; a += Math.PI / 2) {
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(a) * 22, vy: Math.sin(a) * 22, owner: 'enemy', color: '#cc44cc', life: 80, dmg: 18 });
+                            }
+                            e.shootTimer = 22;
+                        } else if (bt === 'thunder_monk') {
+                            // Lightning ring - 8 directions
+                            for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(a) * 18, vy: Math.sin(a) * 18, owner: 'enemy', color: '#ffcc00', life: 90, dmg: 15 });
+                            }
+                            e.shootTimer = 30;
+                        } else if (bt === 'blood_demon') {
+                            // Spiral blood shots
+                            const spin = gameTime * 0.1;
+                            for (let i = 0; i < 3; i++) {
+                                const sa = spin + i * Math.PI * 2 / 3;
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(sa) * 20, vy: Math.sin(sa) * 20, owner: 'enemy', color: '#cc0000', life: 100, dmg: 18 });
+                            }
+                            e.shootTimer = 18;
+                        } else if (bt === 'shadow_lord') {
+                            // Shadow split - aimed + 2 flanking
+                            projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * 30, vy: Math.sin(angle) * 30, owner: 'enemy', color: '#6633cc', life: 90, dmg: 25, size: 16 });
+                            for (let d = -1; d <= 1; d += 2) {
+                                projectiles.push({ x: e.x + e.w / 2 + d * 60, y: e.y, vx: Math.cos(angle) * 22, vy: Math.sin(angle) * 22, owner: 'enemy', color: '#9966ff', life: 80, dmg: 12 });
+                            }
+                            e.shootTimer = 20;
+                        } else { // sword_saint
+                            // 12-direction blade storm
+                            for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(a) * 24, vy: Math.sin(a) * 24, owner: 'enemy', color: '#ffffff', life: 80, dmg: 15 });
+                            }
+                            e.shootTimer = 25;
                         }
-                        e.shootTimer = 25;
                     }
                     // Boss melee slam
                     if (Math.abs(dist) < 100 && Math.abs(distY) < 100 && player.iframe <= 0) {
                         player.hp -= 20; player.iframe = 40;
                         player.vx += dir * -15; player.vy = -10;
-                        createParticles(player.x, player.y, '#ff0000', 10, 2);
+                        createParticles(player.x, player.y, e.color, 10, 2);
                         haptic('heavy');
                     }
                 } else {
@@ -1267,47 +1343,163 @@
             let color = e.color;
             if (e.damageFlash > 0) color = '#fff';
 
-            ctx.strokeStyle = color; ctx.lineWidth = e.type === 'heavy' ? 8 : 4;
+            ctx.strokeStyle = color; ctx.lineWidth = e.type === 'heavy' ? 8 : (e.isBoss ? 6 : 4);
             ctx.lineCap = 'round'; ctx.shadowBlur = 12; ctx.shadowColor = color;
 
             const t = e.animPhase;
+            const tier = e.enemyTier || 1;
 
-            if (e.type === 'martial') {
+            if (e.isBoss) {
+                // === UNIQUE BOSS DRAWINGS ===
+                const bt = e.bossType;
+                // All bosses: larger head
+                ctx.strokeRect(-14, -e.h / 2, 28, 28);
+                // Body
+                ctx.beginPath(); ctx.moveTo(0, -e.h / 2 + 28); ctx.lineTo(0, 10); ctx.stroke();
+                const hs = Math.sin(t) * 15;
+                // Legs
+                ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(18, 30 + Math.cos(t) * 10); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(-18, 30 - Math.cos(t) * 10); ctx.stroke();
+
+                if (bt === 'bandit_chief') {
+                    // Straw hat + large club
+                    ctx.fillStyle = color; ctx.fillRect(-20, -e.h / 2 - 6, 40, 6);
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(30, hs); ctx.lineTo(35, hs - 5); ctx.stroke();
+                    ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(30, hs); ctx.lineTo(40, hs + 5); ctx.stroke();
+                } else if (bt === 'wolf_king') {
+                    // Wolf ears + claws
+                    ctx.beginPath(); ctx.moveTo(-10, -e.h / 2); ctx.lineTo(-15, -e.h / 2 - 15); ctx.lineTo(-5, -e.h / 2); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(10, -e.h / 2); ctx.lineTo(15, -e.h / 2 - 15); ctx.lineTo(5, -e.h / 2); ctx.stroke();
+                    // Claws on hands
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(20, hs); ctx.stroke();
+                    for (let c = 0; c < 3; c++) ctx.fillRect(18 + c * 4, hs - 2, 2, 8);
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-20, -hs); ctx.stroke();
+                    for (let c = 0; c < 3; c++) ctx.fillRect(-20 - c * 4, -hs - 2, 2, 8);
+                } else if (bt === 'iron_fist') {
+                    // Headband + giant fists
+                    ctx.fillStyle = '#ff4400'; ctx.fillRect(-18, -e.h / 2 + 2, 36, 5);
+                    ctx.lineWidth = 10;
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(25, hs); ctx.stroke();
+                    ctx.fillRect(20, hs - 8, 16, 16);
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-25, -hs); ctx.stroke();
+                    ctx.fillRect(-36, -hs - 8, 16, 16);
+                } else if (bt === 'shield_general') {
+                    // Helmet + shield
+                    ctx.fillStyle = color; ctx.fillRect(-16, -e.h / 2 - 8, 32, 8);
+                    ctx.fillRect(-2, -e.h / 2 - 14, 4, 10);
+                    // Shield on left arm
+                    ctx.lineWidth = 3; ctx.strokeRect(-30, -15, 18, 30);
+                    ctx.fillStyle = color; ctx.globalAlpha = 0.3; ctx.fillRect(-30, -15, 18, 30); ctx.globalAlpha = 1;
+                    // Spear on right
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(35, hs - 10); ctx.stroke();
+                } else if (bt === 'phantom_archer') {
+                    // Hood + bow
+                    ctx.beginPath(); ctx.moveTo(-15, -e.h / 2 + 5); ctx.lineTo(0, -e.h / 2 - 12); ctx.lineTo(15, -e.h / 2 + 5); ctx.stroke();
+                    // Bow
+                    ctx.beginPath(); ctx.arc(20, 0, 20, -Math.PI / 3, Math.PI / 3); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(20, -10); ctx.lineTo(20, 10); ctx.stroke();
+                } else if (bt === 'twin_blade') {
+                    // Two swords
+                    ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(25, hs - 15); ctx.lineTo(28, hs - 20); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-25, -hs - 15); ctx.lineTo(-28, -hs - 20); ctx.stroke();
+                    // Flowing scarf
+                    ctx.strokeStyle = '#ff66ff'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(-14, -e.h / 2 + 10);
+                    ctx.bezierCurveTo(-25, -e.h / 2 + 5, -35 - Math.sin(t * 2) * 10, -e.h / 2 + 15, -40 - Math.sin(t * 3) * 8, -e.h / 2 + 5);
+                    ctx.stroke(); ctx.strokeStyle = color;
+                } else if (bt === 'thunder_monk') {
+                    // Bald head + prayer beads + lightning
+                    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, -e.h / 2 + 14, 14, 0, Math.PI * 2); ctx.fill();
+                    // Prayer beads
+                    ctx.fillStyle = '#ffcc00';
+                    for (let b = 0; b < 8; b++) {
+                        const ba = b * Math.PI / 4;
+                        ctx.beginPath(); ctx.arc(Math.cos(ba) * 12, Math.sin(ba) * 12 - e.h / 2 + 14, 3, 0, Math.PI * 2); ctx.fill();
+                    }
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(15, hs); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-15, -hs); ctx.stroke();
+                    // Lightning effect
+                    if (Math.random() > 0.7) {
+                        ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.moveTo(e.w / 2, -e.h / 2); ctx.lineTo(e.w / 2 + 10, -e.h / 2 - 20); ctx.lineTo(e.w / 2 + 5, -e.h / 2 - 15); ctx.lineTo(e.w / 2 + 15, -e.h / 2 - 35); ctx.stroke();
+                    }
+                } else if (bt === 'blood_demon') {
+                    // Horns + tail + red aura
+                    ctx.beginPath(); ctx.moveTo(-10, -e.h / 2); ctx.lineTo(-18, -e.h / 2 - 18); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(10, -e.h / 2); ctx.lineTo(18, -e.h / 2 - 18); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(20, hs); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-20, -hs); ctx.stroke();
+                    // Tail
+                    ctx.beginPath(); ctx.moveTo(0, 10); ctx.bezierCurveTo(-20, 20, -30, 10 + Math.sin(t) * 10, -35, 0); ctx.stroke();
+                    // Aura
+                    ctx.strokeStyle = '#cc0000'; ctx.lineWidth = 1; ctx.globalAlpha = 0.3;
+                    ctx.beginPath(); ctx.arc(0, 0, 35 + Math.sin(t * 2) * 5, 0, Math.PI * 2); ctx.stroke();
+                    ctx.globalAlpha = 1;
+                } else if (bt === 'shadow_lord') {
+                    // Hooded figure + shadow tendrils
+                    ctx.beginPath(); ctx.moveTo(-18, -e.h / 2 + 10); ctx.lineTo(0, -e.h / 2 - 15); ctx.lineTo(18, -e.h / 2 + 10); ctx.fill();
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(15, hs); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-15, -hs); ctx.stroke();
+                    // Shadow tendrils
+                    ctx.strokeStyle = '#6633cc'; ctx.lineWidth = 2;
+                    for (let td = 0; td < 4; td++) {
+                        const ta = td * Math.PI / 2 + t * 0.5;
+                        ctx.beginPath(); ctx.moveTo(0, 10);
+                        ctx.bezierCurveTo(Math.cos(ta) * 20, 20 + Math.sin(ta) * 10, Math.cos(ta) * 30, 30, Math.cos(ta) * 35, 25 + Math.sin(ta + 1) * 10);
+                        ctx.stroke();
+                    }
+                } else { // sword_saint
+                    // Crown + glowing sword + cape
+                    ctx.fillStyle = '#ffcc00';
+                    ctx.fillRect(-12, -e.h / 2 - 4, 24, 4);
+                    for (let p = -8; p <= 8; p += 8) ctx.fillRect(p - 2, -e.h / 2 - 10, 4, 8);
+                    // Sword
+                    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(35, hs - 10); ctx.lineTo(38, hs - 20); ctx.stroke();
+                    ctx.strokeStyle = color;
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-15, -hs); ctx.stroke();
+                    // Cape
+                    ctx.fillStyle = color; ctx.globalAlpha = 0.3;
+                    ctx.beginPath(); ctx.moveTo(-14, -e.h / 2 + 28); ctx.lineTo(-20, 30); ctx.lineTo(20, 30); ctx.lineTo(14, -e.h / 2 + 28); ctx.fill();
+                    ctx.globalAlpha = 1;
+                    // Glow
+                    ctx.shadowBlur = 25; ctx.shadowColor = '#ffffff';
+                }
+            } else if (e.type === 'martial') {
                 // Chinese martial arts stance drawing
                 const combo = e.martialCombo || 0;
-                // Head with headband
                 ctx.strokeRect(-10, -e.h / 2, 20, 20);
-                ctx.fillStyle = '#ff4444'; ctx.fillRect(-14, -e.h / 2, 28, 4); // headband
-                // Body
+                // Headband color by tier
+                ctx.fillStyle = tier === 3 ? '#cc0000' : (tier === 2 ? '#4488cc' : '#ff4444');
+                ctx.fillRect(-14, -e.h / 2, 28, 4);
                 ctx.beginPath(); ctx.moveTo(0, -e.h / 2 + 20); ctx.lineTo(0, 5); ctx.stroke();
-                // Martial arts poses based on combo
-                if (combo === 0) { // 马步冲拳 Horse stance punch
+                if (combo === 0) {
                     ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(25, -15); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-15, 0); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(20, 25); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(-20, 25); ctx.stroke();
-                } else if (combo === 1) { // 侧踢 Side kick
+                } else if (combo === 1) {
                     ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-10, -25); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-20, 5); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(35, 5); ctx.stroke(); // kick
+                    ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(35, 5); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(-10, 30); ctx.stroke();
-                } else if (combo === 2) { // 旋风扫腿 Sweep
+                } else if (combo === 2) {
                     const sw = Math.sin(t * 3) * 30;
                     ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(10 + sw, -20); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-10 - sw, -20); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(25 + sw, 20); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(-25 - sw, 20); ctx.stroke();
-                } else { // 飞龙在天 Dragon uppercut
+                } else {
                     ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(5, -35); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(20, -5); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(10, 30); ctx.stroke();
                     ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(-10, 30); ctx.stroke();
-                    // Energy effect
-                    ctx.strokeStyle = '#ffa500'; ctx.lineWidth = 2;
+                    ctx.strokeStyle = tier === 3 ? '#cc0000' : '#ffa500'; ctx.lineWidth = 2;
                     ctx.beginPath(); ctx.arc(5, -30, 8, 0, Math.PI * 2); ctx.stroke();
                 }
             } else {
-                // Normal enemy drawing
+                // Normal enemies with tier-based accessories
                 ctx.strokeRect(-10, -e.h / 2, 20, 20);
                 ctx.beginPath(); ctx.moveTo(0, -e.h / 2 + 20); ctx.lineTo(0, 5); ctx.stroke();
                 const handSwing = Math.sin(t) * 20;
@@ -1319,6 +1511,34 @@
 
                 if (e.type === 'scout') { ctx.fillStyle = color; ctx.fillRect(15, handSwing - 5, 20, 5); }
                 if (e.type === 'heavy') { ctx.strokeRect(10, -20, 15, 50); }
+
+                // Tier accessories
+                if (tier === 1) {
+                    // Straw hat
+                    ctx.fillStyle = color; ctx.globalAlpha = 0.4;
+                    ctx.fillRect(-14, -e.h / 2 - 3, 28, 3);
+                    ctx.globalAlpha = 1;
+                } else if (tier === 2) {
+                    // Helmet with plume
+                    ctx.fillStyle = color;
+                    ctx.fillRect(-12, -e.h / 2 - 5, 24, 5);
+                    ctx.fillRect(0, -e.h / 2 - 12, 3, 8);
+                    // Shoulder pads
+                    ctx.fillRect(-18, -10, 6, 6);
+                    ctx.fillRect(12, -10, 6, 6);
+                } else {
+                    // Full armor + glowing eyes
+                    ctx.fillStyle = color;
+                    ctx.fillRect(-14, -e.h / 2 - 6, 28, 6);
+                    ctx.fillRect(-2, -e.h / 2 - 14, 4, 10);
+                    // Shoulder armor
+                    ctx.fillRect(-22, -12, 10, 8);
+                    ctx.fillRect(12, -12, 10, 8);
+                    // Glowing eyes
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(-7, -e.h / 2 + 5, 4, 3);
+                    ctx.fillRect(3, -e.h / 2 + 5, 4, 3);
+                }
             }
 
             ctx.restore();
