@@ -13,7 +13,7 @@
 		A10004 /* VirtualJoystick.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10004 /* VirtualJoystick.swift */; };
 		A10005 /* ActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10005 /* ActionButton.swift */; };
 		A10006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B10006 /* Assets.xcassets */; };
-		A10007 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B10007 /* LaunchScreen.storyboard */; };
+
 		A10008 /* douluo_ios.html in Resources */ = {isa = PBXBuildFile; fileRef = B10008 /* douluo_ios.html */; };
 /* End PBXBuildFile section */
 
@@ -24,7 +24,7 @@
 		B10004 /* VirtualJoystick.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualJoystick.swift; sourceTree = "<group>"; };
 		B10005 /* ActionButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionButton.swift; sourceTree = "<group>"; };
 		B10006 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		B10007 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+
 		B10008 /* douluo_ios.html */ = {isa = PBXFileReference; lastKnownFileType = text.html; path = douluo_ios.html; sourceTree = "<group>"; };
 		B10009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B10010 /* DouluoBridge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DouluoBridge.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -59,7 +59,7 @@
 				B10005 /* ActionButton.swift */,
 				B10008 /* douluo_ios.html */,
 				B10006 /* Assets.xcassets */,
-				B10007 /* LaunchScreen.storyboard */,
+
 				B10009 /* Info.plist */,
 			);
 			path = DouluoBridge;
@@ -132,7 +132,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10006 /* Assets.xcassets in Resources */,
-				A10007 /* LaunchScreen.storyboard in Resources */,
+
 				A10008 /* douluo_ios.html in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
