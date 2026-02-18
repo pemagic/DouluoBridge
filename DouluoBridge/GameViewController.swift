@@ -214,7 +214,7 @@ class GameViewController: UIViewController, GameSceneDelegate {
         
         // Version tag
         let versionLabel = UILabel()
-        versionLabel.text = "PIXEL WUXIA v1.1"
+        versionLabel.text = "PIXEL WUXIA v1.2"
         versionLabel.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         versionLabel.textColor = UIColor(white: 1, alpha: 0.3)
         stack.addArrangedSubview(versionLabel)
