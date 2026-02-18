@@ -25,7 +25,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             window.addSubview(splash)
             self.splashView = splash
             
-            // Fade out after 1.5s (game needs time to load WebView)
+            // Fade out after 1.5s (splash during SpriteKit scene setup)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 UIView.animate(withDuration: 0.5, animations: {
                     splash.alpha = 0

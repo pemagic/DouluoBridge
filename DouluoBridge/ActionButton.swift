@@ -43,7 +43,7 @@ class ActionButton: UIView {
         clipsToBounds = true
         
         // Ink wash rice paper background
-        backgroundColor = UIColor(red: 0.88, green: 0.84, blue: 0.78, alpha: 0.25)
+        backgroundColor = UIColor(red: 0.88, green: 0.84, blue: 0.78, alpha: 0.7)
         layer.cornerRadius = 18
         layer.borderColor = UIColor(red: 0.35, green: 0.30, blue: 0.22, alpha: 0.6).cgColor
         layer.borderWidth = 2.5
@@ -223,7 +223,7 @@ class ActionButton: UIView {
         // Visual feedback - ink recede
         UIView.animate(withDuration: 0.15) {
             self.transform = .identity
-            self.backgroundColor = UIColor(red: 0.88, green: 0.84, blue: 0.78, alpha: 0.25)
+            self.backgroundColor = UIColor(red: 0.88, green: 0.84, blue: 0.78, alpha: 0.7)
             self.layer.borderColor = UIColor(red: 0.35, green: 0.30, blue: 0.22, alpha: 0.6).cgColor
         }
         glowLayer.shadowOpacity = 0
