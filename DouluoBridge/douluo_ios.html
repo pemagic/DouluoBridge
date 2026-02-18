@@ -1,0 +1,2418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>斗罗大桥：像素剑影</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #canvas-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+            transform-origin: 0 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .crt::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 100;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .font-game {
+            font-weight: 900;
+        }
+
+        .glowing-text {
+            text-shadow: 0 0 15px rgba(220, 38, 38, 0.9);
+        }
+
+        #ui-layer {
+            pointer-events: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .menu-btn {
+            pointer-events: auto;
+        }
+
+        /* Main Menu Styles */
+        #main-menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #main-menu .version-tag {
+            margin-bottom: 8px;
+            padding: 4px 16px;
+            background: #b91c1c;
+            color: white;
+            font-weight: bold;
+            font-size: 11px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(185, 28, 28, 0.5);
+        }
+
+        #main-menu h1 {
+            font-size: 72px;
+            font-weight: 900;
+            color: white;
+            margin-bottom: 24px;
+        }
+
+        #main-menu .subtitle {
+            font-size: 16px;
+            color: #ef4444;
+            font-family: monospace;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+        }
+
+        #main-menu .start-btn {
+            padding: 16px 48px;
+            background: transparent;
+            border: 3px solid white;
+            color: white;
+            font-weight: 900;
+            font-size: 28px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #main-menu .start-btn:active {
+            border-color: #dc2626;
+            background: rgba(185, 28, 28, 0.5);
+        }
+
+        /* HUD Styles */
+        #hud {
+            display: none;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        #hud.visible {
+            display: flex;
+        }
+
+        .hp-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hp-bar-bg {
+            width: 160px;
+            height: 10px;
+            background: #111;
+            border: 1.5px solid #7f1d1d;
+        }
+
+        #hp-bar {
+            height: 100%;
+            background: #dc2626;
+            width: 100%;
+            box-shadow: 0 0 10px #dc2626;
+        }
+
+        .ult-bar-bg {
+            width: 120px;
+            height: 6px;
+            background: #111;
+            border: 1px solid #713f12;
+            margin-top: 4px;
+        }
+
+        #ult-bar {
+            height: 100%;
+            background: #eab308;
+            width: 0;
+        }
+
+        #weapon-rank-display {
+            font-weight: 900;
+            font-size: 14px;
+            color: white;
+            font-style: italic;
+        }
+
+        #kill-counter {
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 900;
+            font-size: 18px;
+            margin-top: 6px;
+        }
+
+        #combo-container {
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #combo-counter {
+            color: #dc2626;
+            font-weight: 900;
+            font-size: 32px;
+            font-style: italic;
+        }
+
+        /* Game Over Styles */
+        #game-over {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #game-over.visible {
+            display: flex;
+        }
+
+        #game-over h1 {
+            font-size: 56px;
+            font-weight: 900;
+            color: #dc2626;
+            margin-bottom: 16px;
+        }
+
+        #final-stats {
+            color: white;
+            font-weight: 900;
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+
+        #game-over .restart-btn {
+            padding: 12px 36px;
+            border: 2px solid #dc2626;
+            color: #ef4444;
+            font-weight: 900;
+            font-size: 20px;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        #game-over .restart-btn:active {
+            background: #dc2626;
+            color: white;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .ultimate-ready {
+            animation: pulse-gold 1s infinite;
+        }
+
+        @keyframes pulse-gold {
+            0% {
+                box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(250, 204, 21, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+            }
+        }
+
+        /* Pause/Home buttons */
+        .hud-top-right {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 10px;
+            z-index: 200;
+        }
+
+        .hud-btn {
+            pointer-events: auto;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 2px solid rgba(80, 70, 55, 0.6);
+            background: rgba(40, 35, 28, 0.5);
+            color: #c0b090;
+            font-size: 18px;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        .hud-btn:active {
+            background: rgba(80, 70, 55, 0.7);
+        }
+
+        /* Level banner */
+        #level-banner {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 300;
+            background: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        #level-banner.visible {
+            display: flex;
+        }
+
+        #level-banner h2 {
+            color: #c0b090;
+            font-size: 48px;
+            font-weight: 900;
+            text-shadow: 0 0 20px rgba(200, 180, 140, 0.5);
+        }
+
+        #level-banner p {
+            color: #a09080;
+            font-size: 20px;
+            margin-top: 10px;
+        }
+
+        /* Pause overlay */
+        #pause-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 280;
+            background: rgba(0, 0, 0, 0.6);
+            align-items: center;
+            justify-content: center;
+        }
+
+        #pause-overlay.visible {
+            display: flex;
+        }
+
+        #pause-overlay h2 {
+            color: #c0b090;
+            font-size: 56px;
+            font-weight: 900;
+        }
+
+        #level-display {
+            color: #c0b090;
+            font-size: 14px;
+            font-weight: 900;
+            position: absolute;
+            top: 48px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+        }
+    </style>
+</head>
+
+<body class="crt" style="background: #000;">
+    <div id="ui-layer">
+        <!-- Main Menu -->
+        <div id="main-menu">
+            <div class="version-tag">PIXEL WUXIA v1.1</div>
+            <h1 class="font-game glowing-text">斗罗大桥</h1>
+            <p class="subtitle">万剑归宗 | Ten Thousand Swords</p>
+            <button onclick="startGame()" class="menu-btn start-btn font-game">
+                杀出血路
+            </button>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud">
+            <div class="hp-container">
+                <div class="hp-bar-bg">
+                    <div id="hp-bar"></div>
+                </div>
+                <div id="weapon-rank-display" class="font-game">境界：初入江湖 [Lv.1]</div>
+            </div>
+            <div class="ult-bar-bg">
+                <div id="ult-bar"></div>
+            </div>
+            <div id="kill-counter" class="font-game">斩敌: 0</div>
+            <div id="combo-container">
+                <div id="combo-counter" class="font-game">10 COMBO</div>
+            </div>
+            <div id="level-display" class="font-game">第一关</div>
+            <div class="hud-top-right">
+                <button class="hud-btn" id="btn-pause" onclick="togglePause()">⏸</button>
+                <button class="hud-btn" id="btn-home" onclick="returnHome()">🏠</button>
+            </div>
+        </div>
+
+        <!-- Pause Overlay -->
+        <div id="pause-overlay">
+            <h2 class="font-game">暂 停</h2>
+        </div>
+
+        <!-- Level Banner -->
+        <div id="level-banner">
+            <h2 id="level-title" class="font-game"></h2>
+            <p id="level-subtitle" class="font-game"></p>
+        </div>
+
+        <!-- Game Over -->
+        <div id="game-over">
+            <h1 class="font-game">气尽人亡</h1>
+            <div id="final-stats" class="font-game"></div>
+            <button onclick="location.reload()" class="menu-btn restart-btn font-game">转世再来</button>
+        </div>
+    </div>
+
+    <div id="canvas-wrapper">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        // iOS key bridge - called from native Swift code
+        window.iosSetKey = function (code, pressed) {
+            if (pressed) {
+                keys[code] = true;
+                // Handle one-shot actions
+                if (!gameRunning) return;
+                if ((code === 'Space') && player.jumpCount < 2) {
+                    player.vy = JUMP_FORCE; player.jumpCount++; playTone(400, 'sine', 0.1, 0.1);
+                }
+                if ((code === 'ShiftLeft') && player.dashCooldown <= 0) {
+                    player.dashActive = 15; player.dashCooldown = 180;
+                    playTone(200, 'sawtooth', 0.3, 0.15);
+                    playTone(80, 'sawtooth', 0.5, 0.3); // deep bass slash
+                    haptic('heavy');
+                    const dashStartX = player.x;
+                    const dashEndX = player.x + player.facing * DASH_FORCE * 15;
+                    const dashMinX = Math.min(dashStartX, dashEndX) - 40;
+                    const dashMaxX = Math.max(dashStartX, dashEndX) + 40;
+                    // Ink-wash slash effect (LARGE half-screen arc)
+                    slashEffects.push({
+                        x: player.x + player.w / 2,
+                        y: player.y + player.h / 2,
+                        facing: player.facing,
+                        life: 1.0,  // fades from 1 to 0
+                        maxLife: 1.0,
+                        radius: GAME_WIDTH * 0.75, // HUGE radius
+                    });
+                    slashDim = 1.0; // Dim screen
+
+                    // Synthesized SFX: Watermelon Slice (Noise Burst + Low Thud)
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                    // 1. Noise
+                    const bufSize = audioCtx.sampleRate * 0.1;
+                    const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+                    const data = buf.getChannelData(0);
+                    for (let i = 0; i < bufSize; i++) data[i] = (Math.random() - 0.5) * 2;
+                    const noise = audioCtx.createBufferSource();
+                    noise.buffer = buf;
+                    const nGain = audioCtx.createGain();
+                    nGain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                    nGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                    noise.connect(nGain); nGain.connect(audioCtx.destination);
+                    noise.start();
+
+                    // 2. Low Thud (Sine drop)
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+
+                    // Spawn ink splatter particles along slash arc
+                    for (let sp = 0; sp < 30; sp++) {
+                        const ang = (Math.random() - 0.5) * 1.2 + (player.facing > 0 ? 0 : Math.PI);
+                        const spd = 8 + Math.random() * 15;
+                        particles.push({ x: player.x + player.w / 2, y: player.y + player.h / 2, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - 3, life: 0.6 + Math.random() * 0.4, color: ['#1a1a2e', '#4a4a5a', '#888', '#fff'][Math.floor(Math.random() * 4)], size: 3 + Math.random() * 6, decay: 0.02 });
+                    }
+                    for (let ei = enemies.length - 1; ei >= 0; ei--) {
+                        const e = enemies[ei];
+                        if (e.x + e.w > dashMinX && e.x < dashMaxX && Math.abs(e.y - player.y) < 120) {
+                            e.hp -= 80 + player.weaponLevel * 15;
+                            e.damageFlash = 8;
+                            createParticles(e.x + e.w / 2, e.y + e.h / 2, '#ff4444', 20, 2, 2);
+                            if (e.hp <= 0) {
+                                const wasBoss = e.isBoss;
+                                enemies.splice(ei, 1);
+                                kills++; levelKills++; combo++; comboTimer = 150;
+                                player.energy = Math.min(100, player.energy + (wasBoss ? 50 : 4));
+                                spawnDrop(e.x + e.w / 2, e.y + e.h / 2);
+                                hitstop = wasBoss ? 12 : 4;
+                                haptic(wasBoss ? 'heavy' : 'medium');
+                                if (wasBoss) {
+                                    bossActive = false;
+                                    if (currentLevel < 10) { completeLevel(); }
+                                    else { endGame(true); }
+                                }
+                            }
+                        }
+                    }
+                    haptic('heavy');
+                    setTimeout(() => haptic('heavy'), 80);
+                    setTimeout(() => haptic('medium'), 160);
+                }
+                if (code === 'KeyL' && player.energy >= 100) {
+                    player.energy = 0; player.ultActive = 240; player.iframe = 240;
+                    playTone(100, 'sawtooth', 1.0, 0.5);
+                    createParticles(player.x, player.y, '#fff', 50, 3);
+                    haptic('heavy');
+                }
+                // Manual attack (KeyJ)
+                if (code === 'KeyJ') {
+                    playerShoot();
+                }
+                // Skill activations
+                activateSkill(code);
+            } else {
+                keys[code] = false;
+            }
+        };
+
+        // === Skill activation ===
+        function activateSkill(code) {
+            for (const [id, def] of Object.entries(SKILL_DEFS)) {
+                if (code !== def.key) continue;
+                const sk = playerSkills[id];
+                if (sk.level <= 0 || sk.cooldown > 0) return;
+                const lvl = sk.level;
+                const px = player.x + player.w / 2;
+                const py = player.y + player.h / 2;
+
+                if (id === 'fire') {
+                    // Fire Palm: wide fire barrage (4x projectiles)
+                    const dmg = def.baseDmg + lvl * 15;
+                    const count = (1 + Math.floor(lvl / 3)) * 4;
+                    for (let i = 0; i < count; i++) {
+                        const spread = (i - count / 2) * 8;
+                        const ang = (i - count / 2) * 0.12;
+                        projectiles.push({ x: px, y: py + spread, vx: player.facing * (35 + lvl * 2) * Math.cos(ang), vy: Math.sin(ang) * 12 + (Math.random() - 0.5) * 4, owner: 'player', color: def.color, life: 50 + lvl * 4, dmg, size: 14 + lvl, skillHit: true });
+                    }
+                    createParticles(px, py, def.color, 25 + lvl * 2, 3);
+                    sk.cooldown = Math.max(40, def.baseCd - lvl * 8);
+                } else if (id === 'whirlwind') {
+                    // Whirlwind: AoE spin attack
+                    const dmg = def.baseDmg + lvl * 12;
+                    const radius = 100 + lvl * 15;
+                    const count = 4 + Math.floor(lvl / 2);
+                    for (let i = 0; i < count; i++) {
+                        const a = (i / count) * Math.PI * 2;
+                        projectiles.push({ x: px, y: py, vx: Math.cos(a) * 20, vy: Math.sin(a) * 20, owner: 'player', color: def.color, life: 25 + lvl * 2, dmg, size: 12 + lvl });
+                    }
+                    createParticles(px, py, def.color, 15, 2.5);
+                    sk.cooldown = Math.max(50, def.baseCd - lvl * 10);
+                } else if (id === 'shield') {
+                    // Iron Shirt: Balanced - CD > Duration
+                    // Duration: 180 (3s) + lvl * 30 -> Max ~400 (6.6s) at Lv.8
+                    const duration = 180 + lvl * 30;
+                    sk.active = duration;
+                    // Cooldown: Duration * 1.5 + 60 -> Ensures downtime
+                    sk.cooldown = Math.floor(duration * 1.5 + 60);
+
+                    createParticles(px, py, def.color, 30, 2);
+                } else if (id === 'lightning') {
+                    // Lightning: FULL SCREEN - strike ALL visible enemies
+                    const dmg = def.baseDmg + lvl * 20;
+                    let targets = enemies.filter(e => isOnScreen(e));
+                    targets.forEach(e => {
+                        e.hp -= dmg;
+                        e.damageFlash = 12;
+                        createParticles(e.x + e.w / 2, e.y + e.h / 2, def.color, 15, 2.5);
+                        createParticles(e.x + e.w / 2, e.y + e.h / 2, '#fff', 8, 1.5);
+                        // Visual lightning bolt from sky to enemy
+                        lightningBolts.push({
+                            tx: e.x + e.w / 2, ty: e.y,
+                            life: 15, maxLife: 15,
+                            segments: generateLightningPath(e.x + e.w / 2, camY - 50, e.x + e.w / 2, e.y)
+                        });
+                    });
+                    if (targets.length > 0) {
+                        screenFlash = 12;
+                        haptic('heavy');
+                        playTone(80, 'sawtooth', 0.4, 0.3);
+                        playTone(120, 'square', 0.2, 0.2);
+                    }
+                    sk.cooldown = Math.max(60, def.baseCd - lvl * 12);
+                } else if (id === 'ghost') {
+                    // Ghost Claw: 4x homing projectiles, wider spread
+                    const dmg = def.baseDmg + lvl * 18;
+                    const count = (1 + Math.floor(lvl / 4)) * 4;
+                    for (let i = 0; i < count; i++) {
+                        const ang = (i / count - 0.5) * 2.0;
+                        projectiles.push({ x: px, y: py + (i - count / 2) * 10, vx: player.facing * 15 + Math.cos(ang) * 6, vy: Math.sin(ang) * 10, owner: 'player', color: def.color, life: 90 + lvl * 5, dmg, size: 14, homing: true, skillHit: true });
+                    }
+                    createParticles(px, py, def.color, 20, 3);
+                    sk.cooldown = Math.max(60, def.baseCd - lvl * 12);
+                }
+
+                playTone(300 + lvl * 50, 'sawtooth', 0.15, 0.2);
+                haptic('medium');
+                return;
+            }
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const ui = {
+            menu: document.getElementById('main-menu'),
+            over: document.getElementById('game-over'),
+            hud: document.getElementById('hud'),
+            hp: document.getElementById('hp-bar'),
+            ult: document.getElementById('ult-bar'),
+            kills: document.getElementById('kill-counter'),
+            combo: document.getElementById('combo-counter'),
+            comboContainer: document.getElementById('combo-container'),
+            rank: document.getElementById('weapon-rank-display'),
+            stats: document.getElementById('final-stats')
+        };
+
+        // Fixed game resolution for zoomed-out view showing more content
+        const GAME_WIDTH = 1600;
+        const GAME_HEIGHT = 900;
+        let canvasScale = 1;
+
+        const GRAVITY = 1.3;
+        const PLAYER_SPEED = 14;
+        const JUMP_FORCE = -25;
+        const DASH_FORCE = 52;
+        const NEON_COLORS = ['#ff00ff', '#00ffff', '#ffff00', '#00ff00', '#ff0000', '#ff8800', '#00ff88', '#8800ff', '#ffffff'];
+
+        let gameRunning = false;
+        let gamePaused = false;
+        let gameLoopRunning = false;
+        let kills = 0;
+        let combo = 0;
+        let comboTimer = 0;
+        let gameTime = 0;
+        let hitstop = 0;
+        let camX = 0, camY = 0;
+        let spawnCooldown = 0;
+        let spawnGrace = 0;  // frames of spawn immunity after level transition
+
+        // === 10-Level System ===
+        let currentLevel = 1;
+        let levelKills = 0; // kills this level
+        let bossActive = false;
+        let bossSpawned = false;
+        const LEVELS = [
+            {
+                name: '第一关·初入江湖', killTarget: 15, weaponCap: 2, enemyTier: 1, enemies: ['scout'], bossHp: 600, bossSpeed: 1.0, bossType: 'bandit_chief',
+                bgColors: ['#e8dcc8', '#d8ccb4', '#c8b89a', '#b0a080'], mtnColors: ['#7a9a6a', '#8aaa7a', '#6a8a5a'], enemyColors: ['#6a8844', '#7a9954', '#5a7744', '#88aa66', '#779944'],
+                platGround: ['#c8b99a', '#b8a88a', '#d4c4a8'], platFloat: ['#a09080', '#90806a', '#c0b090'],
+                bgm: { drone: 49.0, filter: 2500, vol: 0.04, songId: 0 }
+            },
+            {
+                name: '第二关·崭露锋芒', killTarget: 20, weaponCap: 3, enemyTier: 1, enemies: ['scout', 'chaser'], bossHp: 900, bossSpeed: 1.1, bossType: 'wolf_king',
+                bgColors: ['#dce8d0', '#c8d8bc', '#b4c8a0', '#a0b888'], mtnColors: ['#6a8a6a', '#7a9a7a', '#5a7a5a'], enemyColors: ['#88aa44', '#77994e', '#669944', '#99bb55', '#88aa55'],
+                platGround: ['#b8c8a0', '#a8b890', '#c4d4a8'], platFloat: ['#90a080', '#80906a', '#b0c090'],
+                bgm: { drone: 49.0, filter: 2400, vol: 0.04, songId: 1 }
+            },
+            {
+                name: '第三关·拳脚相加', killTarget: 25, weaponCap: 4, enemyTier: 1, enemies: ['scout', 'chaser', 'martial'], bossHp: 1200, bossSpeed: 1.2, bossType: 'iron_fist',
+                bgColors: ['#e0c8a0', '#d0b890', '#c0a878', '#aa9060'], mtnColors: ['#8a7050', '#9a8060', '#7a6040'], enemyColors: ['#aa7744', '#996644', '#bb8855', '#cc9966', '#aa8844'],
+                platGround: ['#c0a880', '#b09870', '#d0b890'], platFloat: ['#a09070', '#907a5a', '#b0a080'],
+                bgm: { drone: 46.2, filter: 2200, vol: 0.042, songId: 2 }
+            },
+            {
+                name: '第四关·铁甲连城', killTarget: 30, weaponCap: 5, enemyTier: 2, enemies: ['scout', 'chaser', 'martial', 'heavy'], bossHp: 1600, bossSpeed: 1.3, bossType: 'shield_general',
+                bgColors: ['#c8d0d8', '#b0b8c8', '#98a0b0', '#808898'], mtnColors: ['#707888', '#606878', '#808898'], enemyColors: ['#5588aa', '#4477aa', '#6699bb', '#5599cc', '#4488aa'],
+                platGround: ['#a0a8b8', '#9098a8', '#b0b8c8'], platFloat: ['#808898', '#707888', '#909aa8'],
+                bgm: { drone: 41.2, filter: 1800, vol: 0.045, songId: 3 }
+            },
+            {
+                name: '第五关·百步穿杨', killTarget: 35, weaponCap: 6, enemyTier: 2, enemies: ['scout', 'chaser', 'martial', 'heavy', 'sniper'], bossHp: 2000, bossSpeed: 1.4, bossType: 'phantom_archer',
+                bgColors: ['#c8a878', '#b89868', '#a08050', '#886838'], mtnColors: ['#705030', '#604020', '#805838'], enemyColors: ['#886644', '#775533', '#997755', '#aa8866', '#887755'],
+                platGround: ['#a08060', '#907050', '#b09070'], platFloat: ['#806848', '#705838', '#908068'],
+                bgm: { drone: 41.2, filter: 1500, vol: 0.048, songId: 4 }
+            },
+            {
+                name: '第六关·刀光剑影', killTarget: 40, weaponCap: 7, enemyTier: 2, enemies: ['chaser', 'martial', 'heavy', 'sniper'], bossHp: 2500, bossSpeed: 1.5, bossType: 'twin_blade',
+                bgColors: ['#4a5568', '#3a4558', '#2a3548', '#1a2538'], mtnColors: ['#2a3a50', '#1a2a40', '#3a4a60'], enemyColors: ['#7755aa', '#6644aa', '#8866bb', '#9977cc', '#7766aa'],
+                platGround: ['#505868', '#404858', '#606878'], platFloat: ['#3a4258', '#2a3248', '#4a5268'],
+                bgm: { drone: 36.7, filter: 1200, vol: 0.05, songId: 5 }
+            },
+            {
+                name: '第七关·龙争虎斗', killTarget: 45, weaponCap: 8, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper', 'chaser'], bossHp: 3200, bossSpeed: 1.7, bossType: 'thunder_monk',
+                bgColors: ['#3a2848', '#2a1838', '#1a0828', '#100018'], mtnColors: ['#2a1848', '#1a0838', '#3a2858'], enemyColors: ['#aa3344', '#993355', '#bb4455', '#cc5566', '#aa4466'],
+                platGround: ['#3a2838', '#2a1828', '#4a3848'], platFloat: ['#2a1828', '#1a0818', '#3a2838'],
+                bgm: { drone: 36.7, filter: 1000, vol: 0.052, songId: 6 }
+            },
+            {
+                name: '第八关·万夫莫敌', killTarget: 50, weaponCap: 9, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 4000, bossSpeed: 1.9, bossType: 'blood_demon',
+                bgColors: ['#3a1010', '#2a0808', '#1a0000', '#100000'], mtnColors: ['#3a0808', '#2a0000', '#4a1010'], enemyColors: ['#cc2222', '#bb1133', '#dd3344', '#ee4455', '#cc3355'],
+                platGround: ['#3a1818', '#2a0808', '#4a2020'], platFloat: ['#2a1010', '#1a0000', '#3a1818'],
+                bgm: { drone: 32.7, filter: 800, vol: 0.055, songId: 7 }
+            },
+            {
+                name: '第九关·天下无双', killTarget: 55, weaponCap: 9, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 5000, bossSpeed: 2.1, bossType: 'shadow_lord',
+                bgColors: ['#101828', '#081018', '#000810', '#000008'], mtnColors: ['#081830', '#001020', '#102040'], enemyColors: ['#4466cc', '#3355bb', '#5577dd', '#6688ee', '#4477cc'],
+                platGround: ['#182028', '#101818', '#202830'], platFloat: ['#101820', '#081018', '#182028'],
+                bgm: { drone: 32.7, filter: 600, vol: 0.058, songId: 8 }
+            },
+            {
+                name: '第十关·剑神归位', killTarget: 60, weaponCap: 10, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 7000, bossSpeed: 2.5, bossType: 'sword_saint',
+                bgColors: ['#0a0a10', '#050508', '#020204', '#000000'], mtnColors: ['#0a0a18', '#050510', '#101020'], enemyColors: ['#ccccdd', '#bbbbcc', '#ddddee', '#ffffff', '#aaaacc'],
+                platGround: ['#101018', '#080810', '#181820'], platFloat: ['#080810', '#040408', '#101018'],
+                bgm: { drone: 27.5, filter: 500, vol: 0.06, songId: 9 }
+            },
+        ];
+
+        const keys = {};
+        const player = {
+            x: 400, y: 300, vx: 0, vy: 0, w: 40, h: 64, hp: 100, energy: 0,
+            weaponLevel: 1, facing: 1, grounded: false, jumpCount: 0,
+            dashCooldown: 0, dashActive: 0, shootTimer: 0, iframe: 0,
+            animTime: 0, ultActive: 0
+        };
+
+        // === 5-Skill System (10 levels each) ===
+        const SKILL_DEFS = {
+            fire: { name: '火焰掌', emoji: '🔥', color: '#ff4400', key: 'KeyQ', baseCd: 120, baseDmg: 40 },
+            whirlwind: { name: '旋风腿', emoji: '🌀', color: '#00ccff', key: 'KeyE', baseCd: 150, baseDmg: 30 },
+            shield: { name: '铁布衫', emoji: '🛡', color: '#ffcc00', key: 'KeyR', baseCd: 300, baseDur: 60 },
+            lightning: { name: '雷击术', emoji: '⚡', color: '#aa66ff', key: 'KeyT', baseCd: 180, baseDmg: 60 },
+            ghost: { name: '幽冥爪', emoji: '💀', color: '#33ff88', key: 'KeyY', baseCd: 200, baseDmg: 50 },
+        };
+        const playerSkills = {
+            fire: { level: 0, cooldown: 0 },
+            whirlwind: { level: 0, cooldown: 0 },
+            shield: { level: 0, cooldown: 0, active: 0 },
+            lightning: { level: 0, cooldown: 0 },
+            ghost: { level: 0, cooldown: 0 },
+        };
+
+        const enemies = [];
+        const projectiles = [];
+        const particles = [];
+        const platforms = [];
+        const trails = [];
+        const slashEffects = [];  // calligraphy sword qi visuals
+        const lightningBolts = []; // visual lightning strikes
+        let screenFlash = 0;  // white flash timer
+        let slashDim = 0; // dark curtain timer
+        const drops = [];
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(f, t, d, v) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            try {
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime);
+                g.gain.setValueAtTime(v, audioCtx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(); o.stop(audioCtx.currentTime + d);
+            } catch (e) { }
+        }
+
+        // iOS Haptic feedback bridge
+        function haptic(type) {
+            try {
+                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.haptic) {
+                    window.webkit.messageHandlers.haptic.postMessage(type || 'light');
+                }
+            } catch (e) { }
+        }
+
+        // === Advanced Audio Synthesis Engine ===
+        const AUDIO_ENGINE = {
+            ctx: audioCtx,
+
+            // 1. Guzheng (Zither): Plucked, resonant, slight vibrato
+            playGuzheng(freq, time, dur) {
+                if (!isFinite(freq)) return;
+                const t = time;
+                const osc = audioCtx.createOscillator();
+                const osc2 = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                // Bright pluck (Triangle + harm)
+                osc.type = 'triangle';
+                osc2.type = 'sine';
+                osc.frequency.setValueAtTime(freq, t);
+                osc2.frequency.setValueAtTime(freq * 2, t);
+
+                // Slight pitch bend (fingering)
+                osc.frequency.linearRampToValueAtTime(freq, t + 0.1);
+
+                // Envelope: Sharp attack, long sustain
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.3, t + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + dur * 2.0); // Long tail
+
+                osc.connect(gain);
+                osc2.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(t); osc.stop(t + dur * 2.0);
+                osc2.start(t); osc2.stop(t + dur * 2.0);
+            },
+
+            // 2. Pipa (Lute): Softer Pluck (Modified to remove "Ticking")
+            playPipa(freq, time) {
+                if (!isFinite(freq)) return;
+                const t = time;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                // Change to Triangle for softer sound (was Sawtooth)
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, t);
+
+                // Filter - Lower cutoff to remove high-end click
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 800; // Was 3000
+
+                // Envelope: Slower attack to prevent pop
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.15, t + 0.02); // Was 0.005 (too sharp)
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(t); osc.stop(t + 0.4);
+            },
+
+            // 3. Dizi (Bamboo Flute): Breathy, vibrato, slide
+            playDizi(freq, time, dur) {
+                if (!isFinite(freq)) return;
+                const t = time;
+                const osc = audioCtx.createOscillator();
+                const noise = audioCtx.createBufferSource();
+                const gain = audioCtx.createGain();
+                const noiseGain = audioCtx.createGain();
+
+                // Tone
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, t);
+
+                // Vibrato (LFO)
+                const vib = audioCtx.createOscillator();
+                const vibGain = audioCtx.createGain();
+                vib.frequency.value = 5;
+                vibGain.gain.value = 6; // +/- 6Hz
+                vib.connect(vibGain);
+                vibGain.connect(osc.frequency);
+                vib.start(t);
+
+                // Breath noise - REDUCED VOLUME
+                const bufSize = audioCtx.sampleRate * 2;
+                const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+                const data = buf.getChannelData(0);
+                for (let i = 0; i < bufSize; i++) data[i] = (Math.random() - 0.5) * 0.5;
+                noise.buffer = buf;
+
+                // Filter noise
+                const nFilter = audioCtx.createBiquadFilter();
+                nFilter.type = 'bandpass';
+                nFilter.frequency.value = freq * 2;
+                nFilter.Q.value = 1;
+
+                // Envelope
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.2, t + 0.1); // Slow attack
+                gain.gain.setValueAtTime(0.15, t + dur - 0.1);
+                gain.gain.linearRampToValueAtTime(0, t + dur);
+
+                // Reduced breath noise to avoid "chiff" click
+                noiseGain.gain.setValueAtTime(0.02, t); // Was 0.05
+                noiseGain.gain.linearRampToValueAtTime(0, t + 0.1);
+
+                osc.connect(gain);
+                noise.connect(nFilter);
+                nFilter.connect(noiseGain);
+                noiseGain.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(t); osc.stop(t + dur);
+                noise.start(t); noise.stop(t + dur);
+            },
+
+            // 4. Drum (War Drum): Impact
+            playDrum(type, time) {
+                const t = time;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                if (type === 'kick') {
+                    // Deep thud
+                    osc.frequency.setValueAtTime(150, t);
+                    osc.frequency.exponentialRampToValueAtTime(40, t + 0.1);
+                    gain.gain.setValueAtTime(0.8, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+                } else {
+                    // Wood block / Rim
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(800, t);
+                    gain.gain.setValueAtTime(0.1, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+                }
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(t); osc.stop(t + 0.2);
+            }
+        };
+
+        // === Chinese Classical BGM System ===
+        // === Chinese Classical BGM System ===
+        const BGM = {
+            playing: false,
+            nextNoteTime: 0,
+            bar: 0,
+            beat: 0,
+            songId: 0,
+
+            // Pentatonic Scale (G Major): G A B D E
+            // Octaves: 3, 4, 5
+            scale: {
+                G3: 196, A3: 220, B3: 247, D4: 293, E4: 330,
+                G4: 392, A4: 440, B4: 494, D5: 587, E5: 659,
+                G5: 784, A5: 880, B5: 988, D6: 1175, E6: 1318
+            },
+
+            // 10 Distinct Arrangements
+            // Expanded to Verse-Chorus structures (16-32 bar loops)
+            SONGS: [
+                // Lv1: Cang Hai Yi Sheng Xiao (Heroic) - Guzheng Lead
+                // Structure: A (Intro) -> A (Theme) -> B (Variation) -> A (Outro)
+                {
+                    bpm: 100,
+                    melody: [
+                        // A: Main Theme
+                        ['E5', 2], ['D5', 2], ['B4', 2], ['A4', 2], ['G4', 4], ['rest', 4],
+                        ['B4', 2], ['A4', 2], ['G4', 2], ['E4', 2], ['D4', 8],
+                        // Repeat A
+                        ['E5', 2], ['D5', 2], ['B4', 2], ['A4', 2], ['G4', 4], ['rest', 4],
+                        ['B4', 2], ['A4', 2], ['G4', 2], ['E4', 2], ['D4', 8],
+                        // B: Lower Octave Variation
+                        ['A4', 2], ['A4', 2], ['A4', 2], ['B4', 2], ['D5', 4], ['rest', 2], ['D5', 2],
+                        ['E5', 2], ['E5', 2], ['E5', 2], ['G5', 2], ['A5', 8]
+                    ],
+                    backing: [
+                        // Pipa Strums - Steady rhythm
+                        ['G3', 4], ['D4', 4], ['G3', 4], ['D4', 4], ['G3', 4], ['D4', 4], ['G3', 4], ['D4', 4],
+                        ['G3', 4], ['D4', 4], ['G3', 4], ['D4', 4], ['G3', 4], ['D4', 4], ['G3', 4], ['D4', 4],
+                        ['A3', 4], ['E4', 4], ['A3', 4], ['E4', 4], ['E3', 4], ['B3', 4], ['E3', 4], ['B3', 4]
+                    ],
+                    drum: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0]
+                },
+
+                // Lv2: Purple Bamboo (Playful) - Dizi Lead
+                // Structure: Lively call and response
+                {
+                    bpm: 110,
+                    melody: [
+                        ['A4', 1], ['A4', 1], ['B4', 1], ['A4', 1], ['G4', 2], ['E4', 2], ['D4', 1], ['E4', 1], ['G4', 2], ['A4', 4],
+                        ['rest', 4], ['G4', 2], ['E4', 2], ['D4', 2], ['E4', 2], ['G4', 8],
+                        ['A4', 2], ['B4', 2], ['D5', 4], ['B4', 2], ['A4', 2], ['G4', 4],
+                        ['E4', 1], ['G4', 1], ['A4', 1], ['B4', 1], ['A4', 4]
+                    ],
+                    backing: [
+                        ['A3', 4], ['E4', 4], ['A3', 4], ['E4', 4], ['D4', 4], ['A4', 4], ['G3', 4], ['D4', 4],
+                        ['A3', 4], ['A3', 4], ['G3', 4], ['G3', 4]
+                    ],
+                    drum: [1, 0, 0.5, 0, 1, 0, 0.5, 0]
+                },
+
+                // Lv3: Golden Snake (Fast) - Full Ensemble
+                // Structure: Frenetic, driving rhythm
+                {
+                    bpm: 150,
+                    melody: [
+                        ['E6', 1], ['E6', 1], ['D6', 1], ['E6', 1], ['B5', 2], ['A5', 2], ['B5', 1], ['D6', 1], ['B5', 1], ['A5', 1], ['G5', 4],
+                        ['G5', 1], ['G5', 1], ['A5', 2], ['B5', 2], ['D6', 2], ['E6', 4], ['rest', 4],
+                        ['E5', 1], ['D5', 1], ['E5', 1], ['D5', 1], ['B4', 2], ['A4', 2], ['G4', 8]
+                    ],
+                    backing: [['E4', 2], ['E4', 2], ['E4', 2], ['E4', 2], ['B4', 2], ['B4', 2], ['A4', 2], ['A4', 2]],
+                    drum: [1, 1, 1, 1, 1, 1, 1, 1]
+                },
+
+                // Lv4: Ambush (Tense) - Pipa Solo
+                // Structure: Accelerating Tremolo -> Chord Stabs
+                {
+                    bpm: 135,
+                    melody: [
+                        // Section A: Tremolo build up
+                        ['A4', 0.5], ['A4', 0.5], ['A4', 0.5], ['A4', 0.5], ['A4', 0.5], ['A4', 0.5], ['A4', 0.5], ['A4', 0.5],
+                        ['B4', 0.5], ['B4', 0.5], ['B4', 0.5], ['B4', 0.5], ['B4', 0.5], ['B4', 0.5], ['B4', 0.5], ['B4', 0.5],
+                        ['D5', 0.5], ['D5', 0.5], ['D5', 0.5], ['D5', 0.5], ['E5', 2], ['rest', 2],
+                        // Section B: Violent strumming
+                        ['E5', 0.25], ['E5', 0.25], ['E5', 0.25], ['E5', 0.25], ['E5', 1], ['E5', 1], ['E5', 4]
+                    ],
+                    backing: [],
+                    drum: [1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]
+                },
+
+                // Lv5: Mountain Pass (Desolace) - Dizi Slow
+                // Structure: Long flowing notes, lots of space
+                {
+                    bpm: 65,
+                    melody: [
+                        ['D4', 4], ['G4', 4], ['A4', 4], ['B4', 2], ['A4', 2], ['G4', 8], ['rest', 4],
+                        ['A4', 4], ['B4', 2], ['D5', 2], ['E5', 8], ['D5', 4], ['B4', 4], ['A4', 8]
+                    ],
+                    backing: [['G3', 16], ['D3', 16], ['A3', 16], ['E3', 16]], // Long Drones
+                    drum: [1, 0, 0, 0, 0, 0, 0, 0] // Gong
+                },
+
+                // Lv6: General's Command (Martial) - Drum Heavy
+                // Structure: Call to arms
+                {
+                    bpm: 120,
+                    melody: [
+                        ['D4', 2], ['D4', 2], ['D4', 4], ['G4', 2], ['G4', 2], ['G4', 4],
+                        ['A4', 2], ['B4', 2], ['A4', 2], ['G4', 2], ['E4', 4], ['rest', 4],
+                        ['D4', 1], ['D4', 1], ['D4', 2], ['G4', 1], ['G4', 1], ['G4', 2], ['A4', 8]
+                    ],
+                    backing: [['D3', 2], ['G3', 2], ['D3', 2], ['G3', 2]],
+                    drum: [1, 0.5, 1, 0.5, 1, 0.5, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0]
+                },
+
+                // Lv7: Guangling San (Dissonant)
+                // Structure: Unsettling intervals
+                {
+                    bpm: 95,
+                    melody: [
+                        ['G4', 1], ['B4', 1], ['D5', 2], ['E5', 2], ['G5', 4],
+                        ['E5', 1], ['D5', 1], ['B4', 1], ['A4', 1], ['G4', 4],
+                        ['B4', 1], ['A4', 1], ['G4', 2], ['E4', 2], ['D4', 2], ['B3', 8]
+                    ],
+                    backing: [['G3', 1], ['A3', 1], ['B3', 1], ['G3', 1]],
+                    drum: [0, 0, 1, 0, 0, 0, 1, 0]
+                },
+
+                // Lv8: Moon Reflected (Tragic)
+                // Structure: Sad, descending melody
+                {
+                    bpm: 60,
+                    melody: [
+                        ['G5', 3], ['E5', 1], ['D5', 2], ['B4', 2], ['A4', 4],
+                        ['G4', 2], ['A4', 1], ['B4', 1], ['D5', 4], ['rest', 4],
+                        ['B4', 2], ['A4', 2], ['G4', 4], ['E4', 2], ['D4', 2], ['G3', 8]
+                    ],
+                    backing: [['G3', 8], ['D4', 8], ['A3', 8], ['E4', 8]],
+                    drum: []
+                },
+
+                // Lv9: Autumn Palace (Cold)
+                // Structure: Minimalist, ice-like
+                {
+                    bpm: 75,
+                    melody: [
+                        ['E5', 2], ['G5', 2], ['A5', 4], ['G5', 2], ['E5', 2], ['D5', 4],
+                        ['B4', 4], ['A4', 2], ['G4', 2], ['E4', 8],
+                        ['D6', 1], ['E6', 1], ['rest', 2], ['A5', 4], ['G5', 8]
+                    ],
+                    backing: [['E4', 2], ['rest', 2], ['E4', 2], ['rest', 2]],
+                    drum: [1, 0, 0, 0]
+                },
+
+                // Lv10: Plum Blossom (Ethereal)
+                // Structure: High pitched, transcendental
+                {
+                    bpm: 85,
+                    melody: [
+                        ['E6', 2], ['E6', 2], ['D6', 2], ['E6', 2], ['D6', 2], ['B5', 2], ['A5', 4],
+                        ['G5', 2], ['A5', 2], ['B5', 2], ['D6', 2], ['E6', 8],
+                        ['A6', 2], ['G6', 2], ['E6', 2], ['D6', 2], ['B5', 8]
+                    ],
+                    backing: [['E4', 4], ['A4', 4], ['B4', 4], ['E4', 4], ['A3', 8], ['E3', 8]],
+                    drum: [0, 0, 0.5, 0]
+                }
+            ],
+
+            start() {
+                if (this.playing) return;
+                this.playing = true;
+                this.nextNoteTime = audioCtx.currentTime + 0.1;
+                this.bar = 0;
+                this.beat = 0;
+                this.scheduleNotes();
+                console.log('BGM Started: Hybrid Engine');
+            },
+
+            stop() {
+                this.playing = false;
+                if (this.audioElement) {
+                    this.audioElement.pause();
+                    this.audioElement = null;
+                }
+            },
+
+            // Legacy support
+            startSynth(lvl) {
+                if (!this.playing) this.start();
+            },
+
+            scheduleNotes() {
+                if (!this.playing) return;
+                const now = audioCtx.currentTime;
+                // Lookahead 0.1s
+                while (this.nextNoteTime < now + 0.1) {
+                    const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
+                    const song = this.SONGS[lvl.bgm.songId || 0];
+                    const beatDur = 60 / song.bpm / 4; // 16th note duration
+
+                    // 1. Drum Track - DISABLED (User Feedback: "Ticking noise")
+                    /*
+                    if (song.drum && song.drum.length > 0) {
+                        const drumBeat = song.drum[this.beat % song.drum.length];
+                        if (drumBeat > 0) AUDIO_ENGINE.playDrum(drumBeat === 1 ? 'kick' : 'snare', this.nextNoteTime);
+                    }
+                    */
+
+                    // 2. Melody Track (Complex sequencer)
+                    if (song.melody && song.melody.length > 0) {
+                        if (this.melodyWait <= 0) {
+                            const m = song.melody[this.melodyCursor % song.melody.length];
+                            const noteKey = m[0];
+                            const dur = m[1];
+                            if (noteKey !== 'rest') {
+                                const freq = this.scale[noteKey];
+                                // Choose Instrument based on level
+                                if (lvl.bgm.songId === 1 || lvl.bgm.songId === 4 || lvl.bgm.songId === 8)
+                                    AUDIO_ENGINE.playDizi(freq, this.nextNoteTime, dur * beatDur * 1.5);
+                                else if (lvl.bgm.songId === 3)
+                                    AUDIO_ENGINE.playPipa(freq, this.nextNoteTime);
+                                else
+                                    AUDIO_ENGINE.playGuzheng(freq, this.nextNoteTime, dur * beatDur);
+                            }
+                            this.melodyWait = dur;
+                            this.melodyCursor++;
+                        }
+                        this.melodyWait--;
+                    }
+
+                    // 3. Backing Track (Pipa Arpeggios) - DISABLED (User Feedback: "Ticking noise")
+                    /*
+                    if (this.beat % 4 === 0 && song.backing && song.backing.length > 0) {
+                        const b = song.backing[(this.beat / 4) % song.backing.length];
+                        if (b[0] !== 'rest') {
+                            const freq = this.scale[b[0]];
+                            AUDIO_ENGINE.playPipa(freq, this.nextNoteTime);
+                        }
+                    }
+                    */
+
+                    this.nextNoteTime += beatDur;
+                    this.beat++;
+                }
+                setTimeout(() => this.scheduleNotes(), 25);
+            },
+
+            melodyCursor: 0,
+            melodyWait: 0,
+
+            // Legacy fallbacks for file loader
+            playSongForLevel() {
+                const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
+                const songId = lvl.bgm.songId || 0;
+
+                // Stop previous
+                if (this.audioElement) { this.audioElement.pause(); this.audioElement = null; }
+
+                // Attempt to load MP3
+                const audio = new Audio(`assets/audio/bgm_${songId}.mp3`);
+                audio.loop = true;
+                audio.volume = 0.5;
+
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        this.audioElement = audio;
+                        this.useSynth = false; // Disable synth
+                        this.playing = true; // Mark as playing
+                        console.log(`Playing BGM: bgm_${songId}.mp3`);
+                    }).catch(error => {
+                        console.log(`BGM file missing, using Advanced Synth: ${error}`);
+                        this.useSynth = true; // Enable synth
+                        this.start(); // Start the sequencer
+                    });
+                }
+            }
+        };
+
+        function initPlatforms() {
+            platforms.length = 0;
+            const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
+            const groundColors = lvl.platGround;
+            const floatColors = lvl.platFloat;
+            for (let i = 0; i < 500; i++) {
+                // Ground platforms - ink wash stone style
+                platforms.push({ x: i * 600, y: 700 + Math.random() * 100, w: 650, h: 600, color: groundColors[i % groundColors.length], isGround: true });
+                // Mid-level platforms
+                if (Math.random() > 0.35) platforms.push({ x: i * 600 + 150, y: 450 - Math.random() * 250, w: 280, h: 22, color: floatColors[Math.floor(Math.random() * floatColors.length)], isGround: false });
+                // Floating sky platforms - for more vertical gameplay
+                if (Math.random() > 0.5) platforms.push({ x: i * 600 + Math.random() * 400, y: 200 - Math.random() * 180, w: 180 + Math.random() * 120, h: 18, color: floatColors[Math.floor(Math.random() * floatColors.length)], isGround: false });
+                if (Math.random() > 0.7) platforms.push({ x: i * 600 + Math.random() * 300, y: 50 - Math.random() * 100, w: 140 + Math.random() * 80, h: 15, color: '#b0a090', isGround: false });
+            }
+        }
+
+        function createParticles(x, y, color, count, speedScale = 1, sizeScale = 1) {
+            // Performance: cap particle count and reduce when many enemies dying
+            const maxCount = Math.min(count, particles.length > 300 ? Math.ceil(count * 0.4) : count);
+            for (let i = 0; i < maxCount; i++) {
+                if (particles.length > 350) particles.shift();
+                particles.push({
+                    x, y, vx: (Math.random() - 0.5) * 25 * speedScale, vy: (Math.random() - 0.5) * 25 * speedScale,
+                    size: (2 + Math.random() * 4) * sizeScale, life: 1, decay: 0.03 + Math.random() * 0.03, color
+                });
+            }
+        }
+
+        // Generate zigzag lightning path from (x1,y1) to (x2,y2)
+        function generateLightningPath(x1, y1, x2, y2) {
+            const segs = [];
+            const steps = 8 + Math.floor(Math.random() * 6);
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const jitterX = i === 0 || i === steps ? 0 : (Math.random() - 0.5) * 60;
+                const jitterY = i === 0 || i === steps ? 0 : (Math.random() - 0.5) * 15;
+                segs.push({ x: x1 + (x2 - x1) * t + jitterX, y: y1 + (y2 - y1) * t + jitterY });
+            }
+            return segs;
+        }
+
+        function spawnEnemy(isBoss = false) {
+            const side = Math.random() > 0.5 ? 1 : -1;
+            const x = player.x + side * (900 + Math.random() * 400);
+            const lvl = LEVELS[currentLevel - 1];
+            const pool = lvl.enemies;
+            const type = isBoss ? 'boss' : pool[Math.floor(Math.random() * pool.length)];
+            const lvlBonus = (currentLevel - 1) * 0.12;
+            const BULLET_COLORS = ['#ff4466', '#44aaff', '#ffcc00', '#66ff88', '#ff66ff', '#ff8844', '#44ffdd', '#aa66ff'];
+            const tierColors = lvl.enemyColors;
+
+            const BOSS_COLORS = {
+                bandit_chief: '#cc8833', wolf_king: '#888888', iron_fist: '#ff8800',
+                shield_general: '#4488cc', phantom_archer: '#33cc99', twin_blade: '#cc44cc',
+                thunder_monk: '#ffcc00', blood_demon: '#cc0000', shadow_lord: '#6633cc', sword_saint: '#ffffff'
+            };
+
+            const e = {
+                x, y: -200, vx: 0, vy: 0,
+                w: isBoss ? 110 : (type === 'heavy' ? 80 : 50),
+                h: isBoss ? 130 : (type === 'heavy' ? 90 : 70),
+                type: isBoss ? 'boss' : type,
+                isBoss: isBoss,
+                bossType: isBoss ? lvl.bossType : null,
+                enemyTier: lvl.enemyTier,
+                hp: isBoss ? lvl.bossHp : (type === 'heavy' ? 450 : (type === 'martial' ? 200 : 120)) * (1 + lvlBonus),
+                maxHp: isBoss ? lvl.bossHp : 0,
+                baseSpeed: isBoss ? (6 * lvl.bossSpeed) : (8 + Math.random() * 6) * (type === 'chaser' ? 1.8 : (type === 'heavy' ? 0.4 : (type === 'martial' ? 0.7 : 0.7))),
+                shootTimer: isBoss ? 30 : (40 + Math.random() * 60),
+                damageFlash: 0, animPhase: Math.random() * Math.PI * 2,
+                aimTimer: 0,
+                jumpCooldown: 60 + Math.random() * 120,
+                grounded: false,
+                martialCombo: 0, martialTimer: 0,
+                bulletColor: BULLET_COLORS[Math.floor(Math.random() * BULLET_COLORS.length)],
+                color: isBoss ? (BOSS_COLORS[lvl.bossType] || '#ff0000') : tierColors[Math.floor(Math.random() * tierColors.length)]
+            };
+            enemies.push(e);
+        }
+
+        function spawnDrop(x, y) {
+            const lvl = LEVELS[currentLevel - 1];
+            const comboBonus = combo * 0.005;
+            const rand = Math.random();
+            const atCap = player.weaponLevel >= lvl.weaponCap;
+            const weaponProb = atCap ? 0 : 0.10 + comboBonus;
+            const healthProb = 0.08 + (100 - player.hp) * 0.002 + comboBonus;
+            const skillProb = 0.15 + comboBonus;
+
+            if (rand < weaponProb) {
+                drops.push({ x, y: y - 40, w: 32, h: 32, vy: -10, vx: (Math.random() - 0.5) * 8, type: 'weapon', life: 800 });
+            } else if (rand < weaponProb + healthProb) {
+                drops.push({ x, y: y - 40, w: 28, h: 28, vy: -12, vx: (Math.random() - 0.5) * 6, type: 'health', life: 800 });
+            } else if (rand < weaponProb + healthProb + skillProb) {
+                // Random skill drop
+                const skillIds = Object.keys(SKILL_DEFS);
+                const skillId = skillIds[Math.floor(Math.random() * skillIds.length)];
+                drops.push({ x, y: y - 40, w: 30, h: 30, vy: -11, vx: (Math.random() - 0.5) * 7, type: 'skill', skillId, life: 800 });
+            }
+        }
+
+        function playerShoot() {
+            if (player.shootTimer > 0) return;
+            const lvl = player.weaponLevel;
+
+            const bDmg = (40 + (lvl * 12)) * (player.ultActive > 0 ? 2 : 1);
+            const bSpeed = 45 + (lvl * 1.5);
+            const interval = player.ultActive > 0 ? 3 : Math.max(3, 10 - lvl);
+
+            let bColor = '#ff3e3e';
+            if (lvl >= 4) bColor = '#a855f7';
+            if (lvl >= 7) bColor = '#fbbf24';
+            if (lvl >= 10) bColor = NEON_COLORS[gameTime % NEON_COLORS.length];
+            if (player.ultActive > 0) bColor = '#ffffff';
+
+            const fire = (vx, vy, sizeMult = 1) => projectiles.push({
+                x: player.x + (player.facing === 1 ? player.w : -80),
+                y: player.y + 20, vx, vy, owner: 'player',
+                color: bColor, life: 50, dmg: bDmg, size: 10 * sizeMult
+            });
+
+            if (lvl < 4) {
+                fire(player.facing * bSpeed, 0);
+            } else if (lvl < 7) {
+                fire(player.facing * bSpeed, -4);
+                fire(player.facing * bSpeed, 0, 1.2);
+                fire(player.facing * bSpeed, 4);
+            } else if (lvl < 10) {
+                fire(player.facing * bSpeed, -8);
+                fire(player.facing * bSpeed, -4);
+                fire(player.facing * bSpeed, 0, 1.4);
+                fire(player.facing * bSpeed, 4);
+                fire(player.facing * bSpeed, 8);
+            } else {
+                for (let i = -16; i <= 16; i += 4) fire(player.facing * bSpeed, i, i === 0 ? 2.2 : 1.2);
+            }
+
+            player.shootTimer = interval;
+
+            // Retro "Pew" (Square wave pitch drop) - Procedurally Generated
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        }
+
+        // Screen visibility check for enemies
+        function isOnScreen(e) {
+            const sx = e.x - camX;
+            const sy = e.y - camY;
+            return sx > -100 && sx < GAME_WIDTH + 100 && sy > -100 && sy < GAME_HEIGHT + 100;
+        }
+
+        function update() {
+            if (!gameRunning || gamePaused) return;
+            if (hitstop > 0) { hitstop--; return; }
+
+            gameTime++;
+            if (comboTimer > 0) comboTimer--; else combo = 0;
+            if (player.ultActive > 0) player.ultActive--;
+
+            // Level system: check boss spawn
+            const lvl = LEVELS[currentLevel - 1];
+            if (spawnGrace > 0) { spawnGrace--; }
+            else if (!bossActive && !bossSpawned && levelKills >= lvl.killTarget) {
+                bossActive = true;
+                bossSpawned = true;
+                spawnEnemy(true);
+            }
+
+            spawnCooldown--;
+            // Only increase enemy COUNT per level, NOT game speed
+            const maxEnemies = bossActive ? 5 : Math.min(15, 5 + currentLevel * 2);
+            const spawnRate = bossActive ? 80 : 50; // constant spawn rate
+            if (spawnGrace <= 0 && enemies.length < maxEnemies && spawnCooldown <= 0 && !bossSpawned) {
+                spawnEnemy();
+                spawnCooldown = spawnRate;
+            }
+
+            player.animTime += Math.abs(player.vx) * 0.1 + 0.1;
+            if (player.dashActive > 0) {
+                player.vx = player.facing * DASH_FORCE; player.vy = 0; player.dashActive--;
+                trails.push({ x: player.x, y: player.y, w: player.w, h: player.h, life: 0.4, color: player.weaponLevel >= 10 ? NEON_COLORS[gameTime % NEON_COLORS.length] : '#fff', facing: player.facing });
+            } else {
+                if (keys['KeyA'] || keys['ArrowLeft']) { player.vx = -PLAYER_SPEED; player.facing = -1; }
+                else if (keys['KeyD'] || keys['ArrowRight']) { player.vx = PLAYER_SPEED; player.facing = 1; }
+                else player.vx *= 0.82;
+                player.vy += GRAVITY;
+            }
+            player.x += player.vx; player.y += player.vy;
+            if (player.dashCooldown > 0) player.dashCooldown--;
+            if (player.iframe > 0) player.iframe--;
+
+            player.grounded = false;
+            platforms.forEach(plt => {
+                if (player.x < plt.x + plt.w && player.x + player.w > plt.x && player.y + player.h > plt.y && player.y + player.h < plt.y + plt.h + 20) {
+                    if (player.vy > 0) { player.y = plt.y - player.h; player.vy = 0; player.grounded = true; player.jumpCount = 0; }
+                }
+            });
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                const dist = player.x - e.x;
+                const distY = player.y - e.y;
+                const dir = Math.sign(dist);
+                e.animPhase += 0.15;
+                if (e.damageFlash > 0) e.damageFlash--;
+
+                if (e.type === 'chaser') {
+                    e.vx += (dir * e.baseSpeed - e.vx) * 0.12;
+                    if (Math.abs(dist) < 60 && Math.abs(distY) < 70) {
+                        if (player.iframe <= 0) { player.hp -= (playerSkills.shield.active > 0 ? 8 : 15); player.iframe = 30; }
+                        e.hp = 0;
+                    }
+                } else if (e.type === 'martial') {
+                    // Martial arts melee fighter - charges and attacks with kung fu combos
+                    e.vx += (dir * e.baseSpeed - e.vx) * 0.15;
+                    e.martialTimer++;
+                    if (Math.abs(dist) < 80 && Math.abs(distY) < 80) {
+                        // Execute martial arts combo
+                        if (e.martialTimer > 20) {
+                            e.martialCombo = (e.martialCombo + 1) % 4;
+                            e.martialTimer = 0;
+                            if (player.iframe <= 0) {
+                                const rawDmg = (e.martialCombo === 3) ? 25 : 12;
+                                player.hp -= playerSkills.shield.active > 0 ? Math.ceil(rawDmg * 0.5) : rawDmg;
+                                player.iframe = 20;
+                                player.vx += dir * -8;
+                                if (e.martialCombo === 3) player.vy = -15;
+                                createParticles(player.x, player.y, '#ffa500', 8, 1.5);
+                            }
+                        }
+                    } else {
+                        e.martialCombo = 0;
+                    }
+                } else if (e.type === 'sniper') {
+                    if (Math.abs(dist) < 500) e.vx += (-dir * e.baseSpeed - e.vx) * 0.1;
+                    else if (Math.abs(dist) > 700) e.vx += (dir * e.baseSpeed - e.vx) * 0.1;
+                    e.aimTimer++;
+                    if (e.aimTimer > 80 && isOnScreen(e)) {
+                        const angle = Math.atan2(distY, dist);
+                        const spd = 38;
+                        projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd, owner: 'enemy', color: e.bulletColor, life: 100, dmg: 30 });
+                        e.aimTimer = 0;
+                    }
+                } else if (e.type === 'boss') {
+                    const bossRage = e.hp < e.maxHp * 0.5;
+                    const speedMult = bossRage ? 1.5 : 1.0;
+                    e.vx += (dir * e.baseSpeed * speedMult - e.vx) * 0.12;
+                    e.shootTimer--;
+                    // Rage visual pulse
+                    if (bossRage && gameTime % 20 < 3) e.damageFlash = 2;
+                    const bt = e.bossType;
+                    if (e.shootTimer <= 0 && isOnScreen(e)) {
+                        const angle = Math.atan2(distY, dist);
+                        const rageCdMult = bossRage ? 0.5 : 1.0;
+                        if (bt === 'bandit_chief') {
+                            // Charge slam - single heavy shot
+                            projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * 28, vy: Math.sin(angle) * 28, owner: 'enemy', color: '#cc8833', life: 80, dmg: 25, size: 18 });
+                            e.shootTimer = 40 * rageCdMult;
+                        } else if (bt === 'wolf_king') {
+                            // Triple claw swipe
+                            for (let a = -0.2; a <= 0.2; a += 0.2) {
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle + a) * 24, vy: Math.sin(angle + a) * 24, owner: 'enemy', color: '#aaaaaa', life: 60, dmg: 15 });
+                            }
+                            e.shootTimer = 30 * rageCdMult;
+                        } else if (bt === 'iron_fist') {
+                            // Ground pound - 4 shockwaves left/right
+                            for (let s = -1; s <= 1; s += 2) {
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h, vx: s * 18, vy: -4, owner: 'enemy', color: '#ff8800', life: 80, dmg: 20, size: 16 });
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h, vx: s * 12, vy: -8, owner: 'enemy', color: '#ffaa33', life: 80, dmg: 15 });
+                            }
+                            e.shootTimer = 35 * rageCdMult;
+                        } else if (bt === 'shield_general') {
+                            // Shield bash + 2 side shots
+                            projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * 20, vy: Math.sin(angle) * 20, owner: 'enemy', color: '#4488cc', life: 100, dmg: 30, size: 20 });
+                            for (let a = -0.5; a <= 0.5; a += 1) {
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle + a) * 16, vy: Math.sin(angle + a) * 16, owner: 'enemy', color: '#66aaee', life: 80, dmg: 10 });
+                            }
+                            e.shootTimer = 45 * rageCdMult;
+                        } else if (bt === 'phantom_archer') {
+                            // Arrow rain - 5 shots arcing down
+                            for (let i = -2; i <= 2; i++) {
+                                projectiles.push({ x: e.x + e.w / 2 + i * 30, y: e.y, vx: i * 4, vy: -20, owner: 'enemy', color: '#33cc99', life: 120, dmg: 12 });
+                            }
+                            e.shootTimer = 28 * rageCdMult;
+                        } else if (bt === 'twin_blade') {
+                            // X-slash pattern
+                            for (let a = 0; a < Math.PI * 2; a += Math.PI / 2) {
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(a) * 22, vy: Math.sin(a) * 22, owner: 'enemy', color: '#cc44cc', life: 80, dmg: 18 });
+                            }
+                            e.shootTimer = 22 * rageCdMult;
+                        } else if (bt === 'thunder_monk') {
+                            // Lightning ring - 8 directions
+                            for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(a) * 18, vy: Math.sin(a) * 18, owner: 'enemy', color: '#ffcc00', life: 90, dmg: 15 });
+                            }
+                            e.shootTimer = 30 * rageCdMult;
+                        } else if (bt === 'blood_demon') {
+                            // Spiral blood shots
+                            const spin = gameTime * 0.1;
+                            for (let i = 0; i < 3; i++) {
+                                const sa = spin + i * Math.PI * 2 / 3;
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(sa) * 20, vy: Math.sin(sa) * 20, owner: 'enemy', color: '#cc0000', life: 100, dmg: 18 });
+                            }
+                            e.shootTimer = 18 * rageCdMult;
+                        } else if (bt === 'shadow_lord') {
+                            // Shadow split - aimed + 2 flanking
+                            projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * 30, vy: Math.sin(angle) * 30, owner: 'enemy', color: '#6633cc', life: 90, dmg: 25, size: 16 });
+                            for (let d = -1; d <= 1; d += 2) {
+                                projectiles.push({ x: e.x + e.w / 2 + d * 60, y: e.y, vx: Math.cos(angle) * 22, vy: Math.sin(angle) * 22, owner: 'enemy', color: '#9966ff', life: 80, dmg: 12 });
+                            }
+                            e.shootTimer = 20 * rageCdMult;
+                        } else { // sword_saint
+                            // 12-direction blade storm
+                            for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+                                projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(a) * 24, vy: Math.sin(a) * 24, owner: 'enemy', color: '#ffffff', life: 80, dmg: 15 });
+                            }
+                            e.shootTimer = 25 * rageCdMult;
+                        }
+                    }
+                    // Boss melee slam
+                    if (Math.abs(dist) < 100 && Math.abs(distY) < 100 && player.iframe <= 0) {
+                        player.hp -= playerSkills.shield.active > 0 ? 10 : 20; player.iframe = 40;
+                        player.vx += dir * -15; player.vy = -10;
+                        createParticles(player.x, player.y, e.color, 10, 2);
+                        haptic('heavy');
+                    }
+                } else {
+                    e.vx += (dir * e.baseSpeed - e.vx) * 0.1;
+                }
+
+                // Enemy jumping ability
+                e.jumpCooldown--;
+                if (e.grounded && e.jumpCooldown <= 0 && (distY < -80 || Math.random() < 0.01)) {
+                    e.vy = -20 - Math.random() * 8;
+                    e.jumpCooldown = 80 + Math.random() * 120;
+                }
+
+                e.vy += GRAVITY; e.x += e.vx; e.y += e.vy;
+                e.grounded = false;
+                platforms.forEach(plt => {
+                    if (e.x < plt.x + plt.w && e.x + e.w > plt.x && e.y + e.h > plt.y && e.y + e.h < plt.y + plt.h + 20) {
+                        if (e.vy > 0) { e.y = plt.y - e.h; e.vy = 0; e.grounded = true; }
+                    }
+                });
+
+                // 360° shooting for scout and heavy - ONLY when on screen
+                if (e.type !== 'chaser' && e.type !== 'sniper' && e.type !== 'martial' && e.type !== 'boss') {
+                    e.shootTimer--;
+                    if (e.shootTimer <= 0 && isOnScreen(e)) {
+                        const angle = Math.atan2(distY, dist);
+                        const spd = 14;
+                        projectiles.push({ x: e.x + e.w / 2, y: e.y + e.h / 2, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd, owner: 'enemy', color: e.bulletColor, life: 120, dmg: 12 });
+                        e.shootTimer = 70 + Math.random() * 50;
+                    }
+                }
+
+                if (e.hp <= 0) {
+                    const wasBoss = e.isBoss;
+                    enemies.splice(i, 1); kills++; levelKills++; combo++; comboTimer = 150; hitstop = wasBoss ? 12 : 4;
+                    player.energy = Math.min(100, player.energy + (wasBoss ? 50 : 4));
+                    createParticles(e.x + e.w / 2, e.y + e.h / 2, e.color, wasBoss ? 25 : 8, wasBoss ? 2 : 1.2, wasBoss ? 3 : 2);
+                    spawnDrop(e.x + e.w / 2, e.y + e.h / 2);
+                    playTone(60, 'sine', 0.1, 0.3);
+                    haptic(wasBoss ? 'heavy' : 'medium');
+                    // Boss killed = level complete
+                    if (wasBoss) {
+                        bossActive = false;
+                        if (currentLevel < 10) {
+                            completeLevel();
+                        } else {
+                            // Game won!
+                            endGame(true);
+                        }
+                    }
+                }
+            }
+
+            for (let i = drops.length - 1; i >= 0; i--) {
+                const d = drops[i]; d.vy += GRAVITY * 0.6; d.x += d.vx; d.y += d.vy; d.life--;
+
+                platforms.forEach(plt => {
+                    if (d.x < plt.x + plt.w && d.x + d.w > plt.x && d.y + d.h > plt.y && d.y + d.h < plt.y + plt.h + 20) {
+                        if (d.vy > 0) {
+                            d.y = plt.y - d.h;
+                            d.vy = 0;
+                            d.vx *= 0.7;
+                        }
+                    }
+                });
+
+                if (Math.abs(d.x - player.x) < 50 && Math.abs(d.y - player.y) < 70) {
+                    if (d.type === 'health') { player.hp = Math.min(100, player.hp + 30); playTone(800, 'sine', 0.2, 0.2); }
+                    else if (d.type === 'weapon') {
+                        const cap = LEVELS[currentLevel - 1].weaponCap;
+                        if (player.weaponLevel < cap) {
+                            player.weaponLevel++;
+                            playTone(1200, 'square', 0.4, 0.2);
+                            createParticles(player.x, player.y, '#fbbf24', 15, 2);
+                        }
+                    } else if (d.type === 'skill') {
+                        const sk = playerSkills[d.skillId];
+                        if (sk && sk.level < 10) {
+                            sk.level++;
+                            playTone(600 + sk.level * 100, 'square', 0.3, 0.25);
+                            createParticles(player.x, player.y, SKILL_DEFS[d.skillId].color, 20, 2);
+                        } else {
+                            // Max level - give energy instead
+                            player.energy = Math.min(100, player.energy + 10);
+                        }
+                    }
+                    drops.splice(i, 1); continue;
+                }
+                if (d.life <= 0) drops.splice(i, 1);
+            }
+
+            // Manual attack: shoot when holding KeyJ
+            if (keys['KeyJ']) playerShoot();
+            if (player.shootTimer > 0) player.shootTimer--;
+
+            // Skill cooldowns & shield active
+            for (const sk of Object.values(playerSkills)) {
+                if (sk.cooldown > 0) sk.cooldown--;
+                if (sk.active !== undefined && sk.active > 0) sk.active--;
+            }
+
+            // Send skill cooldown to native buttons (every 10 frames for performance)
+            if (gameTime % 10 === 0 && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.skillCooldown) {
+                const skillIds = Object.keys(SKILL_DEFS);
+                for (let si = 0; si < skillIds.length; si++) {
+                    const sk = playerSkills[skillIds[si]];
+                    const def = SKILL_DEFS[skillIds[si]];
+                    const maxCd = Math.max(40, def.baseCd - sk.level * 8);
+                    const ratio = sk.level > 0 ? (sk.cooldown / maxCd) : 0;
+                    const seconds = sk.level > 0 ? (sk.cooldown / 60) : 0;
+                    try { window.webkit.messageHandlers.skillCooldown.postMessage({ index: si, ratio: ratio, seconds: seconds, level: sk.level }); } catch (e) { }
+                }
+            }
+
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const pj = projectiles[i];
+                // Homing logic
+                if (pj.homing && pj.owner === 'player' && enemies.length > 0) {
+                    let closest = null, minDist = 999999;
+                    enemies.forEach(e => {
+                        const d = Math.hypot(e.x - pj.x, e.y - pj.y);
+                        if (d < minDist) { minDist = d; closest = e; }
+                    });
+                    if (closest) {
+                        const a = Math.atan2(closest.y + closest.h / 2 - pj.y, closest.x + closest.w / 2 - pj.x);
+                        const spd = Math.hypot(pj.vx, pj.vy);
+                        pj.vx += Math.cos(a) * 2;
+                        pj.vy += Math.sin(a) * 2;
+                        const ns = Math.hypot(pj.vx, pj.vy);
+                        pj.vx = pj.vx / ns * spd;
+                        pj.vy = pj.vy / ns * spd;
+                    }
+                }
+                pj.x += pj.vx; pj.y += pj.vy; pj.life--;
+                if (pj.owner === 'player') {
+                    enemies.forEach(e => {
+                        if (pj.x < e.x + e.w && pj.x + 70 > e.x && pj.y < e.y + e.h && pj.y + pj.size > e.y) {
+                            e.hp -= pj.dmg; pj.life = 0; e.damageFlash = 6;
+                            if (pj.skillHit) {
+                                // Enhanced skill hit effect: burst + flash
+                                createParticles(pj.x, pj.y, pj.color, 12, 2.5, 2);
+                                createParticles(pj.x, pj.y, '#fff', 6, 1.5);
+                                haptic('medium');
+                            } else {
+                                createParticles(pj.x, pj.y, pj.color, 4);
+                                haptic('light');
+                            }
+                        }
+                    });
+                } else if (player.iframe <= 0 && pj.x < player.x + player.w && pj.x + 20 > player.x && pj.y < player.y + player.h && pj.y + 15 > player.y) {
+                    const finalDmg = playerSkills.shield.active > 0 ? Math.ceil(pj.dmg * 0.5) : pj.dmg;
+                    player.hp -= finalDmg; player.iframe = 35; pj.life = 0;
+                    createParticles(player.x + player.w / 2, player.y + player.h / 2, '#f00', 15);
+                    haptic('heavy'); // player hit feedback
+                }
+                if (pj.life <= 0) projectiles.splice(i, 1);
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i]; pt.x += pt.vx; pt.y += pt.vy; pt.life -= pt.decay;
+                if (pt.life <= 0) particles.splice(i, 1);
+            }
+            for (let i = trails.length - 1; i >= 0; i--) {
+                const t = trails[i]; t.life -= 0.1; if (t.life <= 0) trails.splice(i, 1);
+            }
+            // Update slash effects
+            for (let i = slashEffects.length - 1; i >= 0; i--) {
+                slashEffects[i].life -= 0.04;
+                if (slashEffects[i].life <= 0) slashEffects.splice(i, 1);
+            }
+            // Update lightning bolts
+            for (let i = lightningBolts.length - 1; i >= 0; i--) {
+                lightningBolts[i].life--;
+                if (lightningBolts[i].life <= 0) lightningBolts.splice(i, 1);
+            }
+            if (screenFlash > 0) screenFlash--;
+            if (slashDim > 0) slashDim -= 0.05;
+
+            camX += (player.x - canvas.width / 3.5 - camX) * 0.12;
+            camY += (player.y - canvas.height / 2 - camY) * 0.1;
+
+            ui.hp.style.width = player.hp + '%';
+            ui.ult.style.width = player.energy + '%';
+            ui.kills.innerText = `斩敌: ${kills}`;
+            if (combo > 1) { ui.combo.innerText = `${combo} 连斩`; ui.comboContainer.style.opacity = 1; }
+            else ui.comboContainer.style.opacity = 0;
+
+            const realms = ["初入江湖", "炼体", "筑基", "金丹", "元婴", "化神", "合体", "大乘", "渡劫", "剑神圆满"];
+            ui.rank.innerText = `境界：${realms[player.weaponLevel - 1]} [Lv.${player.weaponLevel}]`;
+            // Level progress display (reuse lvl from above)
+            if (bossActive) {
+                document.getElementById('level-display').innerText = `${lvl.name} — BOSS战！`;
+            } else if (bossSpawned) {
+                document.getElementById('level-display').innerText = `${lvl.name}`;
+            } else {
+                document.getElementById('level-display').innerText = `${lvl.name}  [${levelKills}/${lvl.killTarget}]`;
+            }
+
+            if (player.hp <= 0 || player.y > 2500) endGame(false);
+        }
+
+        // Draw ink wash background with mountains
+        function drawInkWashBg() {
+            const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
+            const cols = lvl.bgColors;
+            // Sky gradient
+            const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            grad.addColorStop(0, cols[0]);
+            grad.addColorStop(0.3, cols[1]);
+            grad.addColorStop(0.6, cols[2]);
+            grad.addColorStop(1, cols[3]);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Screen dimming for slash effect
+            if (slashDim > 0) {
+                ctx.fillStyle = `rgba(0,0,0,${Math.min(0.6, slashDim)})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // Distant mountains - layered ink wash
+            const mtnOffset = camX * 0.05;
+            ctx.globalAlpha = 0.15;
+            const mtnCols = lvl.mtnColors;
+            for (let layer = 0; layer < 3; layer++) {
+                const ly = 200 + layer * 120;
+                const speed = 0.02 + layer * 0.015;
+                ctx.fillStyle = mtnCols[layer % mtnCols.length];
+                ctx.beginPath();
+                ctx.moveTo(0, ly + 200);
+                for (let x = 0; x <= canvas.width; x += 40) {
+                    const h = Math.sin((x + camX * speed) * 0.003 + layer) * 80 + Math.sin((x + camX * speed) * 0.007 + layer * 2) * 40;
+                    ctx.lineTo(x, ly - h);
+                }
+                ctx.lineTo(canvas.width, ly + 200);
+                ctx.closePath();
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1.0;
+            // Floating ink particles (mist)
+            ctx.globalAlpha = 0.06;
+            for (let i = 0; i < 8; i++) {
+                const mx = ((gameTime * 0.3 + i * 200) % (canvas.width + 200)) - 100;
+                const my = 100 + Math.sin(gameTime * 0.01 + i) * 60 + i * 50;
+                ctx.fillStyle = '#555';
+                ctx.beginPath();
+                ctx.arc(mx, my, 40 + i * 10, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1.0;
+        }
+
+        function draw() {
+            drawInkWashBg();
+            ctx.save(); ctx.translate(-camX, -camY);
+
+            platforms.forEach(plt => {
+                if (plt.x + plt.w < camX - 400 || plt.x > camX + canvas.width + 400) return;
+                // Ink wash platform style
+                ctx.fillStyle = plt.color;
+                ctx.fillRect(plt.x, plt.y, plt.w, plt.h);
+                // Brush stroke top edge
+                ctx.strokeStyle = plt.isGround ? '#8a7a60' : '#706050';
+                ctx.lineWidth = plt.isGround ? 3 : 2;
+                ctx.beginPath();
+                ctx.moveTo(plt.x, plt.y);
+                for (let bx = plt.x; bx <= plt.x + plt.w; bx += 8) {
+                    ctx.lineTo(bx, plt.y + Math.sin(bx * 0.1) * 1.5);
+                }
+                ctx.stroke();
+                // Subtle shadow under floating platforms
+                if (!plt.isGround) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.08)';
+                    ctx.fillRect(plt.x + 5, plt.y + plt.h, plt.w - 10, 4);
+                }
+            });
+
+            drops.forEach(d => {
+                ctx.save(); ctx.translate(d.x + d.w / 2, d.y + d.h / 2 + Math.sin(gameTime * 0.1) * 10);
+                if (d.type === 'health') {
+                    ctx.shadowBlur = 20; ctx.shadowColor = '#22c55e'; ctx.fillStyle = '#22c55e';
+                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(-6, -6, 8, 0, Math.PI, true); ctx.arc(6, -6, 8, 0, Math.PI, true); ctx.lineTo(0, 10); ctx.fill();
+                } else if (d.type === 'skill') {
+                    const skDef = SKILL_DEFS[d.skillId];
+                    ctx.shadowBlur = 20; ctx.shadowColor = skDef.color; ctx.fillStyle = skDef.color;
+                    ctx.beginPath(); ctx.arc(0, 0, 14 + Math.sin(gameTime * 0.15) * 3, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = '#fff'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(skDef.emoji, 0, 0);
+                } else {
+                    ctx.shadowBlur = 25; ctx.shadowColor = '#fbbf24'; ctx.fillStyle = '#fbbf24';
+                    ctx.rotate(gameTime * 0.05); ctx.fillRect(-16, -16, 32, 32);
+                    ctx.fillStyle = '#fff'; ctx.fillRect(-4, -12, 8, 24); ctx.fillRect(-12, -4, 24, 8);
+                }
+                ctx.restore();
+            });
+
+            if (player.iframe % 4 < 2) {
+                drawPlayer(player.x, player.y, player.w, player.h, player.facing, player.animTime);
+                // Shield visual
+                if (playerSkills.shield.active > 0) {
+                    ctx.save();
+                    ctx.strokeStyle = '#ffcc00';
+                    ctx.lineWidth = 3;
+                    ctx.globalAlpha = 0.4 + Math.sin(gameTime * 0.2) * 0.2;
+                    ctx.beginPath();
+                    ctx.arc(player.x + player.w / 2, player.y + player.h / 2, 45, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+            enemies.forEach(e => {
+                drawPixelStickman(e);
+            });
+
+            projectiles.forEach(pj => {
+                ctx.save();
+                ctx.fillStyle = pj.color; ctx.shadowBlur = 15; ctx.shadowColor = pj.color;
+                if (pj.homing) {
+                    // Ghost claw drawing
+                    ctx.translate(pj.x, pj.y);
+                    ctx.rotate(Math.atan2(pj.vy, pj.vx));
+                    ctx.beginPath();
+                    ctx.moveTo(10, 0); ctx.lineTo(-10, 8); ctx.lineTo(-5, 0); ctx.lineTo(-10, -8); ctx.fill();
+                } else if (!pj.skillHit) {
+                    // Standard projectile
+                    ctx.beginPath(); ctx.arc(pj.x, pj.y, pj.size || 10, 0, Math.PI * 2); ctx.fill();
+                } else {
+                    // Skill projectile (Fire/Wind)
+                    ctx.translate(pj.x, pj.y);
+                    ctx.rotate(Math.atan2(pj.vy, pj.vx));
+                    ctx.beginPath();
+                    ctx.moveTo(15, 0); ctx.lineTo(-10, 10); ctx.lineTo(-5, 0); ctx.lineTo(-10, -10); ctx.fill();
+                }
+                ctx.restore();
+            });
+
+            // Draw Lightning Bolts
+            ctx.save();
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            lightningBolts.forEach(bolt => {
+                const alpha = bolt.life / 15;
+                ctx.globalAlpha = alpha;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#aa66ff';
+                // Inner white core
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                let first = true;
+                bolt.segments.forEach(pt => {
+                    const px = pt.x - camX;
+                    const py = pt.y - camY;
+                    if (first) { ctx.moveTo(px, py); first = false; }
+                    else ctx.lineTo(px, py);
+                });
+                ctx.stroke();
+                // Outer glow
+                ctx.strokeStyle = '#aa66ff';
+                ctx.lineWidth = 8;
+                ctx.globalAlpha = alpha * 0.5;
+                ctx.stroke();
+            });
+            ctx.restore();
+
+            // Draw Calligraphy Slash Effects (Screen Space)
+            slashEffects.forEach(s => {
+                const sx = s.x - camX;
+                const sy = s.y - camY;
+                const progress = 1 - s.life / s.maxLife; // 0 to 1
+                const alpha = Math.min(1, s.life * 1.5);
+
+                ctx.save();
+                ctx.translate(sx, sy);
+                const scale = s.facing;
+                ctx.scale(scale, 1);
+
+                // Advanced Calligraphy Brush Stroke
+                // Shape: Start thick (heavy ink), taper to thin sharp point
+                // Curve: Cubic Bezier for dynamic "swoosh"
+
+                const p0 = { x: -200, y: 100 }; // Start low-back
+                const p1 = { x: -50, y: -150 };  // Control high-back
+                const p2 = { x: 150, y: -150 };  // Control high-front
+                const p3 = { x: 300, y: 50 };   // End mid-front
+
+                // Animate drawing: only draw up to current progress
+                // Simplified: Draw full shape but mask or scale opacity? 
+                // Better: Draw full stroke but fade out. The motion is effectively instant in "logic" but visual is a trace.
+
+                // 1. Ink Wash Base (The "water" part of ink)
+                ctx.globalAlpha = alpha * 0.3;
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 70;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(p0.x, p0.y);
+                ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+                ctx.stroke();
+
+                // 2. Main Ink Stroke (The heavy "ink" part)
+                // We simulate variable width by drawing multiple offset curves or just a tapered line
+                ctx.globalAlpha = alpha * 0.9;
+                ctx.strokeStyle = '#1a1a1a';
+                ctx.lineWidth = 25;
+                ctx.beginPath();
+                ctx.moveTo(p0.x + 10, p0.y + 10);
+                ctx.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x - 20, p3.y); // Stop slightly short for taper look
+                ctx.stroke();
+
+                // 3. Dry Brush / White Streak (The "velocity" lines)
+                ctx.globalAlpha = alpha * 0.8;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(p0.x + 5, p0.y - 5);
+                ctx.bezierCurveTo(p1.x + 5, p1.y + 5, p2.x - 5, p2.y + 5, p3.x - 10, p3.y);
+                ctx.stroke();
+
+                ctx.restore();
+            });
+
+            // Performance: batch particle draw
+            for (let i = 0; i < particles.length; i++) {
+                const pt = particles[i];
+                ctx.globalAlpha = pt.life;
+                ctx.fillStyle = pt.color;
+                ctx.fillRect(pt.x, pt.y, pt.size, pt.size);
+            }
+            ctx.restore();
+
+            // Draw boss HP bar
+            enemies.forEach(e => {
+                if (e.isBoss && e.maxHp > 0) {
+                    const bx = e.x - camX;
+                    const by = e.y - camY - 20;
+                    ctx.save();
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(bx - 10, by, e.w + 20, 8);
+                    const rage = e.hp < e.maxHp * 0.5;
+                    ctx.fillStyle = rage ? '#ff4400' : '#ff0000';
+                    ctx.fillRect(bx - 10, by, (e.w + 20) * (e.hp / e.maxHp), 8);
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '12px sans-serif';
+                    ctx.fillText(rage ? 'BOSS 狂暴!' : 'BOSS', bx + e.w / 2 - 16, by - 4);
+                    ctx.restore();
+                }
+            });
+
+            // Draw skill HUD on canvas (bottom-left above joystick)
+            ctx.save();
+            ctx.globalAlpha = 0.9;
+            let skX = 20;
+            const skY = canvas.height - 50;
+            if (screenFlash > 0) {
+                ctx.fillStyle = `rgba(255,255,255,${screenFlash / 20})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            for (const [id, def] of Object.entries(SKILL_DEFS)) {
+                const sk = playerSkills[id];
+                if (sk.level <= 0) { skX += 50; continue; }
+                // Background
+                ctx.fillStyle = sk.cooldown > 0 ? 'rgba(40,35,28,0.6)' : 'rgba(40,35,28,0.3)';
+                ctx.fillRect(skX, skY, 44, 44);
+                ctx.strokeStyle = def.color;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(skX, skY, 44, 44);
+                // Cooldown overlay
+                if (sk.cooldown > 0) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    const cdRatio = sk.cooldown / Math.max(40, def.baseCd - sk.level * 8);
+                    ctx.fillRect(skX, skY, 44, 44 * cdRatio);
+                }
+                // Emoji + level
+                ctx.fillStyle = '#fff';
+                ctx.font = '18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(def.emoji, skX + 22, skY + 22);
+                ctx.font = '10px sans-serif';
+                ctx.fillStyle = def.color;
+                ctx.fillText('Lv' + sk.level, skX + 22, skY + 40);
+                skX += 50;
+            }
+            ctx.restore();
+
+            if (!gameLoopRunning) {
+                gameLoopRunning = true;
+                requestAnimationFrame(() => {
+                    gameLoopRunning = false;
+                    if (gameRunning) { update(); draw(); }
+                });
+            }
+        }
+
+        function drawPlayer(x, y, w, h, facing, anim) {
+            ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.scale(facing, 1);
+            const lvl = player.weaponLevel;
+            const bob = Math.sin(anim) * 5;
+
+            if (lvl >= 10) {
+                for (let i = 0; i < 8; i++) {
+                    const ang = gameTime * 0.1 + (i / 8) * Math.PI * 2;
+                    ctx.save(); ctx.translate(Math.cos(ang) * 55, Math.sin(ang) * 55);
+                    ctx.rotate(ang + Math.PI / 2);
+                    ctx.fillStyle = NEON_COLORS[(gameTime + i) % NEON_COLORS.length];
+                    ctx.fillRect(-2, -18, 4, 36); ctx.restore();
+                }
+            }
+
+            let cloakColor = '#222';
+            if (lvl >= 4) cloakColor = '#312e81';
+            if (lvl >= 7) cloakColor = '#4c1d95';
+            if (lvl >= 10) cloakColor = NEON_COLORS[gameTime % NEON_COLORS.length];
+
+            ctx.fillStyle = cloakColor;
+            ctx.beginPath(); ctx.moveTo(0, -10);
+            ctx.quadraticCurveTo(-30 - (lvl * 3), bob, 0, h / 2 + bob); ctx.fill();
+
+            ctx.fillStyle = lvl >= 7 ? '#fff' : '#eee';
+            ctx.fillRect(-10, -10, 20, 40);
+
+            ctx.fillStyle = lvl >= 7 ? '#fbbf24' : '#444';
+            ctx.beginPath(); ctx.moveTo(-25 - (lvl * 1.2), -15); ctx.lineTo(0, -30 - (lvl / 1.5)); ctx.lineTo(25 + (lvl * 1.2), -15); ctx.closePath(); ctx.fill();
+            if (lvl >= 10) {
+                ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.shadowBlur = 20; ctx.shadowColor = '#fff';
+            }
+
+            ctx.strokeStyle = lvl >= 10 ? NEON_COLORS[gameTime % NEON_COLORS.length] : (lvl >= 7 ? '#fbbf24' : '#fff');
+            ctx.lineWidth = 3 + lvl / 2.5;
+            ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(35 + lvl * 2.5, 10); ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function drawPixelStickman(e) {
+            ctx.save(); ctx.translate(e.x + e.w / 2, e.y + e.h / 2);
+            ctx.scale(Math.sign(player.x - e.x) || 1, 1);
+            const hover = Math.sin(e.animPhase) * 6; ctx.translate(0, hover);
+
+            let color = e.color;
+            if (e.damageFlash > 0) color = '#fff';
+
+            ctx.strokeStyle = color; ctx.lineWidth = e.type === 'heavy' ? 8 : (e.isBoss ? 6 : 4);
+            ctx.lineCap = 'round'; ctx.shadowBlur = 12; ctx.shadowColor = color;
+
+            const t = e.animPhase;
+            const tier = e.enemyTier || 1;
+
+            if (e.isBoss) {
+                // === UNIQUE BOSS DRAWINGS ===
+                const bt = e.bossType;
+                // All bosses: larger head
+                ctx.strokeRect(-14, -e.h / 2, 28, 28);
+                // Body
+                ctx.beginPath(); ctx.moveTo(0, -e.h / 2 + 28); ctx.lineTo(0, 10); ctx.stroke();
+                const hs = Math.sin(t) * 15;
+                // Legs
+                ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(18, 30 + Math.cos(t) * 10); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(-18, 30 - Math.cos(t) * 10); ctx.stroke();
+
+                if (bt === 'bandit_chief') {
+                    // Straw hat + large club
+                    ctx.fillStyle = color; ctx.fillRect(-20, -e.h / 2 - 6, 40, 6);
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(30, hs); ctx.lineTo(35, hs - 5); ctx.stroke();
+                    ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(30, hs); ctx.lineTo(40, hs + 5); ctx.stroke();
+                } else if (bt === 'wolf_king') {
+                    // Wolf ears + claws
+                    ctx.beginPath(); ctx.moveTo(-10, -e.h / 2); ctx.lineTo(-15, -e.h / 2 - 15); ctx.lineTo(-5, -e.h / 2); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(10, -e.h / 2); ctx.lineTo(15, -e.h / 2 - 15); ctx.lineTo(5, -e.h / 2); ctx.stroke();
+                    // Claws on hands
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(20, hs); ctx.stroke();
+                    for (let c = 0; c < 3; c++) ctx.fillRect(18 + c * 4, hs - 2, 2, 8);
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-20, -hs); ctx.stroke();
+                    for (let c = 0; c < 3; c++) ctx.fillRect(-20 - c * 4, -hs - 2, 2, 8);
+                } else if (bt === 'iron_fist') {
+                    // Headband + giant fists
+                    ctx.fillStyle = '#ff4400'; ctx.fillRect(-18, -e.h / 2 + 2, 36, 5);
+                    ctx.lineWidth = 10;
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(25, hs); ctx.stroke();
+                    ctx.fillRect(20, hs - 8, 16, 16);
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-25, -hs); ctx.stroke();
+                    ctx.fillRect(-36, -hs - 8, 16, 16);
+                } else if (bt === 'shield_general') {
+                    // Helmet + shield
+                    ctx.fillStyle = color; ctx.fillRect(-16, -e.h / 2 - 8, 32, 8);
+                    ctx.fillRect(-2, -e.h / 2 - 14, 4, 10);
+                    // Shield on left arm
+                    ctx.lineWidth = 3; ctx.strokeRect(-30, -15, 18, 30);
+                    ctx.fillStyle = color; ctx.globalAlpha = 0.3; ctx.fillRect(-30, -15, 18, 30); ctx.globalAlpha = 1;
+                    // Spear on right
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(35, hs - 10); ctx.stroke();
+                } else if (bt === 'phantom_archer') {
+                    // Hood + bow
+                    ctx.beginPath(); ctx.moveTo(-15, -e.h / 2 + 5); ctx.lineTo(0, -e.h / 2 - 12); ctx.lineTo(15, -e.h / 2 + 5); ctx.stroke();
+                    // Bow
+                    ctx.beginPath(); ctx.arc(20, 0, 20, -Math.PI / 3, Math.PI / 3); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(20, -10); ctx.lineTo(20, 10); ctx.stroke();
+                } else if (bt === 'twin_blade') {
+                    // Two swords
+                    ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(25, hs - 15); ctx.lineTo(28, hs - 20); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-25, -hs - 15); ctx.lineTo(-28, -hs - 20); ctx.stroke();
+                    // Flowing scarf
+                    ctx.strokeStyle = '#ff66ff'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(-14, -e.h / 2 + 10);
+                    ctx.bezierCurveTo(-25, -e.h / 2 + 5, -35 - Math.sin(t * 2) * 10, -e.h / 2 + 15, -40 - Math.sin(t * 3) * 8, -e.h / 2 + 5);
+                    ctx.stroke(); ctx.strokeStyle = color;
+                } else if (bt === 'thunder_monk') {
+                    // Bald head + prayer beads + lightning
+                    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, -e.h / 2 + 14, 14, 0, Math.PI * 2); ctx.fill();
+                    // Prayer beads
+                    ctx.fillStyle = '#ffcc00';
+                    for (let b = 0; b < 8; b++) {
+                        const ba = b * Math.PI / 4;
+                        ctx.beginPath(); ctx.arc(Math.cos(ba) * 12, Math.sin(ba) * 12 - e.h / 2 + 14, 3, 0, Math.PI * 2); ctx.fill();
+                    }
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(15, hs); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-15, -hs); ctx.stroke();
+                    // Lightning effect
+                    if (Math.random() > 0.7) {
+                        ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.moveTo(e.w / 2, -e.h / 2); ctx.lineTo(e.w / 2 + 10, -e.h / 2 - 20); ctx.lineTo(e.w / 2 + 5, -e.h / 2 - 15); ctx.lineTo(e.w / 2 + 15, -e.h / 2 - 35); ctx.stroke();
+                    }
+                } else if (bt === 'blood_demon') {
+                    // Horns + tail + red aura
+                    ctx.beginPath(); ctx.moveTo(-10, -e.h / 2); ctx.lineTo(-18, -e.h / 2 - 18); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(10, -e.h / 2); ctx.lineTo(18, -e.h / 2 - 18); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(20, hs); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-20, -hs); ctx.stroke();
+                    // Tail
+                    ctx.beginPath(); ctx.moveTo(0, 10); ctx.bezierCurveTo(-20, 20, -30, 10 + Math.sin(t) * 10, -35, 0); ctx.stroke();
+                    // Aura
+                    ctx.strokeStyle = '#cc0000'; ctx.lineWidth = 1; ctx.globalAlpha = 0.3;
+                    ctx.beginPath(); ctx.arc(0, 0, 35 + Math.sin(t * 2) * 5, 0, Math.PI * 2); ctx.stroke();
+                    ctx.globalAlpha = 1;
+                } else if (bt === 'shadow_lord') {
+                    // Hooded figure + shadow tendrils
+                    ctx.beginPath(); ctx.moveTo(-18, -e.h / 2 + 10); ctx.lineTo(0, -e.h / 2 - 15); ctx.lineTo(18, -e.h / 2 + 10); ctx.fill();
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(15, hs); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-15, -hs); ctx.stroke();
+                    // Shadow tendrils
+                    ctx.strokeStyle = '#6633cc'; ctx.lineWidth = 2;
+                    for (let td = 0; td < 4; td++) {
+                        const ta = td * Math.PI / 2 + t * 0.5;
+                        ctx.beginPath(); ctx.moveTo(0, 10);
+                        ctx.bezierCurveTo(Math.cos(ta) * 20, 20 + Math.sin(ta) * 10, Math.cos(ta) * 30, 30, Math.cos(ta) * 35, 25 + Math.sin(ta + 1) * 10);
+                        ctx.stroke();
+                    }
+                } else { // sword_saint
+                    // Crown + glowing sword + cape
+                    ctx.fillStyle = '#ffcc00';
+                    ctx.fillRect(-12, -e.h / 2 - 4, 24, 4);
+                    for (let p = -8; p <= 8; p += 8) ctx.fillRect(p - 2, -e.h / 2 - 10, 4, 8);
+                    // Sword
+                    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(35, hs - 10); ctx.lineTo(38, hs - 20); ctx.stroke();
+                    ctx.strokeStyle = color;
+                    ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-15, -hs); ctx.stroke();
+                    // Cape
+                    ctx.fillStyle = color; ctx.globalAlpha = 0.3;
+                    ctx.beginPath(); ctx.moveTo(-14, -e.h / 2 + 28); ctx.lineTo(-20, 30); ctx.lineTo(20, 30); ctx.lineTo(14, -e.h / 2 + 28); ctx.fill();
+                    ctx.globalAlpha = 1;
+                    // Glow
+                    ctx.shadowBlur = 25; ctx.shadowColor = '#ffffff';
+                }
+            } else if (e.type === 'martial') {
+                // Chinese martial arts stance drawing
+                const combo = e.martialCombo || 0;
+                ctx.strokeRect(-10, -e.h / 2, 20, 20);
+                // Headband color by tier
+                ctx.fillStyle = tier === 3 ? '#cc0000' : (tier === 2 ? '#4488cc' : '#ff4444');
+                ctx.fillRect(-14, -e.h / 2, 28, 4);
+                ctx.beginPath(); ctx.moveTo(0, -e.h / 2 + 20); ctx.lineTo(0, 5); ctx.stroke();
+                if (combo === 0) {
+                    ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(25, -15); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-15, 0); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(20, 25); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(-20, 25); ctx.stroke();
+                } else if (combo === 1) {
+                    ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-10, -25); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-20, 5); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(35, 5); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(-10, 30); ctx.stroke();
+                } else if (combo === 2) {
+                    const sw = Math.sin(t * 3) * 30;
+                    ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(10 + sw, -20); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-10 - sw, -20); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(25 + sw, 20); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(-25 - sw, 20); ctx.stroke();
+                } else {
+                    ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(5, -35); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(20, -5); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(10, 30); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(-10, 30); ctx.stroke();
+                    ctx.strokeStyle = tier === 3 ? '#cc0000' : '#ffa500'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(5, -30, 8, 0, Math.PI * 2); ctx.stroke();
+                }
+            } else {
+                // Normal enemies with tier-based accessories
+                ctx.strokeRect(-10, -e.h / 2, 20, 20);
+                ctx.beginPath(); ctx.moveTo(0, -e.h / 2 + 20); ctx.lineTo(0, 5); ctx.stroke();
+                const handSwing = Math.sin(t) * 20;
+                ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(15, handSwing); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(-15, -handSwing); ctx.stroke();
+                const legSwing = Math.cos(t) * 20;
+                ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(15, 25 + legSwing); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(-15, 25 - legSwing); ctx.stroke();
+
+                if (e.type === 'scout') { ctx.fillStyle = color; ctx.fillRect(15, handSwing - 5, 20, 5); }
+                if (e.type === 'heavy') { ctx.strokeRect(10, -20, 15, 50); }
+
+                // Tier accessories
+                if (tier === 1) {
+                    // Straw hat
+                    ctx.fillStyle = color; ctx.globalAlpha = 0.4;
+                    ctx.fillRect(-14, -e.h / 2 - 3, 28, 3);
+                    ctx.globalAlpha = 1;
+                } else if (tier === 2) {
+                    // Helmet with plume
+                    ctx.fillStyle = color;
+                    ctx.fillRect(-12, -e.h / 2 - 5, 24, 5);
+                    ctx.fillRect(0, -e.h / 2 - 12, 3, 8);
+                    // Shoulder pads
+                    ctx.fillRect(-18, -10, 6, 6);
+                    ctx.fillRect(12, -10, 6, 6);
+                } else {
+                    // Full armor + glowing eyes
+                    ctx.fillStyle = color;
+                    ctx.fillRect(-14, -e.h / 2 - 6, 28, 6);
+                    ctx.fillRect(-2, -e.h / 2 - 14, 4, 10);
+                    // Shoulder armor
+                    ctx.fillRect(-22, -12, 10, 8);
+                    ctx.fillRect(12, -12, 10, 8);
+                    // Glowing eyes
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(-7, -e.h / 2 + 5, 4, 3);
+                    ctx.fillRect(3, -e.h / 2 + 5, 4, 3);
+                }
+            }
+
+            ctx.restore();
+        }
+
+        // Keep keyboard support for debugging
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if (!gameRunning) return;
+            if ((e.code === 'KeyJ' || e.code === 'Space') && player.jumpCount < 2) {
+                player.vy = JUMP_FORCE; player.jumpCount++; playTone(400, 'sine', 0.1, 0.1);
+            }
+            if ((e.code === 'ShiftLeft' || e.code === 'KeyW') && player.dashCooldown <= 0) {
+                player.dashActive = 15; player.dashCooldown = 35; playTone(300, 'triangle', 0.1, 0.1);
+            }
+            if (e.code === 'KeyL' && player.energy >= 100) {
+                player.energy = 0; player.ultActive = 240; player.iframe = 240;
+                playTone(100, 'sawtooth', 1.0, 0.5);
+                createParticles(player.x, player.y, '#fff', 50, 3);
+            }
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        function startGame() {
+            ui.menu.classList.add('hidden'); ui.hud.classList.add('visible');
+            currentLevel = 1; levelKills = 0; bossActive = false; bossSpawned = false;
+            initPlatforms(); gameRunning = true; gamePaused = false; resize();
+            showLevelBanner();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            BGM.start();
+            try { window.webkit.messageHandlers.gameState.postMessage('transition'); } catch (e) { }
+        }
+        window.startGame = startGame;
+
+        function endGame(won) {
+            gameRunning = false; ui.hud.classList.remove('visible'); ui.over.classList.add('visible');
+            if (won) {
+                document.querySelector('#game-over h1').innerText = '天下无敌';
+                ui.stats.innerText = `通关！斩敌: ${kills} | 最终境界: Lv.${player.weaponLevel}`;
+            } else {
+                document.querySelector('#game-over h1').innerText = '气尽人亡';
+                ui.stats.innerText = `第${currentLevel}关落败 | 斩敌: ${kills} | 境界: Lv.${player.weaponLevel}`;
+            }
+            BGM.stop();
+            haptic('error');
+            try { window.webkit.messageHandlers.gameState.postMessage('ended'); } catch (e) { }
+        }
+
+        function completeLevel() {
+            gamePaused = true;
+            currentLevel++;
+            levelKills = 0;
+            bossSpawned = false;
+            bossActive = false;
+            // Heal player between levels
+            player.hp = Math.min(100, player.hp + 30);
+            // Clear remaining enemies
+            enemies.length = 0;
+            projectiles.length = 0;
+            // Regenerate platforms for new level colors
+            initPlatforms();
+            // Update BGM
+            BGM.playSongForLevel();
+            showLevelBanner();
+        }
+
+        function showLevelBanner() {
+            const lvl = LEVELS[currentLevel - 1];
+            const banner = document.getElementById('level-banner');
+            document.getElementById('level-title').innerText = lvl.name;
+            document.getElementById('level-subtitle').innerText = `武器上限: Lv.${lvl.weaponCap} | 击杀目标: ${lvl.killTarget}`;
+            banner.classList.add('visible');
+            try { window.webkit.messageHandlers.gameState.postMessage('transition'); } catch (e) { }
+            setTimeout(() => {
+                banner.classList.remove('visible');
+                gamePaused = false;
+                spawnGrace = 90;  // ~1.5s safe time after controls reappear
+                try { window.webkit.messageHandlers.gameState.postMessage('playing'); } catch (e) { }
+                if (!gameLoopRunning) draw();
+            }, 2000);
+        }
+
+        function togglePause() {
+            if (!gameRunning) return;
+            gamePaused = !gamePaused;
+            const overlay = document.getElementById('pause-overlay');
+            if (gamePaused) {
+                overlay.classList.add('visible');
+            } else {
+                overlay.classList.remove('visible');
+                if (!gameLoopRunning) draw();
+            }
+        }
+        window.togglePause = togglePause;
+
+        function returnHome() {
+            gameRunning = false;
+            gamePaused = false;
+            BGM.stop();
+            document.getElementById('pause-overlay').classList.remove('visible');
+            ui.hud.classList.remove('visible');
+            ui.over.classList.remove('visible');
+            ui.menu.classList.remove('hidden');
+            // Reset game state
+            player.x = 400; player.y = 300; player.vx = 0; player.vy = 0;
+            player.hp = 100; player.energy = 0; player.weaponLevel = 1;
+            player.dashCooldown = 0; player.dashActive = 0; player.shootTimer = 0;
+            player.iframe = 0; player.ultActive = 0; player.jumpCount = 0;
+            kills = 0; combo = 0; comboTimer = 0; gameTime = 0;
+            currentLevel = 1; levelKills = 0; bossActive = false; bossSpawned = false;
+            enemies.length = 0; projectiles.length = 0; particles.length = 0;
+            trails.length = 0; drops.length = 0; slashEffects.length = 0;
+            // Reset skills
+            for (const sk of Object.values(playerSkills)) { sk.level = 0; sk.cooldown = 0; if (sk.active !== undefined) sk.active = 0; }
+            // Hide native controls
+            try { window.webkit.messageHandlers.gameState.postMessage('ended'); } catch (e) { }
+        }
+        window.returnHome = returnHome;
+
+        function resize() {
+            canvas.width = GAME_WIDTH;
+            canvas.height = GAME_HEIGHT;
+            // Scale canvas to fit viewport while maintaining aspect ratio
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            const scaleX = vw / GAME_WIDTH;
+            const scaleY = vh / GAME_HEIGHT;
+            canvasScale = Math.max(scaleX, scaleY); // cover mode: fill screen
+            canvas.style.transform = `scale(${canvasScale})`;
+            // Center the canvas if it overflows in one direction
+            const scaledW = GAME_WIDTH * canvasScale;
+            const scaledH = GAME_HEIGHT * canvasScale;
+            canvas.style.left = ((vw - scaledW) / 2) + 'px';
+            canvas.style.top = ((vh - scaledH) / 2) + 'px';
+        }
+        window.addEventListener('resize', resize);
+        resize();
+    </script>
+</body>
+
+</html>
