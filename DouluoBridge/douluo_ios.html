@@ -376,7 +376,7 @@
     <div id="ui-layer">
         <!-- Main Menu -->
         <div id="main-menu">
-            <div class="version-tag">PIXEL WUXIA v7.1</div>
+            <div class="version-tag">PIXEL WUXIA v1.1</div>
             <h1 class="font-game glowing-text">斗罗大桥</h1>
             <p class="subtitle">万剑归宗 | Ten Thousand Swords</p>
             <button onclick="startGame()" class="menu-btn start-btn font-game">
@@ -448,15 +448,44 @@
                     const dashEndX = player.x + player.facing * DASH_FORCE * 15;
                     const dashMinX = Math.min(dashStartX, dashEndX) - 40;
                     const dashMaxX = Math.max(dashStartX, dashEndX) + 40;
-                    // Ink-wash slash effect (half-screen arc)
+                    // Ink-wash slash effect (LARGE half-screen arc)
                     slashEffects.push({
                         x: player.x + player.w / 2,
                         y: player.y + player.h / 2,
                         facing: player.facing,
                         life: 1.0,  // fades from 1 to 0
                         maxLife: 1.0,
-                        radius: GAME_WIDTH * 0.35,
+                        radius: GAME_WIDTH * 0.75, // HUGE radius
                     });
+                    slashDim = 1.0; // Dim screen
+
+                    // Synthesized SFX: Watermelon Slice (Noise Burst + Low Thud)
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                    // 1. Noise
+                    const bufSize = audioCtx.sampleRate * 0.1;
+                    const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+                    const data = buf.getChannelData(0);
+                    for (let i = 0; i < bufSize; i++) data[i] = (Math.random() - 0.5) * 2;
+                    const noise = audioCtx.createBufferSource();
+                    noise.buffer = buf;
+                    const nGain = audioCtx.createGain();
+                    nGain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                    nGain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+                    noise.connect(nGain); nGain.connect(audioCtx.destination);
+                    noise.start();
+
+                    // 2. Low Thud (Sine drop)
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+
                     // Spawn ink splatter particles along slash arc
                     for (let sp = 0; sp < 30; sp++) {
                         const ang = (Math.random() - 0.5) * 1.2 + (player.facing > 0 ? 0 : Math.PI);
@@ -539,10 +568,14 @@
                     createParticles(px, py, def.color, 15, 2.5);
                     sk.cooldown = Math.max(50, def.baseCd - lvl * 10);
                 } else if (id === 'shield') {
-                    // Iron Shirt: 4x duration damage reduction
-                    sk.active = (def.baseDur + lvl * 20) * 4;
+                    // Iron Shirt: Balanced - CD > Duration
+                    // Duration: 180 (3s) + lvl * 30 -> Max ~400 (6.6s) at Lv.8
+                    const duration = 180 + lvl * 30;
+                    sk.active = duration;
+                    // Cooldown: Duration * 1.5 + 60 -> Ensures downtime
+                    sk.cooldown = Math.floor(duration * 1.5 + 60);
+
                     createParticles(px, py, def.color, 30, 2);
-                    sk.cooldown = Math.max(100, def.baseCd - lvl * 15);
                 } else if (id === 'lightning') {
                     // Lightning: FULL SCREEN - strike ALL visible enemies
                     const dmg = def.baseDmg + lvl * 20;
@@ -632,61 +665,61 @@
                 name: '第一关·初入江湖', killTarget: 15, weaponCap: 2, enemyTier: 1, enemies: ['scout'], bossHp: 600, bossSpeed: 1.0, bossType: 'bandit_chief',
                 bgColors: ['#e8dcc8', '#d8ccb4', '#c8b89a', '#b0a080'], mtnColors: ['#7a9a6a', '#8aaa7a', '#6a8a5a'], enemyColors: ['#6a8844', '#7a9954', '#5a7744', '#88aa66', '#779944'],
                 platGround: ['#c8b99a', '#b8a88a', '#d4c4a8'], platFloat: ['#a09080', '#90806a', '#c0b090'],
-                bgm: { drone: 49.0, filter: 2500, vol: 0.04, melodies: [0, 4] }
+                bgm: { drone: 49.0, filter: 2500, vol: 0.04, songId: 0 }
             },
             {
                 name: '第二关·崭露锋芒', killTarget: 20, weaponCap: 3, enemyTier: 1, enemies: ['scout', 'chaser'], bossHp: 900, bossSpeed: 1.1, bossType: 'wolf_king',
                 bgColors: ['#dce8d0', '#c8d8bc', '#b4c8a0', '#a0b888'], mtnColors: ['#6a8a6a', '#7a9a7a', '#5a7a5a'], enemyColors: ['#88aa44', '#77994e', '#669944', '#99bb55', '#88aa55'],
                 platGround: ['#b8c8a0', '#a8b890', '#c4d4a8'], platFloat: ['#90a080', '#80906a', '#b0c090'],
-                bgm: { drone: 49.0, filter: 2400, vol: 0.04, melodies: [0, 2, 4] }
+                bgm: { drone: 49.0, filter: 2400, vol: 0.04, songId: 1 }
             },
             {
                 name: '第三关·拳脚相加', killTarget: 25, weaponCap: 4, enemyTier: 1, enemies: ['scout', 'chaser', 'martial'], bossHp: 1200, bossSpeed: 1.2, bossType: 'iron_fist',
                 bgColors: ['#e0c8a0', '#d0b890', '#c0a878', '#aa9060'], mtnColors: ['#8a7050', '#9a8060', '#7a6040'], enemyColors: ['#aa7744', '#996644', '#bb8855', '#cc9966', '#aa8844'],
                 platGround: ['#c0a880', '#b09870', '#d0b890'], platFloat: ['#a09070', '#907a5a', '#b0a080'],
-                bgm: { drone: 46.2, filter: 2200, vol: 0.042, melodies: [2, 6] }
+                bgm: { drone: 46.2, filter: 2200, vol: 0.042, songId: 2 }
             },
             {
                 name: '第四关·铁甲连城', killTarget: 30, weaponCap: 5, enemyTier: 2, enemies: ['scout', 'chaser', 'martial', 'heavy'], bossHp: 1600, bossSpeed: 1.3, bossType: 'shield_general',
                 bgColors: ['#c8d0d8', '#b0b8c8', '#98a0b0', '#808898'], mtnColors: ['#707888', '#606878', '#808898'], enemyColors: ['#5588aa', '#4477aa', '#6699bb', '#5599cc', '#4488aa'],
                 platGround: ['#a0a8b8', '#9098a8', '#b0b8c8'], platFloat: ['#808898', '#707888', '#909aa8'],
-                bgm: { drone: 41.2, filter: 1800, vol: 0.045, melodies: [6, 2, 7] }
+                bgm: { drone: 41.2, filter: 1800, vol: 0.045, songId: 3 }
             },
             {
                 name: '第五关·百步穿杨', killTarget: 35, weaponCap: 6, enemyTier: 2, enemies: ['scout', 'chaser', 'martial', 'heavy', 'sniper'], bossHp: 2000, bossSpeed: 1.4, bossType: 'phantom_archer',
                 bgColors: ['#c8a878', '#b89868', '#a08050', '#886838'], mtnColors: ['#705030', '#604020', '#805838'], enemyColors: ['#886644', '#775533', '#997755', '#aa8866', '#887755'],
                 platGround: ['#a08060', '#907050', '#b09070'], platFloat: ['#806848', '#705838', '#908068'],
-                bgm: { drone: 41.2, filter: 1500, vol: 0.048, melodies: [6, 7, 1] }
+                bgm: { drone: 41.2, filter: 1500, vol: 0.048, songId: 4 }
             },
             {
                 name: '第六关·刀光剑影', killTarget: 40, weaponCap: 7, enemyTier: 2, enemies: ['chaser', 'martial', 'heavy', 'sniper'], bossHp: 2500, bossSpeed: 1.5, bossType: 'twin_blade',
                 bgColors: ['#4a5568', '#3a4558', '#2a3548', '#1a2538'], mtnColors: ['#2a3a50', '#1a2a40', '#3a4a60'], enemyColors: ['#7755aa', '#6644aa', '#8866bb', '#9977cc', '#7766aa'],
                 platGround: ['#505868', '#404858', '#606878'], platFloat: ['#3a4258', '#2a3248', '#4a5268'],
-                bgm: { drone: 36.7, filter: 1200, vol: 0.05, melodies: [7, 6, 3] }
+                bgm: { drone: 36.7, filter: 1200, vol: 0.05, songId: 5 }
             },
             {
                 name: '第七关·龙争虎斗', killTarget: 45, weaponCap: 8, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper', 'chaser'], bossHp: 3200, bossSpeed: 1.7, bossType: 'thunder_monk',
                 bgColors: ['#3a2848', '#2a1838', '#1a0828', '#100018'], mtnColors: ['#2a1848', '#1a0838', '#3a2858'], enemyColors: ['#aa3344', '#993355', '#bb4455', '#cc5566', '#aa4466'],
                 platGround: ['#3a2838', '#2a1828', '#4a3848'], platFloat: ['#2a1828', '#1a0818', '#3a2838'],
-                bgm: { drone: 36.7, filter: 1000, vol: 0.052, melodies: [7, 3, 5] }
+                bgm: { drone: 36.7, filter: 1000, vol: 0.052, songId: 6 }
             },
             {
                 name: '第八关·万夫莫敌', killTarget: 50, weaponCap: 9, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 4000, bossSpeed: 1.9, bossType: 'blood_demon',
                 bgColors: ['#3a1010', '#2a0808', '#1a0000', '#100000'], mtnColors: ['#3a0808', '#2a0000', '#4a1010'], enemyColors: ['#cc2222', '#bb1133', '#dd3344', '#ee4455', '#cc3355'],
                 platGround: ['#3a1818', '#2a0808', '#4a2020'], platFloat: ['#2a1010', '#1a0000', '#3a1818'],
-                bgm: { drone: 32.7, filter: 800, vol: 0.055, melodies: [3, 5, 7] }
+                bgm: { drone: 32.7, filter: 800, vol: 0.055, songId: 7 }
             },
             {
                 name: '第九关·天下无双', killTarget: 55, weaponCap: 9, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 5000, bossSpeed: 2.1, bossType: 'shadow_lord',
                 bgColors: ['#101828', '#081018', '#000810', '#000008'], mtnColors: ['#081830', '#001020', '#102040'], enemyColors: ['#4466cc', '#3355bb', '#5577dd', '#6688ee', '#4477cc'],
                 platGround: ['#182028', '#101818', '#202830'], platFloat: ['#101820', '#081018', '#182028'],
-                bgm: { drone: 32.7, filter: 600, vol: 0.058, melodies: [5, 7, 3] }
+                bgm: { drone: 32.7, filter: 600, vol: 0.058, songId: 8 }
             },
             {
                 name: '第十关·剑神归位', killTarget: 60, weaponCap: 10, enemyTier: 3, enemies: ['martial', 'heavy', 'sniper'], bossHp: 7000, bossSpeed: 2.5, bossType: 'sword_saint',
                 bgColors: ['#0a0a10', '#050508', '#020204', '#000000'], mtnColors: ['#0a0a18', '#050510', '#101020'], enemyColors: ['#ccccdd', '#bbbbcc', '#ddddee', '#ffffff', '#aaaacc'],
                 platGround: ['#101018', '#080810', '#181820'], platFloat: ['#080810', '#040408', '#101018'],
-                bgm: { drone: 27.5, filter: 500, vol: 0.06, melodies: [5, 3, 7] }
+                bgm: { drone: 27.5, filter: 500, vol: 0.06, songId: 9 }
             },
         ];
 
@@ -722,6 +755,7 @@
         const slashEffects = [];  // calligraphy sword qi visuals
         const lightningBolts = []; // visual lightning strikes
         let screenFlash = 0;  // white flash timer
+        let slashDim = 0; // dark curtain timer
         const drops = [];
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -747,176 +781,425 @@
             } catch (e) { }
         }
 
+        // === Advanced Audio Synthesis Engine ===
+        const AUDIO_ENGINE = {
+            ctx: audioCtx,
+
+            // 1. Guzheng (Zither): Plucked, resonant, slight vibrato
+            playGuzheng(freq, time, dur) {
+                if (!isFinite(freq)) return;
+                const t = time;
+                const osc = audioCtx.createOscillator();
+                const osc2 = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                // Bright pluck (Triangle + harm)
+                osc.type = 'triangle';
+                osc2.type = 'sine';
+                osc.frequency.setValueAtTime(freq, t);
+                osc2.frequency.setValueAtTime(freq * 2, t);
+
+                // Slight pitch bend (fingering)
+                osc.frequency.linearRampToValueAtTime(freq, t + 0.1);
+
+                // Envelope: Sharp attack, long sustain
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.3, t + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + dur * 2.0); // Long tail
+
+                osc.connect(gain);
+                osc2.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(t); osc.stop(t + dur * 2.0);
+                osc2.start(t); osc2.stop(t + dur * 2.0);
+            },
+
+            // 2. Pipa (Lute): Softer Pluck (Modified to remove "Ticking")
+            playPipa(freq, time) {
+                if (!isFinite(freq)) return;
+                const t = time;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                // Change to Triangle for softer sound (was Sawtooth)
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, t);
+
+                // Filter - Lower cutoff to remove high-end click
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 800; // Was 3000
+
+                // Envelope: Slower attack to prevent pop
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.15, t + 0.02); // Was 0.005 (too sharp)
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(t); osc.stop(t + 0.4);
+            },
+
+            // 3. Dizi (Bamboo Flute): Breathy, vibrato, slide
+            playDizi(freq, time, dur) {
+                if (!isFinite(freq)) return;
+                const t = time;
+                const osc = audioCtx.createOscillator();
+                const noise = audioCtx.createBufferSource();
+                const gain = audioCtx.createGain();
+                const noiseGain = audioCtx.createGain();
+
+                // Tone
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, t);
+
+                // Vibrato (LFO)
+                const vib = audioCtx.createOscillator();
+                const vibGain = audioCtx.createGain();
+                vib.frequency.value = 5;
+                vibGain.gain.value = 6; // +/- 6Hz
+                vib.connect(vibGain);
+                vibGain.connect(osc.frequency);
+                vib.start(t);
+
+                // Breath noise - REDUCED VOLUME
+                const bufSize = audioCtx.sampleRate * 2;
+                const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+                const data = buf.getChannelData(0);
+                for (let i = 0; i < bufSize; i++) data[i] = (Math.random() - 0.5) * 0.5;
+                noise.buffer = buf;
+
+                // Filter noise
+                const nFilter = audioCtx.createBiquadFilter();
+                nFilter.type = 'bandpass';
+                nFilter.frequency.value = freq * 2;
+                nFilter.Q.value = 1;
+
+                // Envelope
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.2, t + 0.1); // Slow attack
+                gain.gain.setValueAtTime(0.15, t + dur - 0.1);
+                gain.gain.linearRampToValueAtTime(0, t + dur);
+
+                // Reduced breath noise to avoid "chiff" click
+                noiseGain.gain.setValueAtTime(0.02, t); // Was 0.05
+                noiseGain.gain.linearRampToValueAtTime(0, t + 0.1);
+
+                osc.connect(gain);
+                noise.connect(nFilter);
+                nFilter.connect(noiseGain);
+                noiseGain.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(t); osc.stop(t + dur);
+                noise.start(t); noise.stop(t + dur);
+            },
+
+            // 4. Drum (War Drum): Impact
+            playDrum(type, time) {
+                const t = time;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                if (type === 'kick') {
+                    // Deep thud
+                    osc.frequency.setValueAtTime(150, t);
+                    osc.frequency.exponentialRampToValueAtTime(40, t + 0.1);
+                    gain.gain.setValueAtTime(0.8, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+                } else {
+                    // Wood block / Rim
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(800, t);
+                    gain.gain.setValueAtTime(0.1, t);
+                    gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+                }
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(t); osc.stop(t + 0.2);
+            }
+        };
+
         // === Chinese Classical BGM System ===
-        // Melodies inspired by traditional Chinese pieces (沧海一声笑, 高山流水, etc.)
+        // === Chinese Classical BGM System ===
         const BGM = {
             playing: false,
             nextNoteTime: 0,
-            droneOsc: null,
-            droneGain: null,
-            // G pentatonic: G A B D E (most natural Chinese music key)
-            scale: [
-                98.0, 110.0, 123.5, 146.8, 164.8,   // G2 A2 B2 D3 E3
-                196.0, 220.0, 246.9, 293.7, 329.6,   // G3 A3 B3 D4 E4
-                392.0, 440.0, 493.9, 587.3, 659.3,   // G4 A4 B4 D5 E5
-                784.0, 880.0, 987.8                    // G5 A5 B5
+            bar: 0,
+            beat: 0,
+            songId: 0,
+
+            // Pentatonic Scale (G Major): G A B D E
+            // Octaves: 3, 4, 5
+            scale: {
+                G3: 196, A3: 220, B3: 247, D4: 293, E4: 330,
+                G4: 392, A4: 440, B4: 494, D5: 587, E5: 659,
+                G5: 784, A5: 880, B5: 988, D6: 1175, E6: 1318
+            },
+
+            // 10 Distinct Arrangements
+            // Expanded to Verse-Chorus structures (16-32 bar loops)
+            SONGS: [
+                // Lv1: Cang Hai Yi Sheng Xiao (Heroic) - Guzheng Lead
+                // Structure: A (Intro) -> A (Theme) -> B (Variation) -> A (Outro)
+                {
+                    bpm: 100,
+                    melody: [
+                        // A: Main Theme
+                        ['E5', 2], ['D5', 2], ['B4', 2], ['A4', 2], ['G4', 4], ['rest', 4],
+                        ['B4', 2], ['A4', 2], ['G4', 2], ['E4', 2], ['D4', 8],
+                        // Repeat A
+                        ['E5', 2], ['D5', 2], ['B4', 2], ['A4', 2], ['G4', 4], ['rest', 4],
+                        ['B4', 2], ['A4', 2], ['G4', 2], ['E4', 2], ['D4', 8],
+                        // B: Lower Octave Variation
+                        ['A4', 2], ['A4', 2], ['A4', 2], ['B4', 2], ['D5', 4], ['rest', 2], ['D5', 2],
+                        ['E5', 2], ['E5', 2], ['E5', 2], ['G5', 2], ['A5', 8]
+                    ],
+                    backing: [
+                        // Pipa Strums - Steady rhythm
+                        ['G3', 4], ['D4', 4], ['G3', 4], ['D4', 4], ['G3', 4], ['D4', 4], ['G3', 4], ['D4', 4],
+                        ['G3', 4], ['D4', 4], ['G3', 4], ['D4', 4], ['G3', 4], ['D4', 4], ['G3', 4], ['D4', 4],
+                        ['A3', 4], ['E4', 4], ['A3', 4], ['E4', 4], ['E3', 4], ['B3', 4], ['E3', 4], ['B3', 4]
+                    ],
+                    drum: [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0]
+                },
+
+                // Lv2: Purple Bamboo (Playful) - Dizi Lead
+                // Structure: Lively call and response
+                {
+                    bpm: 110,
+                    melody: [
+                        ['A4', 1], ['A4', 1], ['B4', 1], ['A4', 1], ['G4', 2], ['E4', 2], ['D4', 1], ['E4', 1], ['G4', 2], ['A4', 4],
+                        ['rest', 4], ['G4', 2], ['E4', 2], ['D4', 2], ['E4', 2], ['G4', 8],
+                        ['A4', 2], ['B4', 2], ['D5', 4], ['B4', 2], ['A4', 2], ['G4', 4],
+                        ['E4', 1], ['G4', 1], ['A4', 1], ['B4', 1], ['A4', 4]
+                    ],
+                    backing: [
+                        ['A3', 4], ['E4', 4], ['A3', 4], ['E4', 4], ['D4', 4], ['A4', 4], ['G3', 4], ['D4', 4],
+                        ['A3', 4], ['A3', 4], ['G3', 4], ['G3', 4]
+                    ],
+                    drum: [1, 0, 0.5, 0, 1, 0, 0.5, 0]
+                },
+
+                // Lv3: Golden Snake (Fast) - Full Ensemble
+                // Structure: Frenetic, driving rhythm
+                {
+                    bpm: 150,
+                    melody: [
+                        ['E6', 1], ['E6', 1], ['D6', 1], ['E6', 1], ['B5', 2], ['A5', 2], ['B5', 1], ['D6', 1], ['B5', 1], ['A5', 1], ['G5', 4],
+                        ['G5', 1], ['G5', 1], ['A5', 2], ['B5', 2], ['D6', 2], ['E6', 4], ['rest', 4],
+                        ['E5', 1], ['D5', 1], ['E5', 1], ['D5', 1], ['B4', 2], ['A4', 2], ['G4', 8]
+                    ],
+                    backing: [['E4', 2], ['E4', 2], ['E4', 2], ['E4', 2], ['B4', 2], ['B4', 2], ['A4', 2], ['A4', 2]],
+                    drum: [1, 1, 1, 1, 1, 1, 1, 1]
+                },
+
+                // Lv4: Ambush (Tense) - Pipa Solo
+                // Structure: Accelerating Tremolo -> Chord Stabs
+                {
+                    bpm: 135,
+                    melody: [
+                        // Section A: Tremolo build up
+                        ['A4', 0.5], ['A4', 0.5], ['A4', 0.5], ['A4', 0.5], ['A4', 0.5], ['A4', 0.5], ['A4', 0.5], ['A4', 0.5],
+                        ['B4', 0.5], ['B4', 0.5], ['B4', 0.5], ['B4', 0.5], ['B4', 0.5], ['B4', 0.5], ['B4', 0.5], ['B4', 0.5],
+                        ['D5', 0.5], ['D5', 0.5], ['D5', 0.5], ['D5', 0.5], ['E5', 2], ['rest', 2],
+                        // Section B: Violent strumming
+                        ['E5', 0.25], ['E5', 0.25], ['E5', 0.25], ['E5', 0.25], ['E5', 1], ['E5', 1], ['E5', 4]
+                    ],
+                    backing: [],
+                    drum: [1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1]
+                },
+
+                // Lv5: Mountain Pass (Desolace) - Dizi Slow
+                // Structure: Long flowing notes, lots of space
+                {
+                    bpm: 65,
+                    melody: [
+                        ['D4', 4], ['G4', 4], ['A4', 4], ['B4', 2], ['A4', 2], ['G4', 8], ['rest', 4],
+                        ['A4', 4], ['B4', 2], ['D5', 2], ['E5', 8], ['D5', 4], ['B4', 4], ['A4', 8]
+                    ],
+                    backing: [['G3', 16], ['D3', 16], ['A3', 16], ['E3', 16]], // Long Drones
+                    drum: [1, 0, 0, 0, 0, 0, 0, 0] // Gong
+                },
+
+                // Lv6: General's Command (Martial) - Drum Heavy
+                // Structure: Call to arms
+                {
+                    bpm: 120,
+                    melody: [
+                        ['D4', 2], ['D4', 2], ['D4', 4], ['G4', 2], ['G4', 2], ['G4', 4],
+                        ['A4', 2], ['B4', 2], ['A4', 2], ['G4', 2], ['E4', 4], ['rest', 4],
+                        ['D4', 1], ['D4', 1], ['D4', 2], ['G4', 1], ['G4', 1], ['G4', 2], ['A4', 8]
+                    ],
+                    backing: [['D3', 2], ['G3', 2], ['D3', 2], ['G3', 2]],
+                    drum: [1, 0.5, 1, 0.5, 1, 0.5, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0]
+                },
+
+                // Lv7: Guangling San (Dissonant)
+                // Structure: Unsettling intervals
+                {
+                    bpm: 95,
+                    melody: [
+                        ['G4', 1], ['B4', 1], ['D5', 2], ['E5', 2], ['G5', 4],
+                        ['E5', 1], ['D5', 1], ['B4', 1], ['A4', 1], ['G4', 4],
+                        ['B4', 1], ['A4', 1], ['G4', 2], ['E4', 2], ['D4', 2], ['B3', 8]
+                    ],
+                    backing: [['G3', 1], ['A3', 1], ['B3', 1], ['G3', 1]],
+                    drum: [0, 0, 1, 0, 0, 0, 1, 0]
+                },
+
+                // Lv8: Moon Reflected (Tragic)
+                // Structure: Sad, descending melody
+                {
+                    bpm: 60,
+                    melody: [
+                        ['G5', 3], ['E5', 1], ['D5', 2], ['B4', 2], ['A4', 4],
+                        ['G4', 2], ['A4', 1], ['B4', 1], ['D5', 4], ['rest', 4],
+                        ['B4', 2], ['A4', 2], ['G4', 4], ['E4', 2], ['D4', 2], ['G3', 8]
+                    ],
+                    backing: [['G3', 8], ['D4', 8], ['A3', 8], ['E4', 8]],
+                    drum: []
+                },
+
+                // Lv9: Autumn Palace (Cold)
+                // Structure: Minimalist, ice-like
+                {
+                    bpm: 75,
+                    melody: [
+                        ['E5', 2], ['G5', 2], ['A5', 4], ['G5', 2], ['E5', 2], ['D5', 4],
+                        ['B4', 4], ['A4', 2], ['G4', 2], ['E4', 8],
+                        ['D6', 1], ['E6', 1], ['rest', 2], ['A5', 4], ['G5', 8]
+                    ],
+                    backing: [['E4', 2], ['rest', 2], ['E4', 2], ['rest', 2]],
+                    drum: [1, 0, 0, 0]
+                },
+
+                // Lv10: Plum Blossom (Ethereal)
+                // Structure: High pitched, transcendental
+                {
+                    bpm: 85,
+                    melody: [
+                        ['E6', 2], ['E6', 2], ['D6', 2], ['E6', 2], ['D6', 2], ['B5', 2], ['A5', 4],
+                        ['G5', 2], ['A5', 2], ['B5', 2], ['D6', 2], ['E6', 8],
+                        ['A6', 2], ['G6', 2], ['E6', 2], ['D6', 2], ['B5', 8]
+                    ],
+                    backing: [['E4', 4], ['A4', 4], ['B4', 4], ['E4', 4], ['A3', 8], ['E3', 8]],
+                    drum: [0, 0, 0.5, 0]
+                }
             ],
-            // Classic Chinese melody patterns (indices into scale)
-            melodies: [
-                // 沧海一声笑 (Laughing across the Sea) - bold wuxia feel
-                [14, 12, 10, 9, 10, 12, 14, 12, 10, 9, 7, 5, 7, 9, 10, 9],
-                // 高山流水 (High Mountains, Flowing Water) - flowing cascade
-                [10, 12, 14, 12, 10, 9, 7, 5, 7, 9, 10, 12, 10, 9, 7, 9],
-                // 笑傲江湖 (Swordsman) - heroic ascending
-                [5, 7, 9, 10, 12, 10, 9, 7, 9, 10, 12, 14, 12, 10, 9, 7],
-                // 梅花三弄 (Plum Blossom) - delicate, ornamental
-                [14, 14, 12, 14, 12, 10, 9, 10, 12, 10, 9, 7, 9, 7, 5, 7],
-                // 春江花月夜 (Spring River Moonlit Night) - serene, lyrical
-                [5, 5, 7, 9, 10, 10, 9, 7, 5, 7, 9, 10, 12, 12, 10, 9],
-                // 渔舟唱晚 (Evening Song of Fisherman) - peaceful closing
-                [12, 10, 9, 7, 5, 7, 9, 10, 9, 7, 5, 4, 5, 7, 9, 7],
-                // 十面埋伏 (Ambush from All Sides) - intense, combat
-                [7, 9, 10, 12, 14, 12, 10, 12, 14, 15, 14, 12, 10, 9, 10, 12],
-                // 二泉映月 (Moon Reflected in Pool) - melancholic beauty
-                [9, 10, 12, 10, 9, 7, 5, 7, 9, 10, 9, 7, 5, 4, 5, 7],
-            ],
-            // Rhythm patterns: 1=quarter, 0.5=eighth, 1.5=dotted quarter, 2=half
-            rhythms: [
-                [0.5, 0.5, 0.5, 0.5, 1, 0.5, 0.5, 1, 0.5, 0.5, 0.5, 0.5, 1, 0.5, 0.5, 1],
-                [0.5, 0.5, 1, 0.5, 0.5, 1, 0.5, 0.5, 1, 0.5, 0.5, 0.5, 0.5, 1, 1, 1.5],
-                [1, 0.5, 0.5, 1, 0.5, 0.5, 1, 1, 0.5, 0.5, 0.5, 0.5, 1, 1, 0.5, 1.5],
-            ],
-            currentMelody: 0,
-            melodyPos: 0,
-            phraseRest: 0,
-            currentRhythm: 0,
 
             start() {
                 if (this.playing) return;
                 this.playing = true;
-                // Deep bass drone on G2
-                this.droneGain = audioCtx.createGain();
-                this.droneGain.gain.value = 0.02;
-                this.droneGain.connect(audioCtx.destination);
-                this.droneOsc = audioCtx.createOscillator();
-                this.droneOsc.type = 'sine';
-                // Initialize with current level's drone freq
-                const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
-                this.droneOsc.frequency.value = lvl.bgm.drone;
-                this.droneOsc.connect(this.droneGain);
-                this.droneOsc.start();
-                // Gentle pulsing on the drone
-                const lfo = audioCtx.createOscillator();
-                const lfoGain = audioCtx.createGain();
-                lfo.frequency.value = 0.15;
-                lfoGain.gain.value = 0.008;
-                lfo.connect(lfoGain);
-                lfoGain.connect(this.droneGain.gain);
-                lfo.start();
-                this.nextNoteTime = audioCtx.currentTime + 0.8;
+                this.nextNoteTime = audioCtx.currentTime + 0.1;
+                this.bar = 0;
+                this.beat = 0;
                 this.scheduleNotes();
+                console.log('BGM Started: Hybrid Engine');
             },
 
             stop() {
                 this.playing = false;
-                if (this.droneOsc) { try { this.droneOsc.stop(); } catch (e) { } }
-                this.droneOsc = null;
+                if (this.audioElement) {
+                    this.audioElement.pause();
+                    this.audioElement = null;
+                }
             },
 
-            // Guzheng/guqin pluck with natural overtones
-            pluckNote(freq, time, duration, volume) {
-                const osc = audioCtx.createOscillator();
-                const osc2 = audioCtx.createOscillator();
-                const osc3 = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                const filter = audioCtx.createBiquadFilter();
-
-                // Fundamental
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(freq, time);
-                // 2nd harmonic (octave) - quieter
-                osc2.type = 'sine';
-                osc2.frequency.setValueAtTime(freq * 2, time);
-                // Gentle vibrato after initial attack (guzheng 揉弦)
-                osc3.type = 'sine';
-                osc3.frequency.value = 5.5;
-                const vibGain = audioCtx.createGain();
-                vibGain.gain.setValueAtTime(0, time);
-                vibGain.gain.linearRampToValueAtTime(freq * 0.006, time + 0.15);
-                osc3.connect(vibGain);
-                vibGain.connect(osc.frequency);
-
-                // Natural pluck envelope
-                gain.gain.setValueAtTime(0, time);
-                gain.gain.linearRampToValueAtTime(volume, time + 0.005);
-                gain.gain.setValueAtTime(volume * 0.85, time + 0.04);
-                gain.gain.exponentialRampToValueAtTime(volume * 0.3, time + duration * 0.4);
-                gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
-
-                // Warm silk string timbre
-                filter.type = 'lowpass';
-                const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
-                const baseCutoff = lvl.bgm.filter;
-                const baseVol = lvl.bgm.vol;
-
-                filter.frequency.setValueAtTime(baseCutoff, time);
-                filter.frequency.exponentialRampToValueAtTime(baseCutoff * 0.15, time + duration);
-                filter.Q.value = 0.8;
-
-                const harmGain = audioCtx.createGain();
-                harmGain.gain.value = 0.3;
-
-                osc.connect(filter);
-                osc2.connect(harmGain);
-                harmGain.connect(filter);
-                filter.connect(gain);
-                gain.connect(audioCtx.destination);
-
-                osc.start(time); osc.stop(time + duration);
-                osc2.start(time); osc2.stop(time + duration);
-                osc3.start(time); osc3.stop(time + duration);
+            // Legacy support
+            startSynth(lvl) {
+                if (!this.playing) this.start();
             },
 
             scheduleNotes() {
                 if (!this.playing) return;
                 const now = audioCtx.currentTime;
-                while (this.nextNoteTime < now + 0.6) {
-                    if (this.phraseRest > 0) {
-                        this.nextNoteTime += 0.2;
-                        this.phraseRest--;
-                        continue;
-                    }
+                // Lookahead 0.1s
+                while (this.nextNoteTime < now + 0.1) {
                     const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
-                    // Dynamic melody selection from level pool
-                    const melodyPool = lvl.bgm.melodies;
-                    const melodyIdx = melodyPool[this.currentMelody % melodyPool.length];
-                    const melody = this.melodies[melodyIdx];
-                    const rhythm = this.rhythms[this.currentRhythm];
-                    const noteIdx = melody[this.melodyPos];
-                    const freq = this.scale[noteIdx];
-                    const beatDur = rhythm[this.melodyPos % rhythm.length];
-                    const noteDur = beatDur * 0.8 + 0.2;
-                    const vol = baseVol + Math.random() * 0.015;
-                    this.pluckNote(freq, this.nextNoteTime, noteDur, vol);
-                    // Harmony on strong beats
-                    if (this.melodyPos % 4 === 0 && noteIdx >= 2) {
-                        this.pluckNote(this.scale[noteIdx - 2], this.nextNoteTime + 0.015, noteDur * 0.6, vol * 0.25);
+                    const song = this.SONGS[lvl.bgm.songId || 0];
+                    const beatDur = 60 / song.bpm / 4; // 16th note duration
+
+                    // 1. Drum Track - DISABLED (User Feedback: "Ticking noise")
+                    /*
+                    if (song.drum && song.drum.length > 0) {
+                        const drumBeat = song.drum[this.beat % song.drum.length];
+                        if (drumBeat > 0) AUDIO_ENGINE.playDrum(drumBeat === 1 ? 'kick' : 'snare', this.nextNoteTime);
                     }
-                    // Octave bass on first beat of phrase
-                    if (this.melodyPos === 0 && noteIdx >= 5) {
-                        this.pluckNote(this.scale[noteIdx - 5], this.nextNoteTime, noteDur * 1.2, vol * 0.35);
+                    */
+
+                    // 2. Melody Track (Complex sequencer)
+                    if (song.melody && song.melody.length > 0) {
+                        if (this.melodyWait <= 0) {
+                            const m = song.melody[this.melodyCursor % song.melody.length];
+                            const noteKey = m[0];
+                            const dur = m[1];
+                            if (noteKey !== 'rest') {
+                                const freq = this.scale[noteKey];
+                                // Choose Instrument based on level
+                                if (lvl.bgm.songId === 1 || lvl.bgm.songId === 4 || lvl.bgm.songId === 8)
+                                    AUDIO_ENGINE.playDizi(freq, this.nextNoteTime, dur * beatDur * 1.5);
+                                else if (lvl.bgm.songId === 3)
+                                    AUDIO_ENGINE.playPipa(freq, this.nextNoteTime);
+                                else
+                                    AUDIO_ENGINE.playGuzheng(freq, this.nextNoteTime, dur * beatDur);
+                            }
+                            this.melodyWait = dur;
+                            this.melodyCursor++;
+                        }
+                        this.melodyWait--;
                     }
-                    this.melodyPos++;
-                    if (this.melodyPos >= melody.length) {
-                        this.melodyPos = 0;
-                        this.phraseRest = 6; // Breath between phrases
-                        this.currentMelody = (this.currentMelody + 1) % this.melodies.length;
-                        this.currentRhythm = Math.floor(Math.random() * this.rhythms.length);
+
+                    // 3. Backing Track (Pipa Arpeggios) - DISABLED (User Feedback: "Ticking noise")
+                    /*
+                    if (this.beat % 4 === 0 && song.backing && song.backing.length > 0) {
+                        const b = song.backing[(this.beat / 4) % song.backing.length];
+                        if (b[0] !== 'rest') {
+                            const freq = this.scale[b[0]];
+                            AUDIO_ENGINE.playPipa(freq, this.nextNoteTime);
+                        }
                     }
-                    // Tempo ~80 BPM with natural rubato
-                    this.nextNoteTime += beatDur * 0.38 + Math.random() * 0.04;
+                    */
+
+                    this.nextNoteTime += beatDur;
+                    this.beat++;
                 }
-                setTimeout(() => this.scheduleNotes(), 180);
+                setTimeout(() => this.scheduleNotes(), 25);
+            },
+
+            melodyCursor: 0,
+            melodyWait: 0,
+
+            // Legacy fallbacks for file loader
+            playSongForLevel() {
+                const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
+                const songId = lvl.bgm.songId || 0;
+
+                // Stop previous
+                if (this.audioElement) { this.audioElement.pause(); this.audioElement = null; }
+
+                // Attempt to load MP3
+                const audio = new Audio(`assets/audio/bgm_${songId}.mp3`);
+                audio.loop = true;
+                audio.volume = 0.5;
+
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        this.audioElement = audio;
+                        this.useSynth = false; // Disable synth
+                        this.playing = true; // Mark as playing
+                        console.log(`Playing BGM: bgm_${songId}.mp3`);
+                    }).catch(error => {
+                        console.log(`BGM file missing, using Advanced Synth: ${error}`);
+                        this.useSynth = true; // Enable synth
+                        this.start(); // Start the sequencer
+                    });
+                }
             }
         };
 
@@ -1058,7 +1341,18 @@
             }
 
             player.shootTimer = interval;
-            playTone(400 + (lvl * 80), 'triangle', 0.05, 0.06);
+
+            // Retro "Pew" (Square wave pitch drop) - Procedurally Generated
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
         }
 
         // Screen visibility check for enemies
@@ -1417,6 +1711,7 @@
                 if (lightningBolts[i].life <= 0) lightningBolts.splice(i, 1);
             }
             if (screenFlash > 0) screenFlash--;
+            if (slashDim > 0) slashDim -= 0.05;
 
             camX += (player.x - canvas.width / 3.5 - camX) * 0.12;
             camY += (player.y - canvas.height / 2 - camY) * 0.1;
@@ -1453,6 +1748,13 @@
             grad.addColorStop(1, cols[3]);
             ctx.fillStyle = grad;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Screen dimming for slash effect
+            if (slashDim > 0) {
+                ctx.fillStyle = `rgba(0,0,0,${Math.min(0.6, slashDim)})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
             // Distant mountains - layered ink wash
             const mtnOffset = camX * 0.05;
             ctx.globalAlpha = 0.15;
@@ -2034,12 +2336,8 @@
             projectiles.length = 0;
             // Regenerate platforms for new level colors
             initPlatforms();
-            // Update BGM drone for new level (smooth glissando)
-            if (BGM.droneOsc) {
-                const lvl = LEVELS[currentLevel - 1] || LEVELS[0];
-                const nextFreq = lvl.bgm.drone;
-                BGM.droneOsc.frequency.exponentialRampToValueAtTime(nextFreq, audioCtx.currentTime + 2.0);
-            }
+            // Update BGM
+            BGM.playSongForLevel();
             showLevelBanner();
         }
 
