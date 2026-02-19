@@ -2,34 +2,74 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.2] - 2026-02-18
+## [1.3] - 2026-02-19
+
+### Fixed
+- **怪物刷新根因修复**：
+    - 离屏清理的怪物现在计入 `levelKills`，修复击杀计数泄漏导致关卡永远无法推进的根本问题
+    - Boss 离屏后重置 `bossActive`/`bossSpawned` 状态，防止 Boss 丢失后刷怪永久停滞
+    - 增加 300 帧安全计时器：即使 Boss 状态异常也能自动恢复
+    - 移除 `updateEnemies()` 中重复的死亡检查代码
+- **刷怪空窗期修复**：当场上无怪物且关卡未完成时，立即重置冷却时间强制刷新
 
 ### Added
-- **Visuals**:
-    - Integrated 10 distinct level-specific ink-wash style backgrounds (`bg_level_1` to `bg_level_10`).
-    - Added "Pause" button (⏸) to the top-right UI for gameplay suspension.
-- **Audio**:
-    - Expanded BGM tracks from short loops to full-length guzheng compositions (60-80 notes each).
-    - Implemented per-level BGM with distinct BPMs (Range: 80-145 BPM) and styles (Heroic, Tragic, Ethereal, etc.).
-    - Ensured seamless BGM transition upon level completion.
-- **Gameplay**:
-    - **Enemy AI**: Added random jumping behavior (1% chance when grounded) to navigate platforms.
-    - **Enemy Combat**: Implemented 360° aimed shooting for Scout, Heavy, and Sniper enemies (projectiles now track player position).
-    - Added cooldown visualization to the Dash (杀) button.
+- **彩虹天空阶梯**：天空和高处平台改为 8 色彩虹循环（红橙黄绿青蓝紫粉），视觉效果更加炫彩
+- **梯度刷怪系统**：
+    - 最大怪物数 = `10 + 关卡×3 + 武器等级×3`（最高 70 只同屏）
+    - 第 7 关起四面八方刷新（左、右、上方、对角线）
+    - 高关卡每次冷却批量刷新最多 4 只怪物
+    - 刷新冷却随关卡和武器等级加速：`max(3, 35 - 关卡×2 - 武器×2)` 帧
 
 ### Changed
-- **UI Improvements**:
-    - Repositioned Level Name label below Weapon Level for better readability and darkened text color.
-    - Moved "KILLS" counter to avoid overlap with top-right control buttons.
-    - Increased opacity of virtual control buttons (0.25 -> 0.7) for better visibility against backgrounds.
-    - Removed circular styling (border/background) from Pause and Home buttons for a cleaner look.
-    - Hid SpriteKit debug statistics (node count, FPS) by default.
-- **Camera**:
-    - Adjusted camera Y-offset (+200) to keep the player character visible while maintaining a cinematic view of the new backgrounds.
-- **Platforming**:
-    - Adjusted platform generation height to align better with the new camera perspective.
+- **武器升级平滑化**：
+    - 严格执行每关 `weaponCap` 上限（第1关上限Lv.2，第10关上限Lv.10）
+    - 基于差值的掉率公式：武器等级低于当前关卡上限时掉率更高，达到上限后几乎不掉
+    - 每关约升 1 级武器，全程平滑递进到最终关
+- **离屏清理阈值收紧**：从 2200px 缩减到 1600px，防止远处不可见怪物占满上限
+- **性能优化**：`EnemyNode.drawStickFigure()` 从每帧调用改为每 3 帧一次（动画相位量化），大幅减少 SKShapeNode 反复创建销毁的开销
+
+---
+
+## [1.2] - 2026-02-18
+
+### Architecture
+- **纯原生重构**：从 WKWebView + HTML5 Canvas 混合架构迁移到纯 SpriteKit 原生渲染
+    - 移除 `douluo_ios.html` 和 JavaScript 依赖
+    - 新增 `GameScene.swift`、`PlayerNode.swift`、`EnemyNode.swift`、`ProjectileNode.swift`、`GameConfig.swift`
+    - 游戏逻辑、渲染、物理碰撞全部用 Swift/SpriteKit 重写
+
+### Added
+- **水墨背景**：集成 10 幅关卡专属水墨画风背景（`bg_level_1` ~ `bg_level_10`）
+- **暂停按钮**：右上角 ⏸ 暂停功能
+- **音频引擎**：`AudioManager.swift` 使用 AVAudioEngine 程序化生成古筝 BGM（10 首各 60-80 音符）
+- **敌人 AI**：
+    - 随机跳跃行为（着地时 1% 概率跳跃以导航平台）
+    - 360° 瞄准射击（Scout、Heavy、Sniper）
+- **冲锋按钮冷却可视化**
+
+### Changed
+- **UI 改进**：
+    - 关卡名称标签移至武器等级下方，深色文字
+    - 击杀计数器重新定位避免与控制按钮重叠
+    - 虚拟控件按钮透明度从 0.25 提高到 0.7
+    - 暂停/返回按钮移除圆形边框
+    - 隐藏 SpriteKit 调试统计信息
+- **相机**：Y 轴偏移 +200，保持角色可见同时展示水墨背景
+- **平台生成**：高度调整以适配新相机视角
 
 ### Removed
-- Removed the dedicated "Ultimate" (必) button (Ultimate is now triggered automatically or via other mechanics).
-- Removed temporary "Cheat" (☠️) button used for testing.
-- Fixed bug where BGM would not switch correctly between levels.
+- 移除必杀技（必）单独按钮
+- 移除测试用作弊（☠️）按钮
+- 修复关卡间 BGM 切换异常
+
+---
+
+## [1.1] - 2026-02-17
+
+### Initial Release (HTML Version)
+- **混合架构**：WKWebView + HTML5 Canvas + JavaScript 游戏引擎
+- **游戏核心**：10 关卡、5 种敌人、10 级武器进化、Boss 战
+- **水墨画风**：CSS 渐变实现的中国水墨背景
+- **五声音阶 BGM**：Web Audio API 程序生成古筝旋律
+- **iOS 原生控件**：虚拟摇杆 + 动作按钮覆盖在 WebView 上
+- **触觉反馈**：通过 WKScriptMessageHandler 桥接 iOS 原生震动
