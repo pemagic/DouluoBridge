@@ -599,7 +599,7 @@ class GameScene: SKScene {
                         damage: 12,
                         owner: .enemy,
                         color: neonColor,
-                        life: 120,
+                        life: 60,  // Range: 14 * 60 = 840px (~0.5 screen)
                         size: 10
                     )
                     proj.position = CGPoint(x: enemy.position.x,
@@ -622,7 +622,7 @@ class GameScene: SKScene {
                     damage: 30,
                     owner: .enemy,
                     color: neonColor,
-                    life: 100,
+                    life: 20,  // Range: 42 * 20 = 840px (~0.5 screen)
                     size: 10
                 )
                 proj.position = CGPoint(x: enemy.position.x,
