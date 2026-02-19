@@ -306,12 +306,10 @@ class GameScene: SKScene {
     }
     
     private func drawPlatform(_ plat: PlatformData) {
+    private func drawPlatform(_ plat: PlatformData) {
         // V1.1 (lines 1794-1813): solid fill + brush stroke top edge + floating shadow
-        let node = SKShapeNode(rectOf: CGSize(width: plat.width, height: plat.height))
-        node.fillColor = plat.color.darkened(0.6)  // Darker for depth
-
-        node.strokeColor = .clear
-        node.lineWidth = 0
+        // OPTIMIZATION: Use SKSpriteNode for main body to reduce draw calls/lag
+        let node = SKSpriteNode(color: plat.color.darkened(0.6), size: CGSize(width: plat.width, height: plat.height))
         node.alpha = plat.isGround ? 0.5 : 0.35  // Semi-transparent so background shows through
         node.position = CGPoint(
             x: plat.x + plat.width / 2,
@@ -340,9 +338,7 @@ class GameScene: SKScene {
         
         // Floating platform drop shadow (v1.1 lines 1809-1812)
         if !plat.isGround {
-            let shadow = SKShapeNode(rectOf: CGSize(width: plat.width - 10, height: 4))
-            shadow.fillColor = UIColor(white: 0, alpha: 0.08)
-            shadow.strokeColor = .clear
+            let shadow = SKSpriteNode(color: UIColor(white: 0, alpha: 0.08), size: CGSize(width: plat.width - 10, height: 4))
             shadow.position = CGPoint(
                 x: plat.x + plat.width / 2 + 5,
                 y: plat.y - 2  // just below platform bottom
@@ -785,6 +781,9 @@ class GameScene: SKScene {
                                        color: skillDef?.color ?? .cyan, count: 40, speedScale: 2.5)
                         gameDelegate?.showLevelBanner("获得技能: \(skillDef?.name ?? skillId)", updateBGM: false)
                         gameDelegate?.triggerHaptic(.heavy)
+                        
+                        // Instant Cast (does not affect cooldown)
+                        handleSkill(skillId, ignoreCooldown: true)
                     }
                 }
                 drops[i].node?.removeFromParent()
@@ -1042,10 +1041,10 @@ class GameScene: SKScene {
         gameDelegate?.triggerHaptic(.light)
     }
     
-    func handleSkill(_ skillId: String) {
+    func handleSkill(_ skillId: String, ignoreCooldown: Bool = false) {
         guard gameState == .playing else { return }
         guard let def = GameConfig.skillDefs.first(where: { $0.id == skillId }) else { return }
-        guard let sk = playerNode.skills[skillId], sk.level > 0, sk.cooldown <= 0 else { return }
+        guard let sk = playerNode.skills[skillId], sk.level > 0, (sk.cooldown <= 0 || ignoreCooldown) else { return }
         
         // Skill implementations — Phase 4
         let lvl = sk.level
@@ -1073,7 +1072,10 @@ class GameScene: SKScene {
                 entityLayer.addChild(proj)
                 projectiles.append(proj)
             }
-            sk.cooldown = max(40, def.baseCooldown - lvl * 8)
+            }
+            if !ignoreCooldown {
+                sk.cooldown = max(40, def.baseCooldown - lvl * 8)
+            }
             
         case "whirlwind":
             let dmg = def.baseDamage + lvl * 12
@@ -1093,12 +1095,16 @@ class GameScene: SKScene {
                 entityLayer.addChild(proj)
                 projectiles.append(proj)
             }
-            sk.cooldown = max(50, def.baseCooldown - lvl * 10)
+            }
+            if !ignoreCooldown {
+                sk.cooldown = max(50, def.baseCooldown - lvl * 10)
+            }
             
-        case "shield":
             let duration = 180 + lvl * 30
             sk.active = duration
-            sk.cooldown = Int(Double(duration) * 1.5) + 60
+            if !ignoreCooldown {
+                sk.cooldown = Int(Double(duration) * 1.5) + 60
+            }
             
         case "lightning":
             let dmg = def.baseDamage + lvl * 20
@@ -1106,8 +1112,11 @@ class GameScene: SKScene {
                 enemy.hp -= CGFloat(dmg)
                 enemy.damageFlash = 12
             }
+            }
             screenFlash = 12
-            sk.cooldown = max(60, def.baseCooldown - lvl * 12)
+            if !ignoreCooldown {
+                sk.cooldown = max(60, def.baseCooldown - lvl * 12)
+            }
             
         case "ghost":
             let dmg = def.baseDamage + lvl * 18
@@ -1131,7 +1140,10 @@ class GameScene: SKScene {
                 entityLayer.addChild(proj)
                 projectiles.append(proj)
             }
-            sk.cooldown = max(60, def.baseCooldown - lvl * 12)
+            }
+            if !ignoreCooldown {
+                sk.cooldown = max(60, def.baseCooldown - lvl * 12)
+            }
             
         default:
             break

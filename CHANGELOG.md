@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.1] - 2026-02-19
+
+### Optimizations
+- **性能优化 (Performance)**: 重构平台渲染逻辑 (SKSpriteNode 替代 SKShapeNode)，彻底消除开局与关卡切换卡顿。
+- **技能释放逻辑 (Instant Cast)**: 拾取技能后立即自动释放一次，且不触发冷却 (Manual cast unchanged)。
+
 ## [1.5] - 2026-02-19
 
 ### New Features
