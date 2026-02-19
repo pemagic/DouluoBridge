@@ -1241,7 +1241,7 @@ class GameScene: SKScene {
                 type: .health, life: 800
             )
             addDropWithNode(drop)
-        } else if rand < weaponProb + healthProb + 0.08 { // Skill drop chance increased
+        } else if rand < weaponProb + healthProb + 0.3 { // Skill drop chance increased to 30%
              // Random skill
              if let skill = GameConfig.skillDefs.randomElement() {
                  let drop = DropData(
