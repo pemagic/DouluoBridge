@@ -536,14 +536,20 @@ class GameScene: SKScene {
         for (i, enemy) in enemies.enumerated().reversed() {
             enemy.update(playerPosition: playerNode.position, platforms: platforms)
             
-            // Off-screen cleanup
+            // Off-screen cleanup — tighter threshold so distant enemies don't clog maxEnemies
             let enemyRelX = abs(enemy.position.x - cameraNode.position.x)
-            if enemy.position.y < -200 || enemyRelX > Physics.gameWidth + 600 {
+            if enemy.position.y < -200 || enemyRelX > Physics.gameWidth {
                 // If this is a boss going off-screen, reset boss state so it can respawn
                 if enemy.isBoss {
                     bossActive = false
                     bossSpawned = false
                     bossStallTimer = 0
+                }
+                // ROOT CAUSE FIX: Count off-screen enemies toward levelKills
+                // so the kill target isn't "leaked" by enemies wandering off
+                if !enemy.isBoss {
+                    levelKills += 1
+                    totalKills += 1
                 }
                 enemy.removeFromParent()
                 enemies.remove(at: i)
@@ -812,6 +818,11 @@ class GameScene: SKScene {
         // Fix 6: Scale max enemies with BOTH level and weapon level
         let maxEnemies = 10 + currentLevel * 3 + playerNode.weaponLevel * 3
         if enemies.count >= maxEnemies { return }
+        
+        // Fast respawn: if NO enemies exist and level isn't complete, spawn immediately
+        if enemies.isEmpty && levelKills < lvl.killTarget {
+            spawnCooldown = 0  // Force immediate spawn
+        }
         
         // Batch spawn: more enemies per tick at higher levels
         let batchSize = max(1, (currentLevel - 3) / 2)  // 1@L1-4, 2@L5-6, 3@L7-8, 4@L9-10
