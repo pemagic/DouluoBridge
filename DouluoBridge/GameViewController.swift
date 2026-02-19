@@ -357,26 +357,33 @@ class GameViewController: UIViewController, GameSceneDelegate {
     
     private func setupLevelBanner() {
         levelBanner = UIView()
-        levelBanner.backgroundColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.8)
+        levelBanner.backgroundColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.6) // Semi-transparent black
+        levelBanner.layer.cornerRadius = 12
+        levelBanner.layer.masksToBounds = true
+        levelBanner.isUserInteractionEnabled = false // Ensure touches pass through
         levelBanner.isHidden = true
         view.addSubview(levelBanner)
         levelBanner.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Top Banner constraints
         NSLayoutConstraint.activate([
-            levelBanner.topAnchor.constraint(equalTo: view.topAnchor),
-            levelBanner.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            levelBanner.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            levelBanner.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+            levelBanner.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
+            levelBanner.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            levelBanner.heightAnchor.constraint(equalToConstant: 60),
+            levelBanner.widthAnchor.constraint(greaterThanOrEqualToConstant: 300)
         ])
         
         levelBannerTitle = UILabel()
-        levelBannerTitle.font = UIFont(name: "PingFangSC-Heavy", size: 48) ?? .boldSystemFont(ofSize: 48)
-        levelBannerTitle.textColor = UIColor(red: 0.75, green: 0.69, blue: 0.56, alpha: 1)
+        levelBannerTitle.font = UIFont(name: "PingFangSC-Heavy", size: 24) ?? .boldSystemFont(ofSize: 24)
+        levelBannerTitle.textColor = UIColor(red: 0.95, green: 0.90, blue: 0.80, alpha: 1)
         levelBannerTitle.textAlignment = .center
         levelBanner.addSubview(levelBannerTitle)
         levelBannerTitle.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             levelBannerTitle.centerXAnchor.constraint(equalTo: levelBanner.centerXAnchor),
-            levelBannerTitle.centerYAnchor.constraint(equalTo: levelBanner.centerYAnchor)
+            levelBannerTitle.centerYAnchor.constraint(equalTo: levelBanner.centerYAnchor),
+            levelBannerTitle.leadingAnchor.constraint(equalTo: levelBanner.leadingAnchor, constant: 20),
+            levelBannerTitle.trailingAnchor.constraint(equalTo: levelBanner.trailingAnchor, constant: -20)
         ])
     }
     
@@ -663,13 +670,19 @@ class GameViewController: UIViewController, GameSceneDelegate {
             self.audioManager.changeSong(songId: songId, bpm: bpm)
             
             self.levelBannerTitle.text = name
+            
+            // Slide down animation
             self.levelBanner.isHidden = false
             self.levelBanner.alpha = 0
-            UIView.animate(withDuration: 0.5, animations: {
+            self.levelBanner.transform = CGAffineTransform(translationX: 0, y: -50)
+            
+            UIView.animate(withDuration: 0.4, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5, options: [], animations: {
                 self.levelBanner.alpha = 1
+                self.levelBanner.transform = .identity
             }) { _ in
-                UIView.animate(withDuration: 0.5, delay: 1.5, options: [], animations: {
+                UIView.animate(withDuration: 0.4, delay: 2.0, options: [], animations: {
                     self.levelBanner.alpha = 0
+                    self.levelBanner.transform = CGAffineTransform(translationX: 0, y: -50)
                 }) { _ in
                     self.levelBanner.isHidden = true
                 }
