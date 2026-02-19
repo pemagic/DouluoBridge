@@ -658,16 +658,18 @@ class GameViewController: UIViewController, GameSceneDelegate {
         }
     }
     
-    func showLevelBanner(_ name: String) {
+    func showLevelBanner(_ name: String, updateBGM: Bool = false) {
         DispatchQueue.main.async {
-            // Switch BGM to match current level — different BPM per level for variety
-            let songId = self.gameScene.currentLevel - 1
-            // BPM by level: [Lv1-Heroic:110, Lv2-Carefree:105, Lv3-Martial:140, Lv4-Ambush:135,
-            //  Lv5-Archery:115, Lv6-Blades:145, Lv7-Dragon:138, Lv8-Moon:90, Lv9-Ethereal:80, Lv10-Plum:100]
-            let bpmTable: [Float] = [110, 105, 140, 135, 115, 145, 138, 90, 80, 100]
-            let bpm = bpmTable[min(songId, bpmTable.count - 1)]
-            print("[GameVC] Level \(self.gameScene.currentLevel) → switching BGM to songId \(songId), bpm \(bpm)")
-            self.audioManager.changeSong(songId: songId, bpm: bpm)
+            // Switch BGM ONLY if requested (e.g. level transition)
+            if updateBGM {
+                let songId = self.gameScene.currentLevel - 1
+                // BPM by level: [Lv1-Heroic:110, Lv2-Carefree:105, Lv3-Martial:140, Lv4-Ambush:135,
+                //  Lv5-Archery:115, Lv6-Blades:145, Lv7-Dragon:138, Lv8-Moon:90, Lv9-Ethereal:80, Lv10-Plum:100]
+                let bpmTable: [Float] = [110, 105, 140, 135, 115, 145, 138, 90, 80, 100]
+                let bpm = bpmTable[min(songId, bpmTable.count - 1)]
+                print("[GameVC] Level \(self.gameScene.currentLevel) → switching BGM to songId \(songId), bpm \(bpm)")
+                self.audioManager.changeSong(songId: songId, bpm: bpm)
+            }
             
             self.levelBannerTitle.text = name
             

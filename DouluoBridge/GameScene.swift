@@ -205,7 +205,7 @@ class GameScene: SKScene {
             levelUpRandomSkill()
             
             // Level banner
-            gameDelegate?.showLevelBanner(currentLevelDef.name)
+            gameDelegate?.showLevelBanner(currentLevelDef.name, updateBGM: true)
             
             // Resume after delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
@@ -780,7 +780,7 @@ class GameScene: SKScene {
                         let skillDef = GameConfig.skillDefs.first { $0.id == skillId }
                         createParticles(x: playerNode.position.x, y: playerNode.position.y,
                                        color: skillDef?.color ?? .cyan, count: 40, speedScale: 2.5)
-                        gameDelegate?.showLevelBanner("获得技能: \(skillDef?.name ?? skillId)")
+                        gameDelegate?.showLevelBanner("获得技能: \(skillDef?.name ?? skillId)", updateBGM: false)
                         gameDelegate?.triggerHaptic(.heavy)
                     }
                 }
@@ -1425,7 +1425,7 @@ enum HapticType {
 protocol GameSceneDelegate: AnyObject {
     func gameStateChanged(_ state: GameScene.GameState)
     func updateHUD(hp: Int, maxHp: Int, energy: Int, kills: Int, combo: Int, weaponLevel: Int, level: Int)
-    func showLevelBanner(_ name: String)
+    func showLevelBanner(_ name: String, updateBGM: Bool)
     func gameEnded(kills: Int, time: Int, level: Int, victory: Bool)
     func triggerHaptic(_ type: HapticType)
 }
