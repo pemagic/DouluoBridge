@@ -1062,7 +1062,8 @@ class GameScene: SKScene {
                     owner: .player,
                     color: UIColor(red: 1, green: 0.27, blue: 0, alpha: 1),
                     life: 50 + lvl * 4,
-                    size: 14 + lvl
+                    size: 14 + lvl,
+                    homing: true
                 )
                 proj.position = CGPoint(
                     x: playerNode.position.x,
@@ -1087,7 +1088,8 @@ class GameScene: SKScene {
                     owner: .player,
                     color: UIColor(red: 0, green: 0.8, blue: 1, alpha: 1),
                     life: 25 + lvl * 2,
-                    size: 12 + lvl
+                    size: 12 + lvl,
+                    homing: true
                 )
                 proj.position = playerNode.position
                 entityLayer.addChild(proj)
@@ -1241,6 +1243,24 @@ class GameScene: SKScene {
         let healthProb = 0.08 + Double(max(0, 100 - playerNode.hp)) * 0.002 + comboBonus
         let rand = Double.random(in: 0...1)
         
+        // Independent Skill Roll (30% base chance)
+        // Fix for "Later levels don't drop skills": Use separate random roll so high combo/weapon probability doesn't starve skills
+        if Double.random(in: 0...1) < 0.3 + (comboBonus * 0.5) {
+             if let skill = GameConfig.skillDefs.randomElement() {
+                 let drop = DropData(
+                     x: position.x, y: position.y + 40,
+                     vx: CGFloat.random(in: -3...3),
+                     vy: 14,
+                     type: .skill(skill.id), life: 1000
+                 )
+                 addDropWithNode(drop)
+                 // If skill drops, maybe we don't drop weapon/health to avoid clutter? 
+                 // Or allow both? Let's return to prevent excessive drops per kill.
+                 return 
+             }
+        }
+
+        // Weapon/Health Roll
         if rand < weaponProb {
             let drop = DropData(
                 x: position.x, y: position.y + 40,
@@ -1257,17 +1277,6 @@ class GameScene: SKScene {
                 type: .health, life: 800
             )
             addDropWithNode(drop)
-        } else if rand < weaponProb + healthProb + 0.3 { // Skill drop chance increased to 30%
-             // Random skill
-             if let skill = GameConfig.skillDefs.randomElement() {
-                 let drop = DropData(
-                     x: position.x, y: position.y + 40,
-                     vx: CGFloat.random(in: -3...3),
-                     vy: 14,
-                     type: .skill(skill.id), life: 1000
-                 )
-                 addDropWithNode(drop)
-             }
         }
     }
     

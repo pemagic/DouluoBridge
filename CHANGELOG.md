@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.2] - 2026-02-19
+
+### Improvements
+- **技能掉落修复 (Fix Skill Drops)**: 修复了后期连击数高时，因概率计算溢出导致技能包无法掉落的问题 (Independent 30% roll)。
+- **技能追踪 (Homing Skills)**: 火焰掌 (Fire) 和 旋风腿 (Whirlwind) 现在会自动追踪最近的敌人。
+
 ## [1.5.1] - 2026-02-19
 
 ### Optimizations
