@@ -305,7 +305,8 @@ class GameScene: SKScene {
     private func drawPlatform(_ plat: PlatformData) {
         // V1.1 (lines 1794-1813): solid fill + brush stroke top edge + floating shadow
         let node = SKShapeNode(rectOf: CGSize(width: plat.width, height: plat.height))
-        node.fillColor = plat.color
+        node.fillColor = plat.color.darkened(0.6)  // Darker for depth
+
         node.strokeColor = .clear
         node.lineWidth = 0
         node.alpha = plat.isGround ? 0.5 : 0.35  // Semi-transparent so background shows through
@@ -327,8 +328,8 @@ class GameScene: SKScene {
         }
         let edge = SKShapeNode(path: edgePath)
         edge.strokeColor = plat.isGround
-            ? UIColor(red: 0.54, green: 0.48, blue: 0.38, alpha: 1)  // #8a7a60
-            : UIColor(red: 0.44, green: 0.38, blue: 0.31, alpha: 1)  // #706050
+            ? UIColor(red: 0.54, green: 0.48, blue: 0.38, alpha: 1).darkened(0.6)  // #8a7a60
+            : UIColor(red: 0.44, green: 0.38, blue: 0.31, alpha: 1).darkened(0.6)  // #706050
         edge.lineWidth = plat.isGround ? 3 : 2
         edge.fillColor = .clear
         edge.zPosition = 1
@@ -766,6 +767,17 @@ class GameScene: SKScene {
                                        color: UIColor(red: 0.98, green: 0.75, blue: 0.14, alpha: 1), count: 30, speedScale: 2)
                         gameDelegate?.triggerHaptic(.heavy) // Tone 1200 (weapon)
                     }
+                case .skill(let skillId):
+                    // Unlock or upgrade skill
+                    if let skillState = playerNode.skills[skillId] {
+                        skillState.level += 1
+                        // Visual effect
+                        let skillDef = GameConfig.skillDefs.first { $0.id == skillId }
+                        createParticles(x: playerNode.position.x, y: playerNode.position.y,
+                                       color: skillDef?.color ?? .cyan, count: 40, speedScale: 2.5)
+                        gameDelegate?.showLevelBanner("获得技能: \(skillDef?.name ?? skillId)")
+                        gameDelegate?.triggerHaptic(.heavy)
+                    }
                 }
                 drops[i].node?.removeFromParent()
                 drops.remove(at: i)
@@ -855,7 +867,8 @@ class GameScene: SKScene {
             if enemies.count >= maxEnemies { break }
             
             let type = lvl.enemies.randomElement() ?? .scout
-            let color = lvl.colors.enemyColors.randomElement() ?? .cyan
+            let color = lvl.colors.enemyColors.randomElement()?.darkened(0.6) ?? .cyan
+
             
             let enemy = EnemyNode(
                 type: type,
@@ -1228,6 +1241,17 @@ class GameScene: SKScene {
                 type: .health, life: 800
             )
             addDropWithNode(drop)
+        } else if rand < weaponProb + healthProb + 0.08 { // Skill drop chance increased
+             // Random skill
+             if let skill = GameConfig.skillDefs.randomElement() {
+                 let drop = DropData(
+                     x: position.x, y: position.y + 40,
+                     vx: CGFloat.random(in: -3...3),
+                     vy: 14,
+                     type: .skill(skill.id), life: 1000
+                 )
+                 addDropWithNode(drop)
+             }
         }
     }
     
@@ -1238,7 +1262,8 @@ class GameScene: SKScene {
         node.position = CGPoint(x: d.x, y: d.y)
         node.zPosition = 5
         
-        if d.type == .health {
+        switch d.type {
+        case .health:
             // Heart shape with green glow
             let heart = SKShapeNode()
             let path = UIBezierPath()
@@ -1248,31 +1273,50 @@ class GameScene: SKScene {
             path.addLine(to: CGPoint(x: 0, y: -10))
             path.close()
             heart.path = path.cgPath
-            heart.fillColor = UIColor(red: 0.13, green: 0.77, blue: 0.37, alpha: 1)  // #22c55e
-            heart.strokeColor = .clear
-            heart.glowWidth = 10
+            heart.fillColor = UIColor(red: 0, green: 1, blue: 0.5, alpha: 1)
+            heart.strokeColor = .white
+            heart.lineWidth = 2
+            heart.glowWidth = 5
             node.addChild(heart)
-        } else {
-            // Weapon: rotating golden square with white cross
-            let square = SKShapeNode(rectOf: CGSize(width: 32, height: 32))
-            square.fillColor = UIColor(red: 0.98, green: 0.75, blue: 0.14, alpha: 1)  // #fbbf24
-            square.strokeColor = .clear
-            square.glowWidth = 12
-            node.addChild(square)
             
-            // White cross
-            let crossV = SKShapeNode(rectOf: CGSize(width: 8, height: 24))
-            crossV.fillColor = .white
-            crossV.strokeColor = .clear
-            node.addChild(crossV)
-            let crossH = SKShapeNode(rectOf: CGSize(width: 24, height: 8))
-            crossH.fillColor = .white
-            crossH.strokeColor = .clear
-            node.addChild(crossH)
+        case .weapon:
+             // Sword shape (Weapon)
+             let sword = SKShapeNode()
+             let path = UIBezierPath()
+             path.move(to: CGPoint(x: 0, y: 0))
+             path.addLine(to: CGPoint(x: 4, y: 4))
+             path.addLine(to: CGPoint(x: 12, y: 12)) // blade
+             path.addLine(to: CGPoint(x: 8, y: 16))
+             path.addLine(to: CGPoint(x: 0, y: 8))
+             path.close()
+             // Handle
+             path.move(to: CGPoint(x: 0, y: 0))
+             path.addLine(to: CGPoint(x: -4, y: -4))
+             sword.path = path.cgPath
+             sword.fillColor = UIColor(red: 1, green: 0.8, blue: 0.2, alpha: 1)
+             sword.strokeColor = .white
+             sword.lineWidth = 1
+             sword.glowWidth = 4
+             node.addChild(sword)
+             
+             let rotate = SKAction.rotate(byAngle: .pi * 2, duration: 2)
+             sword.run(SKAction.repeatForever(rotate))
             
-            // Rotate
-            let rotate = SKAction.rotate(byAngle: .pi * 2, duration: 2)  // Original: gameTime*0.05 ≈ 3 rad/s
-            square.run(SKAction.repeatForever(rotate))
+        case .skill(let skillId):
+             // Skill Book / Rune
+             let bg = SKShapeNode(rectOf: CGSize(width: 32, height: 32), cornerRadius: 4)
+             let skillDef = GameConfig.skillDefs.first { $0.id == skillId }
+             bg.fillColor = (skillDef?.color ?? .gray).withAlphaComponent(0.8)
+             bg.strokeColor = .white
+             bg.lineWidth = 2
+             node.addChild(bg)
+             
+             let label = SKLabelNode(text: skillDef?.emoji ?? "?")
+             label.fontName = "AppleColorEmoji"
+             label.fontSize = 20
+             label.verticalAlignmentMode = .center
+             label.position = CGPoint(x: 0, y: -7) // adjust Y for emoji font centering
+             node.addChild(label)
         }
         
         entityLayer.addChild(node)
@@ -1357,7 +1401,7 @@ struct ParticleEffect {
 }
 
 struct DropData {
-    enum DropType { case health, weapon }
+    enum DropType { case health, weapon, skill(String) }
     var x: CGFloat
     var y: CGFloat
     var vx: CGFloat = 0
@@ -1379,4 +1423,15 @@ protocol GameSceneDelegate: AnyObject {
     func showLevelBanner(_ name: String)
     func gameEnded(kills: Int, time: Int, level: Int, victory: Bool)
     func triggerHaptic(_ type: HapticType)
+}
+
+// MARK: - Extensions
+extension UIColor {
+    func darkened(_ factor: CGFloat = 0.6) -> UIColor {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        if getRed(&r, green: &g, blue: &b, alpha: &a) {
+            return UIColor(red: max(r * factor, 0), green: max(g * factor, 0), blue: max(b * factor, 0), alpha: a)
+        }
+        return self
+    }
 }
