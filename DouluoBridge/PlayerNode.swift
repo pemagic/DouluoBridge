@@ -221,6 +221,17 @@ class PlayerNode: SKNode {
             }
         }
         
+        // Shield Visual
+        if let shield = skills["shield"], shield.active > 0 {
+             let s = SKShapeNode(circleOfRadius: 40)
+             s.strokeColor = UIColor(red: 1, green: 0.84, blue: 0, alpha: 0.8) // Gold
+             s.lineWidth = 3
+             s.fillColor = UIColor(red: 1, green: 0.84, blue: 0, alpha: 0.2)
+             s.zPosition = 10
+             addChild(s)
+             s.run(SKAction.sequence([SKAction.wait(forDuration: 0.05), SKAction.removeFromParent()]))
+        }
+        
         // Ultimate glow effect
         if ultActive > 0 {
             let glow = SKShapeNode(circleOfRadius: 50)

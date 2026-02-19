@@ -157,7 +157,7 @@ struct GameConfig {
                 mountainColors: [c("#8a7050"), c("#9a8060"), c("#7a6040")],
                 enemyColors: [c("#aa7744"), c("#996644"), c("#bb8855"), c("#cc9966"), c("#aa8844")],
                 platformGround: [c("#c0a880"), c("#b09870"), c("#d0b890")],
-                platformFloat: [c("#a09070"), c("#907a5a"), c("#b0a080")]
+                platformFloat: [c("#ff9900"), c("#ffcc00"), c("#ffee44")] // Orange/Yellow
             ),
             bgm: BGMConfig(droneFreq: 46.2, filterCutoff: 2200, volume: 0.042, songId: 2)
         ),
@@ -170,7 +170,7 @@ struct GameConfig {
                 mountainColors: [c("#707888"), c("#606878"), c("#808898")],
                 enemyColors: [c("#5588aa"), c("#4477aa"), c("#6699bb"), c("#5599cc"), c("#4488aa")],
                 platformGround: [c("#a0a8b8"), c("#9098a8"), c("#b0b8c8")],
-                platformFloat: [c("#808898"), c("#707888"), c("#909aa8")]
+                platformFloat: [c("#8800ff"), c("#9933ff"), c("#aa66ff")] // Purple/Violet
             ),
             bgm: BGMConfig(droneFreq: 41.2, filterCutoff: 1800, volume: 0.045, songId: 3)
         ),
@@ -183,7 +183,7 @@ struct GameConfig {
                 mountainColors: [c("#705030"), c("#604020"), c("#805838")],
                 enemyColors: [c("#886644"), c("#775533"), c("#997755"), c("#aa8866"), c("#887755")],
                 platformGround: [c("#a08060"), c("#907050"), c("#b09070")],
-                platformFloat: [c("#806848"), c("#705838"), c("#908068")]
+                platformFloat: [c("#00cc00"), c("#33dd33"), c("#66ee66")] // Green/Lime
             ),
             bgm: BGMConfig(droneFreq: 41.2, filterCutoff: 1500, volume: 0.048, songId: 4)
         ),
@@ -196,7 +196,7 @@ struct GameConfig {
                 mountainColors: [c("#2a3a50"), c("#1a2a40"), c("#3a4a60")],
                 enemyColors: [c("#7755aa"), c("#6644aa"), c("#8866bb"), c("#9977cc"), c("#7766aa")],
                 platformGround: [c("#505868"), c("#404858"), c("#606878")],
-                platformFloat: [c("#3a4258"), c("#2a3248"), c("#4a5268")]
+                platformFloat: [c("#ff0066"), c("#ff3388"), c("#ff66aa")] // Pink/Red
             ),
             bgm: BGMConfig(droneFreq: 36.7, filterCutoff: 1200, volume: 0.05, songId: 5)
         ),
@@ -209,7 +209,7 @@ struct GameConfig {
                 mountainColors: [c("#2a1848"), c("#1a0838"), c("#3a2858")],
                 enemyColors: [c("#aa3344"), c("#993355"), c("#bb4455"), c("#cc5566"), c("#aa4466")],
                 platformGround: [c("#3a2838"), c("#2a1828"), c("#4a3848")],
-                platformFloat: [c("#2a1828"), c("#1a0818"), c("#3a2838")]
+                platformFloat: [c("#ffcc00"), c("#ffee00"), c("#ffff44")] // Gold/Yellow (Electric)
             ),
             bgm: BGMConfig(droneFreq: 36.7, filterCutoff: 1000, volume: 0.052, songId: 6)
         ),
@@ -222,7 +222,7 @@ struct GameConfig {
                 mountainColors: [c("#3a0808"), c("#2a0000"), c("#4a1010")],
                 enemyColors: [c("#cc2222"), c("#bb1133"), c("#dd3344"), c("#ee4455"), c("#cc3355")],
                 platformGround: [c("#3a1818"), c("#2a0808"), c("#4a2020")],
-                platformFloat: [c("#2a1010"), c("#1a0000"), c("#3a1818")]
+                platformFloat: [c("#ff0000"), c("#dd0000"), c("#bb0000")] // Deep Red
             ),
             bgm: BGMConfig(droneFreq: 32.7, filterCutoff: 800, volume: 0.055, songId: 7)
         ),
@@ -235,7 +235,7 @@ struct GameConfig {
                 mountainColors: [c("#081830"), c("#001020"), c("#102040")],
                 enemyColors: [c("#4466cc"), c("#3355bb"), c("#5577dd"), c("#6688ee"), c("#4477cc")],
                 platformGround: [c("#182028"), c("#101818"), c("#202830")],
-                platformFloat: [c("#101820"), c("#081018"), c("#182028")]
+                platformFloat: [c("#0000ff"), c("#2222ff"), c("#4444ff")] // Deep Blue
             ),
             bgm: BGMConfig(droneFreq: 32.7, filterCutoff: 600, volume: 0.058, songId: 8)
         ),
@@ -248,7 +248,7 @@ struct GameConfig {
                 mountainColors: [c("#0a0a18"), c("#050510"), c("#101020")],
                 enemyColors: [c("#ccccdd"), c("#bbbbcc"), c("#ddddee"), c("#ffffff"), c("#aaaacc")],
                 platformGround: [c("#101018"), c("#080810"), c("#181820")],
-                platformFloat: [c("#080810"), c("#040408"), c("#101018")]
+                platformFloat: [c("#ffffff"), c("#eeeeee"), c("#dddddd")] // White/Silver
             ),
             bgm: BGMConfig(droneFreq: 27.5, filterCutoff: 500, volume: 0.06, songId: 9)
         ),

@@ -567,11 +567,16 @@ class GameScene: SKScene {
             let dy = abs(enemy.position.y - playerNode.position.y)
             
             // Chaser kamikaze: if close, deal 15 damage, self-destruct
+            // Chaser kamikaze: if close, deal 15 damage, self-destruct
             if enemy.enemyType == .chaser {
                 if dx < 60 && dy < 70 {
-                    if playerNode.iframe <= 0 {
+                    if let shield = playerNode.skills["shield"], shield.active > 0 {
+                        shield.active = max(0, shield.active - 10)
+                        gameDelegate?.triggerHaptic(.light)
+                    } else if playerNode.iframe <= 0 {
                         playerNode.hp -= 15
                         playerNode.iframe = 30  // original: iframe = 30
+                        gameDelegate?.triggerHaptic(.medium)
                     }
                     enemy.hp = 0  // self-destruct
                 }
