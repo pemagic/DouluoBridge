@@ -22,6 +22,7 @@ class GameScene: SKScene {
     var bossActive: Bool = false
     var bossSpawned: Bool = false
     var screenFlash: Int = 0
+    var bossStallTimer: Int = 0  // Safety timer to detect boss stuck/lost
 
     
     // MARK: - Camera
@@ -253,27 +254,47 @@ class GameScene: SKScene {
                 drawPlatform(midPlat)
             }
             
-            // Sky platforms (50% chance)
+            // Sky platforms (50% chance) — Rainbow colors!
             if CGFloat.random(in: 0...1) > 0.5 {
-                let floatColor = colors.platformFloat.randomElement() ?? UIColor(white: 0.2, alpha: 1)
+                let rainbowColors: [UIColor] = [
+                    UIColor(red: 1.0, green: 0.3, blue: 0.3, alpha: 1),   // Red
+                    UIColor(red: 1.0, green: 0.6, blue: 0.2, alpha: 1),   // Orange
+                    UIColor(red: 1.0, green: 0.9, blue: 0.2, alpha: 1),   // Yellow
+                    UIColor(red: 0.3, green: 0.9, blue: 0.4, alpha: 1),   // Green
+                    UIColor(red: 0.2, green: 0.8, blue: 1.0, alpha: 1),   // Cyan
+                    UIColor(red: 0.3, green: 0.4, blue: 1.0, alpha: 1),   // Blue
+                    UIColor(red: 0.7, green: 0.3, blue: 1.0, alpha: 1),   // Purple
+                    UIColor(red: 1.0, green: 0.4, blue: 0.8, alpha: 1),   // Magenta
+                ]
+                let skyColor = rainbowColors[i % rainbowColors.count]
                 let skyPlat = PlatformData(
                     x: CGFloat(i) * 600 + CGFloat.random(in: 0...400),
                     y: 260 + CGFloat.random(in: 0...90),
                     width: 180 + CGFloat.random(in: 0...120), height: 18,
-                    color: floatColor, isGround: false
+                    color: skyColor, isGround: false
                 )
                 platforms.append(skyPlat)
                 drawPlatform(skyPlat)
             }
             
-            // High platforms (30% chance)
+            // High platforms (30% chance) — Rainbow colors!
             if CGFloat.random(in: 0...1) > 0.7 {
+                let rainbowColors: [UIColor] = [
+                    UIColor(red: 1.0, green: 0.3, blue: 0.3, alpha: 1),
+                    UIColor(red: 1.0, green: 0.6, blue: 0.2, alpha: 1),
+                    UIColor(red: 1.0, green: 0.9, blue: 0.2, alpha: 1),
+                    UIColor(red: 0.3, green: 0.9, blue: 0.4, alpha: 1),
+                    UIColor(red: 0.2, green: 0.8, blue: 1.0, alpha: 1),
+                    UIColor(red: 0.3, green: 0.4, blue: 1.0, alpha: 1),
+                    UIColor(red: 0.7, green: 0.3, blue: 1.0, alpha: 1),
+                    UIColor(red: 1.0, green: 0.4, blue: 0.8, alpha: 1),
+                ]
+                let highColor = rainbowColors[(i + 3) % rainbowColors.count]
                 let highPlat = PlatformData(
                     x: CGFloat(i) * 600 + CGFloat.random(in: 0...300),
                     y: 350 + CGFloat.random(in: 0...50),
                     width: 140 + CGFloat.random(in: 0...80), height: 15,
-                    color: UIColor(red: 0.69, green: 0.63, blue: 0.56, alpha: 1), // #b0a090
-                    isGround: false
+                    color: highColor, isGround: false
                 )
                 platforms.append(highPlat)
                 drawPlatform(highPlat)
@@ -518,6 +539,12 @@ class GameScene: SKScene {
             // Off-screen cleanup
             let enemyRelX = abs(enemy.position.x - cameraNode.position.x)
             if enemy.position.y < -200 || enemyRelX > Physics.gameWidth + 600 {
+                // If this is a boss going off-screen, reset boss state so it can respawn
+                if enemy.isBoss {
+                    bossActive = false
+                    bossSpawned = false
+                    bossStallTimer = 0
+                }
                 enemy.removeFromParent()
                 enemies.remove(at: i)
                 continue
@@ -535,12 +562,6 @@ class GameScene: SKScene {
                     }
                     enemy.hp = 0  // self-destruct
                 }
-            }
-            
-            // Enemy death check (before other interactions)
-            if enemy.hp <= 0 {
-                handleEnemyDeath(at: i)
-                continue
             }
             
             // Enemy death check (before other interactions)
@@ -709,7 +730,7 @@ class GameScene: SKScene {
                     playerNode.hp = min(100, playerNode.hp + 30)  // Original: +30
                     gameDelegate?.triggerHaptic(.medium) // Tone 800 (health)
                 case .weapon:
-                    if playerNode.weaponLevel < 10 {
+                    if playerNode.weaponLevel < currentLevelDef.weaponCap {
                         playerNode.weaponLevel += 1
                         playerNode.rebuildVisual()
                         createParticles(x: playerNode.position.x, y: playerNode.position.y,
@@ -771,35 +792,77 @@ class GameScene: SKScene {
         }
         
         // Don't spawn regular enemies during boss fight
-        if bossActive { return }
+        if bossActive {
+            // Safety: if boss is active but no boss exists in array, reset after timer
+            bossStallTimer += 1
+            let hasBoss = enemies.contains { $0.isBoss }
+            if !hasBoss && bossStallTimer > 300 {
+                bossActive = false
+                bossSpawned = false
+                bossStallTimer = 0
+            }
+            return
+        }
+        bossStallTimer = 0
         
-        // Regular spawning — original formula
+        // Regular spawning — scaled for level intensity
         spawnCooldown -= 1
         if spawnCooldown > 0 { return }
         
-        let maxEnemies = 15 + playerNode.weaponLevel * 5
+        // Fix 6: Scale max enemies with BOTH level and weapon level
+        let maxEnemies = 10 + currentLevel * 3 + playerNode.weaponLevel * 3
         if enemies.count >= maxEnemies { return }
         
-        let type = lvl.enemies.randomElement() ?? .scout
-        let color = lvl.colors.enemyColors.randomElement() ?? .cyan
+        // Batch spawn: more enemies per tick at higher levels
+        let batchSize = max(1, (currentLevel - 3) / 2)  // 1@L1-4, 2@L5-6, 3@L7-8, 4@L9-10
         
-        let enemy = EnemyNode(
-            type: type,
-            playerWeaponLevel: playerNode.weaponLevel,
-            color: color,
-            enemyTier: lvl.enemyTier
-        )
+        for _ in 0..<batchSize {
+            if enemies.count >= maxEnemies { break }
+            
+            let type = lvl.enemies.randomElement() ?? .scout
+            let color = lvl.colors.enemyColors.randomElement() ?? .cyan
+            
+            let enemy = EnemyNode(
+                type: type,
+                playerWeaponLevel: playerNode.weaponLevel,
+                color: color,
+                enemyTier: lvl.enemyTier
+            )
+            
+            // At higher levels, spawn from all directions (left, right, above, diagonal)
+            let spawnX: CGFloat
+            let spawnY: CGFloat
+            if currentLevel >= 7 {
+                // 4-directional spawning for intense later levels
+                let direction = Int.random(in: 0...3)
+                switch direction {
+                case 0: // Right
+                    spawnX = playerNode.position.x + 700 + CGFloat.random(in: 0...400)
+                    spawnY = playerNode.position.y + CGFloat.random(in: -200...300)
+                case 1: // Left
+                    spawnX = playerNode.position.x - 700 - CGFloat.random(in: 0...400)
+                    spawnY = playerNode.position.y + CGFloat.random(in: -200...300)
+                case 2: // Above
+                    spawnX = playerNode.position.x + CGFloat.random(in: -600...600)
+                    spawnY = Physics.gameHeight + 200 + CGFloat.random(in: 0...200)
+                default: // Diagonal
+                    let side: CGFloat = Bool.random() ? -1 : 1
+                    spawnX = playerNode.position.x + side * (500 + CGFloat.random(in: 0...300))
+                    spawnY = Physics.gameHeight + 100 + CGFloat.random(in: 0...300)
+                }
+            } else {
+                let side: CGFloat = Bool.random() ? -1 : 1
+                spawnX = playerNode.position.x + side * (900 + CGFloat.random(in: 0...400))
+                spawnY = Physics.gameHeight + 200
+            }
+            
+            enemy.position = CGPoint(x: spawnX, y: spawnY)
+            entityLayer.addChild(enemy)
+            enemies.append(enemy)
+        }
         
-        // Original: x = player.x + side * (900 + Math.random()*400); y = -200
-        let side: CGFloat = Bool.random() ? -1 : 1
-        enemy.position = CGPoint(
-            x: playerNode.position.x + side * (900 + CGFloat.random(in: 0...400)),
-            y: Physics.gameHeight + 200  // y=-200 in canvas = above screen
-        )
-        entityLayer.addChild(enemy)
-        enemies.append(enemy)
-        
-        spawnCooldown = max(5, 40 - playerNode.weaponLevel * 3)
+        // Faster spawn cooldown at higher levels
+        spawnCooldown = max(3, 35 - currentLevel * 2 - playerNode.weaponLevel * 2)
     }
     
     // MARK: - Camera (match original offset)
@@ -1083,28 +1146,36 @@ class GameScene: SKScene {
         }
     }
     
-    /// Spawn drop matching original probability formula exactly
+    /// Spawn drop with smooth weapon scaling across levels
     func spawnDrop(at position: CGPoint) {
-        // Original:
-        // const comboBonus = combo * 0.005;
-        // const weaponProb = player.weaponLevel >= 10 ? 0.02 : 0.12 + comboBonus;
-        // const healthProb = 0.08 + (100 - player.hp) * 0.002 + comboBonus;
         let comboBonus = Double(combo) * 0.005
-        let weaponProb = playerNode.weaponLevel >= 10 ? 0.02 : 0.12 + comboBonus
-        let healthProb = 0.08 + Double(100 - playerNode.hp) * 0.002 + comboBonus
+        let cap = currentLevelDef.weaponCap
+        
+        // Fix 4: Smooth weapon scaling — target ~1 weapon level per game level
+        let weaponProb: Double
+        if playerNode.weaponLevel >= 10 {
+            weaponProb = 0.01  // Max level, almost no drops
+        } else if playerNode.weaponLevel >= cap {
+            weaponProb = 0.02  // Already at cap for this level, very rare
+        } else {
+            // Scale based on deficit from cap — more drops if behind
+            let deficit = cap - playerNode.weaponLevel
+            let levelProgress = Double(levelKills) / max(1.0, Double(currentLevelDef.killTarget))
+            weaponProb = min(0.15, 0.04 + Double(deficit) * 0.035) * (1.0 - levelProgress * 0.4) + comboBonus
+        }
+        
+        let healthProb = 0.08 + Double(max(0, 100 - playerNode.hp)) * 0.002 + comboBonus
         let rand = Double.random(in: 0...1)
         
         if rand < weaponProb {
-            // Weapon drop: vy=-10 (upward in canvas → +10 in SpriteKit), vx=random
             let drop = DropData(
                 x: position.x, y: position.y + 40,
                 vx: CGFloat.random(in: -4...4),
-                vy: 10,  // upward
+                vy: 10,
                 type: .weapon, life: 800
             )
             addDropWithNode(drop)
         } else if rand < weaponProb + healthProb {
-            // Health drop: vy=-12 → +12 in SpriteKit
             let drop = DropData(
                 x: position.x, y: position.y + 40,
                 vx: CGFloat.random(in: -3...3),
@@ -1113,7 +1184,6 @@ class GameScene: SKScene {
             )
             addDropWithNode(drop)
         }
-        // No skill drops in original
     }
     
     /// Create visual node for a drop and add to drops array

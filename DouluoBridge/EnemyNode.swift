@@ -24,6 +24,7 @@ class EnemyNode: SKNode {
     var bossType: BossType?
     var martialCombo: Int = 0
     var martialTimer: Int = 0
+    private var lastDrawnPhase: Int = -1  // Performance: skip redundant redraws
     
     // Boss
     var rageMode: Bool = false
@@ -645,8 +646,12 @@ class EnemyNode: SKNode {
         let facingDir: CGFloat = playerPosition.x > position.x ? 1 : -1
         xScale = facingDir
         
-        // Redraw stick figure for animation
-        drawStickFigure()
+        // Redraw stick figure for animation — throttled for performance (Fix 5)
+        let currentPhase = Int(animPhase * 3)  // Quantize to ~3 frames per redraw
+        if currentPhase != lastDrawnPhase || damageFlash > 0 {
+            drawStickFigure()
+            lastDrawnPhase = currentPhase
+        }
         
         // Update sniper aim line
         updateAimLine(playerPosition: playerPosition)
