@@ -306,7 +306,6 @@ class GameScene: SKScene {
     }
     
     private func drawPlatform(_ plat: PlatformData) {
-    private func drawPlatform(_ plat: PlatformData) {
         // V1.1 (lines 1794-1813): solid fill + brush stroke top edge + floating shadow
         // OPTIMIZATION: Use SKSpriteNode for main body to reduce draw calls/lag
         let node = SKSpriteNode(color: plat.color.darkened(0.6), size: CGSize(width: plat.width, height: plat.height))
