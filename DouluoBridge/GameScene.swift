@@ -1107,6 +1107,16 @@ class GameScene: SKScene {
         playerNode.energy = 0
         playerNode.ultActive = 240
         playerNode.iframe = 240
+        
+        // Fix for "Kill Skill has no damage": Deal massive AOE damage
+        let ultDamage = 500 + playerNode.weaponLevel * 100
+        for enemy in enemies {
+            enemy.hp -= CGFloat(ultDamage)
+            enemy.damageFlash = 20
+        }
+        
+        // Visual feedback
+        screenFlash = 20
         gameDelegate?.triggerHaptic(.heavy)
     }
     

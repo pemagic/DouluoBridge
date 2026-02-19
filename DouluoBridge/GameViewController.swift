@@ -214,7 +214,7 @@ class GameViewController: UIViewController, GameSceneDelegate {
         
         // Version tag
         let versionLabel = UILabel()
-        versionLabel.text = "PIXEL WUXIA v1.3"
+        versionLabel.text = "PIXEL WUXIA v1.5"
         versionLabel.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         versionLabel.textColor = UIColor(white: 1, alpha: 0.3)
         stack.addArrangedSubview(versionLabel)
@@ -316,6 +316,7 @@ class GameViewController: UIViewController, GameSceneDelegate {
     @objc private func restartTapped() {
         gameOverView.isHidden = true
         gameScene.startGame()
+        audioManager.startBGM(songId: 0, bpm: 100)
     }
     
     // MARK: - Pause Overlay

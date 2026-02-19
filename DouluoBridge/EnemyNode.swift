@@ -599,7 +599,7 @@ class EnemyNode: SKNode {
             rageMode = true
             baseSpeed *= 1.5
         }
-        if rageMode { vx *= 1.3 }
+        // Fix: Removed per-frame vx *= 1.3 which caused erratic speed
         
         // Gravity: e.vy += GRAVITY; (canvas down = positive)
         // SpriteKit: down = negative
