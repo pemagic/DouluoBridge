@@ -1072,7 +1072,6 @@ class GameScene: SKScene {
                 entityLayer.addChild(proj)
                 projectiles.append(proj)
             }
-            }
             if !ignoreCooldown {
                 sk.cooldown = max(40, def.baseCooldown - lvl * 8)
             }
@@ -1095,11 +1094,11 @@ class GameScene: SKScene {
                 entityLayer.addChild(proj)
                 projectiles.append(proj)
             }
-            }
             if !ignoreCooldown {
                 sk.cooldown = max(50, def.baseCooldown - lvl * 10)
             }
             
+        case "shield":
             let duration = 180 + lvl * 30
             sk.active = duration
             if !ignoreCooldown {
@@ -1111,7 +1110,6 @@ class GameScene: SKScene {
             for enemy in enemies {
                 enemy.hp -= CGFloat(dmg)
                 enemy.damageFlash = 12
-            }
             }
             screenFlash = 12
             if !ignoreCooldown {
@@ -1139,7 +1137,6 @@ class GameScene: SKScene {
                 )
                 entityLayer.addChild(proj)
                 projectiles.append(proj)
-            }
             }
             if !ignoreCooldown {
                 sk.cooldown = max(60, def.baseCooldown - lvl * 12)
