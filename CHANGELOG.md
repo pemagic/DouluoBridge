@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5] - 2026-02-19
+
+### New Features
+- **技能掉落系统 (Skill Drops)**: 击杀敌人有 30% 概率掉落技能书/符文，拾取可解锁或升级技能。
+- **多彩天空楼梯 (Colorful Platforms)**: 根据关卡不同，悬浮楼梯呈现多彩色 (Levels 3-10)，增强视觉深度。
+- **护盾技能视觉 (Shield Visual)**: 激活护盾时显示金色光圈特效。
+- **UI 优化**: 技能获取提示改为顶部非阻塞式横幅。
+
+### Fixed
+- 修复 **护盾技能** 无效的问题 (Shield logic against Chaser/Projectiles)。
+- 修复 **冲刺技能 (Dash/Kill)** 无法造成伤害的问题 (Added collision damage)。
+- 修复 **必杀技 (Ultimate)** 无法造成伤害的问题 (Added AOE damage logic)。
+- 修复 **背景音乐 (BGM)** 在拾取技能时被重置的问题。
+- 修复 **游戏开始时** 缺少 Level 1 关卡提示横幅的问题。
+
+### Changed
+- 增加了所有视觉元素的色彩深度 (Darkened by 40%) 以增强质感。
+- 调整了掉落概率平衡 (Weapon deficit scaling + Skill 30%)。
+
 ## [1.3] - 2026-02-19
 
 ### Fixed

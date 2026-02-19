@@ -166,6 +166,9 @@ class GameScene: SKScene {
         
         gameState = .playing
         gameDelegate?.gameStateChanged(.playing)
+        
+        // Show Level 1 Banner immediately
+        gameDelegate?.showLevelBanner(currentLevelDef.name, updateBGM: false)
     }
     
     func pauseGame() {
