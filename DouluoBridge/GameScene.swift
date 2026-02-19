@@ -610,6 +610,23 @@ class GameScene: SKScene {
                 }
             }
             
+            // Dash Attack Logic (Fix for "Kill Skill has no damage"):
+            // When dashing, player deals damage on contact
+            if playerNode.dashActive > 0 && dx < 60 && dy < 80 {
+                // Check if enemy hasn't been hit recently to avoid 60 hits/sec
+                if enemy.damageFlash == 0 {
+                    let dashDmg = 100 + playerNode.weaponLevel * 30
+                    enemy.hp -= CGFloat(dashDmg)
+                    enemy.damageFlash = 10  // Prevent instant multi-hit kill (dash lasts 15 frames, so maybe hit twice max)
+                    
+                    // Knockback
+                    enemy.vx += CGFloat(playerNode.facing) * 15
+                    enemy.position.y += 5
+                    
+                    gameDelegate?.triggerHaptic(.medium)
+                }
+            }
+            
             // Sniper: fires when aimTimer > 80, 360° aimed
             if enemy.enemyType == .sniper && enemy.aimTimer > 80 {
                 let angle = atan2(playerNode.position.y - enemy.position.y,
