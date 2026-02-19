@@ -538,19 +538,24 @@ class GameScene: SKScene {
             
             // Off-screen cleanup — tighter threshold so distant enemies don't clog maxEnemies
             let enemyRelX = abs(enemy.position.x - cameraNode.position.x)
-            if enemy.position.y < -200 || enemyRelX > Physics.gameWidth {
-                // If this is a boss going off-screen, reset boss state so it can respawn
+            let enemyRelY = enemy.position.y
+            if enemyRelY < -200 || enemyRelX > Physics.gameWidth {
+                // BOSS: never remove — teleport back near the player instead
                 if enemy.isBoss {
-                    bossActive = false
-                    bossSpawned = false
-                    bossStallTimer = 0
+                    // Teleport boss to a position near the player
+                    let side: CGFloat = playerNode.facing > 0 ? 1 : -1
+                    enemy.position = CGPoint(
+                        x: playerNode.position.x + side * 400,
+                        y: playerNode.position.y + 200
+                    )
+                    enemy.vx = 0
+                    enemy.vy = 0
+                    continue
                 }
-                // ROOT CAUSE FIX: Count off-screen enemies toward levelKills
-                // so the kill target isn't "leaked" by enemies wandering off
-                if !enemy.isBoss {
-                    levelKills += 1
-                    totalKills += 1
-                }
+                // Regular enemies: count toward levelKills so the kill target
+                // isn't "leaked" by enemies wandering off
+                levelKills += 1
+                totalKills += 1
                 enemy.removeFromParent()
                 enemies.remove(at: i)
                 continue
@@ -800,11 +805,12 @@ class GameScene: SKScene {
         // Don't spawn regular enemies during boss fight
         if bossActive {
             // Safety: if boss is active but no boss exists in array, reset after timer
+            // Only reset bossActive (NOT bossSpawned) so a new boss won't spawn
             bossStallTimer += 1
             let hasBoss = enemies.contains { $0.isBoss }
             if !hasBoss && bossStallTimer > 300 {
                 bossActive = false
-                bossSpawned = false
+                // Do NOT reset bossSpawned — that would cause a new full-HP boss to appear
                 bossStallTimer = 0
             }
             return
