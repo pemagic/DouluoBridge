@@ -391,12 +391,8 @@ class GameScene: SKScene {
         }
         
         // Set scene bg color as fallback
-        // v1.7: Use first (lightest) color so the transparent background fades into light, not dark
-        if let firstColor = currentLevelDef.colors.bgColors.first {
-            backgroundColor = firstColor
-        } else {
-            backgroundColor = .white
-        }
+        // Set scene bg color as fallback (always white so the alpha blend is light)
+        backgroundColor = .white
     }
     
     // Helper for gradient interpolation
