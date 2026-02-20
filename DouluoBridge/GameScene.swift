@@ -315,7 +315,7 @@ class GameScene: SKScene {
         // V1.1 (lines 1794-1813): solid fill + brush stroke top edge + floating shadow
         // OPTIMIZATION: Use SKSpriteNode for main body to reduce draw calls/lag
         let node = SKSpriteNode(color: plat.color.darkened(0.42), size: CGSize(width: plat.width, height: plat.height))
-        node.alpha = plat.isGround ? 0.5 : 0.35  // Semi-transparent so background shows through
+        node.alpha = plat.isGround ? 0.5 : 1.0  // Ground is semi-transparent, but floating platforms are solid
         node.position = CGPoint(
             x: plat.x + plat.width / 2,
             y: plat.y + plat.height / 2

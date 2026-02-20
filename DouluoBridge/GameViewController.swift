@@ -194,34 +194,6 @@ class GameViewController: UIViewController, GameSceneDelegate {
             levelLabel.leadingAnchor.constraint(equalTo: hudContainer.leadingAnchor)
         ])
         
-        // Debug/Cheat button to skip level
-        let cheatBtn = UIButton(type: .system)
-        cheatBtn.setTitle("⏭ 清关", for: .normal)
-        cheatBtn.backgroundColor = UIColor.red.withAlphaComponent(0.6)
-        cheatBtn.setTitleColor(.white, for: .normal)
-        cheatBtn.titleLabel?.font = .boldSystemFont(ofSize: 12)
-        cheatBtn.layer.cornerRadius = 4
-        cheatBtn.addTarget(self, action: #selector(cheatSkipLevel), for: .touchUpInside)
-        hudContainer.addSubview(cheatBtn)
-        cheatBtn.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            cheatBtn.bottomAnchor.constraint(equalTo: hudContainer.bottomAnchor),
-            cheatBtn.trailingAnchor.constraint(equalTo: hudContainer.trailingAnchor, constant: -160),
-            cheatBtn.widthAnchor.constraint(equalToConstant: 60),
-            cheatBtn.heightAnchor.constraint(equalToConstant: 24)
-        ])
-    }
-    
-    @objc private func cheatSkipLevel() {
-        guard let scene = gameScene, scene.gameState == .playing else { return }
-        // Force spawn boss or kill boss instantly
-        scene.levelKills = GameConfig.levels[scene.currentLevel - 1].killTarget
-        scene.spawnCooldown = 0
-        if scene.bossSpawned {
-            for enemy in scene.enemies where enemy.isBoss {
-                enemy.hp = 0
-            }
-        }
     }
     
     // MARK: - Main Menu
