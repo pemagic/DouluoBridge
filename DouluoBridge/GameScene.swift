@@ -385,7 +385,7 @@ class GameScene: SKScene {
             
             bgNode.position = CGPoint(x: 0, y: 0)  // Center of camera
             bgNode.zPosition = -200
-            bgNode.alpha = 0.7  // 70% transparency — vivid but slightly softer
+            bgNode.alpha = 0.4  // More transparent to highlight gameplay elements
             bgNode.name = "bgSky"
             cameraNode.addChild(bgNode)
         }
