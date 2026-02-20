@@ -1,32 +1,21 @@
 import SpriteKit
 import UIKit
 
-// MARK: - Texture Cache for Performance
-// Pre-rendered stick figure textures to avoid creating hundreds of SKShapeNodes per frame
-private class EnemyTextureCache {
-    static let shared = EnemyTextureCache()
-    private var cache: [String: SKTexture] = [:]
+// MARK: - Shared Texture Cache (v1.6.2: Pre-rendered animation frames)
+// All enemies of the same visual type share pre-rendered frame textures.
+// Zero per-frame rendering cost — just array index lookup.
+private class EnemyFrameCache {
+    static let shared = EnemyFrameCache()
+    private var cache: [String: [SKTexture]] = [:]
+    static let frameCount = 6
     
-    func texture(forKey key: String, size: CGSize, drawBlock: (CGContext) -> Void) -> SKTexture {
-        if let cached = cache[key] { return cached }
-        let renderer = UIGraphicsImageRenderer(size: size)
-        let image = renderer.image { ctx in
-            drawBlock(ctx.cgContext)
-        }
-        let texture = SKTexture(image: image)
-        texture.filteringMode = .nearest
-        cache[key] = texture
-        return texture
-    }
-    
-    func clearCache() {
-        cache.removeAll()
-    }
+    func frames(forKey key: String) -> [SKTexture]? { cache[key] }
+    func store(frames: [SKTexture], forKey key: String) { cache[key] = frames }
 }
 
 class EnemyNode: SKNode {
     
-    // MARK: - Properties (match original HTML exactly)
+    // MARK: - Properties
     var vx: CGFloat = 0
     var vy: CGFloat = 0
     var hp: CGFloat
@@ -41,32 +30,27 @@ class EnemyNode: SKNode {
     var shootTimer: CGFloat = 0
     var damageFlash: Int = 0
     var animPhase: CGFloat = CGFloat.random(in: 0...(CGFloat.pi * 2))
-    var aimTimer: Int = 0  // sniper only
-    var damage: Int = 12   // default enemy bullet damage
+    var aimTimer: Int = 0
+    var damage: Int = 12
     var enemyTier: Int = 1
     var bossType: BossType?
     var martialCombo: Int = 0
     var martialTimer: Int = 0
-    private var lastDrawnPhase: Int = -1  // Performance: skip redundant redraws
-    private var lastDamageFlashState: Bool = false  // Track flash state transitions
-    
-    // Boss
     var rageMode: Bool = false
     
-    // v1.6 Performance: Single sprite node replaces entire stickGroup of SKShapeNodes
+    // v1.6.2: Pre-rendered sprite
     private var stickSprite: SKSpriteNode!
-    private var hpBar: SKSpriteNode?      // v1.6: SKSpriteNode instead of SKShapeNode
-    private var hpFill: SKSpriteNode?     // v1.6: SKSpriteNode instead of SKShapeNode
-    private var aimLine: SKSpriteNode?    // v1.6: SKSpriteNode for sniper aim line
-    private var lastAimAlphaLevel: Int = -1  // Quantized aim alpha to avoid re-render
+    private var hpFill: SKSpriteNode?
+    private var aimLine: SKShapeNode?
+    private var lastFrameIndex: Int = -1
+    private var lastFlashState: Bool = false
+    private var normalFrames: [SKTexture] = []
+    private var flashFrames: [SKTexture] = []
+    private var martialNormalFrames: [[SKTexture]] = []
+    private var martialFlashFrames: [[SKTexture]] = []
+    private var texW: CGFloat { enemyWidth + 80 }
+    private var texH: CGFloat { enemyHeight + 60 }
     
-    // Rendering constants
-    private let renderScale: CGFloat = 2.0  // Retina quality
-    private var renderSize: CGSize { CGSize(width: (enemyWidth + 80) * renderScale, height: (enemyHeight + 60) * renderScale) }
-    private var renderCenter: CGPoint { CGPoint(x: renderSize.width / 2, y: renderSize.height / 2) }
-    
-    /// Original init matching HTML's spawnEnemy()
-    /// Stats: hp = (heavy?450:120) * (1 + lvlBonus), baseSpeed = (8+rand*6) * typeMult * (1+lvlBonus*0.5)
     init(type: EnemyType, playerWeaponLevel: Int, isBoss: Bool = false, bossHp: Int = 0, bossSpeed: CGFloat = 0, color: UIColor, enemyTier: Int = 1, bossType: BossType? = nil, hpMultiplier: CGFloat = 1.0) {
         self.enemyType = type
         self.isBoss = isBoss
@@ -82,432 +66,322 @@ class EnemyNode: SKNode {
             self.enemyWidth = 80
             self.enemyHeight = 100
         } else {
-            // Match original: const lvlBonus = (player.weaponLevel - 1) * 0.15;
             let lvlBonus = CGFloat(playerWeaponLevel - 1) * 0.15
-            
-            // hp: (type === 'heavy' ? 450 : 120) * (1 + lvlBonus) * hpMultiplier
             let baseHp: CGFloat = (type == .heavy) ? 450 : 120
             self.hp = baseHp * (1 + lvlBonus) * hpMultiplier
             self.maxHp = self.hp
-            
-            // baseSpeed: (8 + Math.random()*6) * typeMult — v1.6: removed lvlBonus speed scaling to keep pace constant
             let rawSpeed = 8 + CGFloat.random(in: 0...6)
             let typeMult: CGFloat
             switch type {
             case .chaser: typeMult = 1.8
             case .heavy:  typeMult = 0.4
-            default:      typeMult = 0.7  // scout, sniper
+            default:      typeMult = 0.7
             }
-            self.baseSpeed = rawSpeed * typeMult  // No speed scaling — only HP scales
-            
-            // Dimensions: w = heavy ? 80 : 50, h = heavy ? 90 : 70
+            self.baseSpeed = rawSpeed * typeMult
             self.enemyWidth = (type == .heavy) ? 80 : 50
             self.enemyHeight = (type == .heavy) ? 90 : 70
-            
-            // shootTimer: 40 + Math.random()*60
             self.shootTimer = 40 + CGFloat.random(in: 0...60)
-            
-            self.damage = 12  // flat 12 for all regular enemy bullets
+            self.damage = 12
         }
         
         super.init()
         
-        // v1.6: Single sprite node instead of stickGroup with many SKShapeNodes
         stickSprite = SKSpriteNode()
         addChild(stickSprite)
         
-        // Boss HP bar — use SKSpriteNode for performance
         if isBoss {
-            let barWidth: CGFloat = enemyWidth + 20
-            let bar = SKSpriteNode(color: UIColor(red: 0.15, green: 0.15, blue: 0.15, alpha: 1), size: CGSize(width: barWidth, height: 6))
-            bar.position = CGPoint(x: 0, y: enemyHeight / 2 + 10)
-            bar.zPosition = 10
-            addChild(bar)
-            hpBar = bar
-            
-            let fill = SKSpriteNode(color: UIColor(red: 0.8, green: 0.1, blue: 0.1, alpha: 1), size: CGSize(width: barWidth - 2, height: 4))
+            let barW: CGFloat = enemyWidth + 20
+            let bg = SKSpriteNode(color: UIColor(white: 0.15, alpha: 1), size: CGSize(width: barW, height: 6))
+            bg.position = CGPoint(x: 0, y: enemyHeight / 2 + 10)
+            bg.zPosition = 10
+            addChild(bg)
+            let fill = SKSpriteNode(color: UIColor(red: 0.8, green: 0.1, blue: 0.1, alpha: 1), size: CGSize(width: barW - 2, height: 4))
             fill.position = CGPoint(x: 0, y: enemyHeight / 2 + 10)
             fill.zPosition = 11
             addChild(fill)
             hpFill = fill
         }
         
-        drawStickFigure()
+        prepareFrames()
+        updateTexture()
     }
     
-    required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+    required init?(coder aDecoder: NSCoder) { fatalError() }
+    
+    // MARK: - Cache key
+    
+    private func cacheKey(flash: Bool, combo: Int = 0) -> String {
+        let bt = bossType.map { "\($0)" } ?? "x"
+        return "\(enemyType)_\(enemyTier)_\(isBoss)_\(bt)_\(flash)_\(combo)_\(Int(enemyWidth))"
     }
     
-    // MARK: - Stick Figure Drawing — Renders to texture for performance
+    // MARK: - Prepare frames (once per visual type)
     
-    private func drawStickFigure() {
-        let drawColor = damageFlash > 0 ? UIColor.white : color
+    private func prepareFrames() {
+        let fc = EnemyFrameCache.frameCount
+        
+        if enemyType == .martial && !isBoss {
+            for combo in 0..<4 {
+                let nKey = cacheKey(flash: false, combo: combo)
+                let fKey = cacheKey(flash: true, combo: combo)
+                if let nf = EnemyFrameCache.shared.frames(forKey: nKey),
+                   let ff = EnemyFrameCache.shared.frames(forKey: fKey) {
+                    martialNormalFrames.append(nf)
+                    martialFlashFrames.append(ff)
+                } else {
+                    var nf: [SKTexture] = [], ff: [SKTexture] = []
+                    for i in 0..<fc {
+                        let phase = CGFloat(i) / CGFloat(fc) * .pi * 2
+                        nf.append(renderFrame(phase: phase, flash: false, combo: combo))
+                        ff.append(renderFrame(phase: phase, flash: true, combo: combo))
+                    }
+                    EnemyFrameCache.shared.store(frames: nf, forKey: nKey)
+                    EnemyFrameCache.shared.store(frames: ff, forKey: fKey)
+                    martialNormalFrames.append(nf)
+                    martialFlashFrames.append(ff)
+                }
+            }
+        } else {
+            let nKey = cacheKey(flash: false)
+            let fKey = cacheKey(flash: true)
+            if let nf = EnemyFrameCache.shared.frames(forKey: nKey),
+               let ff = EnemyFrameCache.shared.frames(forKey: fKey) {
+                normalFrames = nf; flashFrames = ff
+            } else {
+                for i in 0..<fc {
+                    let phase = CGFloat(i) / CGFloat(fc) * .pi * 2
+                    normalFrames.append(renderFrame(phase: phase, flash: false, combo: 0))
+                    flashFrames.append(renderFrame(phase: phase, flash: true, combo: 0))
+                }
+                EnemyFrameCache.shared.store(frames: normalFrames, forKey: nKey)
+                EnemyFrameCache.shared.store(frames: flashFrames, forKey: fKey)
+            }
+        }
+    }
+    
+    private func updateTexture() {
+        let fc = EnemyFrameCache.frameCount
+        let frameIndex = abs(Int(animPhase / (.pi * 2) * CGFloat(fc))) % fc
+        let isFlash = damageFlash > 0
+        if frameIndex == lastFrameIndex && isFlash == lastFlashState { return }
+        lastFrameIndex = frameIndex
+        lastFlashState = isFlash
+        
+        let frames: [SKTexture]
+        if enemyType == .martial && !isBoss {
+            let c = min(martialCombo, 3)
+            frames = isFlash ? martialFlashFrames[c] : martialNormalFrames[c]
+        } else {
+            frames = isFlash ? flashFrames : normalFrames
+        }
+        guard frameIndex < frames.count else { return }
+        stickSprite.texture = frames[frameIndex]
+        stickSprite.size = CGSize(width: texW, height: texH)
+    }
+    
+    // MARK: - Render single frame (all drawing in one function, no closures passed)
+    
+    private func renderFrame(phase: CGFloat, flash: Bool, combo: Int) -> SKTexture {
+        let drawColor = flash ? UIColor.white : color
         let lineW: CGFloat = isBoss ? 6 : (enemyType == .heavy ? 8 : 4)
-        let t = animPhase
         let h = enemyHeight
+        let w = texW
+        let th = texH
+        let glowBlur: CGFloat = isBoss ? 12 : 8
         
-        // Hover
-        let hover = sin(animPhase) * 6
-        stickSprite.position.y = hover
-        
-        // Render to texture using UIGraphicsImageRenderer (v1.6 optimization)
-        let size = renderSize
-        let cx = renderCenter.x  // center X in render space
-        let cy = renderCenter.y  // center Y in render space
-        let scale = renderScale
-        
-        let renderer = UIGraphicsImageRenderer(size: size)
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: w, height: th))
         let image = renderer.image { ctx in
             let g = ctx.cgContext
-            g.scaleBy(x: scale, y: scale)
-            let cx2 = cx / scale
-            let cy2 = cy / scale
+            let cx = w / 2
+            let cy = th / 2
+            let t = phase
             
-            // Helper: draw line with glow
-            func drawLine(from: CGPoint, to: CGPoint, color: UIColor, width: CGFloat, glow: CGFloat = 0) {
+            // --- Helper: line ---
+            func L(_ fx: CGFloat, _ fy: CGFloat, _ tx: CGFloat, _ ty: CGFloat, _ c: UIColor, _ lw: CGFloat) {
                 g.saveGState()
-                if glow > 0 {
-                    g.setShadow(offset: .zero, blur: glow, color: color.cgColor)
-                }
-                g.setStrokeColor(color.cgColor)
-                g.setLineWidth(width)
-                g.setLineCap(.square)
+                g.setShadow(offset: .zero, blur: glowBlur, color: c.cgColor)
+                g.setStrokeColor(c.cgColor); g.setLineWidth(lw); g.setLineCap(.square)
                 g.beginPath()
-                // Note: CoreGraphics Y is flipped vs SpriteKit — we draw in screen coords (Y-down)
-                g.move(to: CGPoint(x: cx2 + from.x, y: cy2 - from.y))
-                g.addLine(to: CGPoint(x: cx2 + to.x, y: cy2 - to.y))
-                g.strokePath()
-                g.restoreGState()
+                g.move(to: CGPoint(x: cx + fx, y: cy - fy))
+                g.addLine(to: CGPoint(x: cx + tx, y: cy - ty))
+                g.strokePath(); g.restoreGState()
+            }
+            // --- Helper: filled rect (no stroke) ---
+            func R(_ x: CGFloat, _ y: CGFloat, _ rw: CGFloat, _ rh: CGFloat, _ fc: UIColor) {
+                let r = CGRect(x: cx + x - rw/2, y: cy - y - rh/2, width: rw, height: rh)
+                g.setFillColor(fc.cgColor); g.fill(r)
+            }
+            // --- Helper: stroked rect ---
+            func RS(_ x: CGFloat, _ y: CGFloat, _ rw: CGFloat, _ rh: CGFloat, _ fc: UIColor, _ sc: UIColor, _ sw: CGFloat) {
+                let r = CGRect(x: cx + x - rw/2, y: cy - y - rh/2, width: rw, height: rh)
+                g.setFillColor(fc.cgColor); g.fill(r)
+                g.setStrokeColor(sc.cgColor); g.setLineWidth(sw); g.stroke(r)
+            }
+            // --- Helper: circle ---
+            func C(_ x: CGFloat, _ y: CGFloat, _ r: CGFloat, _ fc: UIColor) {
+                let rect = CGRect(x: cx + x - r, y: cy - y - r, width: r * 2, height: r * 2)
+                g.setFillColor(fc.cgColor); g.fillEllipse(in: rect)
+            }
+            func CS(_ x: CGFloat, _ y: CGFloat, _ r: CGFloat, _ sc: UIColor, _ sw: CGFloat) {
+                let rect = CGRect(x: cx + x - r, y: cy - y - r, width: r * 2, height: r * 2)
+                g.setStrokeColor(sc.cgColor); g.setLineWidth(sw); g.strokeEllipse(in: rect)
             }
             
-            // Helper: draw filled rect with optional glow  
-            func drawRect(x: CGFloat, y: CGFloat, w: CGFloat, rh: CGFloat, fillColor: UIColor, strokeColor: UIColor? = nil, strokeWidth: CGFloat = 0, glow: CGFloat = 0) {
-                g.saveGState()
-                if glow > 0 {
-                    g.setShadow(offset: .zero, blur: glow, color: fillColor.cgColor)
+            // ========= BOSS =========
+            if self.isBoss {
+                RS(0, h/2-14, 28, 28, .clear, drawColor, lineW)
+                L(0, h/2-28, 0, -10, drawColor, lineW)
+                let hs = sin(t) * 15
+                L(0, -10, 18, -30-cos(t)*10, drawColor, lineW)
+                L(0, -10, -18, -30+cos(t)*10, drawColor, lineW)
+                
+                guard let bt = self.bossType else {
+                    L(0, 5, 20, hs, drawColor, lineW)
+                    L(0, 5, -20, -hs, drawColor, lineW)
+                    return
                 }
-                let rect = CGRect(x: cx2 + x - w/2, y: cy2 - y - rh/2, width: w, height: rh)
-                g.setFillColor(fillColor.cgColor)
-                g.fill(rect)
-                if let sc = strokeColor, strokeWidth > 0 {
-                    g.setStrokeColor(sc.cgColor)
-                    g.setLineWidth(strokeWidth)
-                    g.stroke(rect)
+                switch bt {
+                case .banditChief:
+                    R(0, h/2+3, 40, 6, drawColor)
+                    L(0, 5, 30, hs, drawColor, lineW)
+                    L(30, hs, 40, hs-5, drawColor, 8)
+                case .wolfKing:
+                    L(-10, h/2, -15, h/2+15, drawColor, lineW); L(-15, h/2+15, -5, h/2, drawColor, lineW)
+                    L(10, h/2, 15, h/2+15, drawColor, lineW); L(15, h/2+15, 5, h/2, drawColor, lineW)
+                    L(0, 5, 20, hs, drawColor, lineW); L(0, 5, -20, -hs, drawColor, lineW)
+                    for c in 0..<3 { R(18+CGFloat(c)*4, hs, 2, 8, drawColor) }
+                case .ironFist:
+                    R(0, h/2-2, 36, 5, UIColor(red:1,green:0.27,blue:0,alpha:1))
+                    L(0, 5, 25, hs, drawColor, 10); R(28, hs, 16, 16, drawColor)
+                    L(0, 5, -25, -hs, drawColor, 10); R(-28, -hs, 16, 16, drawColor)
+                case .shieldGeneral:
+                    R(0, h/2+4, 32, 8, drawColor); R(0, h/2+12, 4, 10, drawColor)
+                    RS(-21, 0, 18, 30, drawColor.withAlphaComponent(0.3), drawColor, 3)
+                    L(0, 5, 35, hs+10, drawColor, lineW)
+                case .phantomArcher:
+                    L(-15, h/2-5, 0, h/2+12, drawColor, lineW); L(0, h/2+12, 15, h/2-5, drawColor, lineW)
+                    g.saveGState()
+                    g.setShadow(offset: .zero, blur: 8, color: drawColor.cgColor)
+                    g.setStrokeColor(drawColor.cgColor); g.setLineWidth(lineW)
+                    g.addArc(center: CGPoint(x: cx+20, y: cy), radius: 20, startAngle: -.pi/3, endAngle: .pi/3, clockwise: true)
+                    g.strokePath(); g.restoreGState()
+                    L(20, 10, 20, -10, drawColor, lineW)
+                case .twinBlade:
+                    L(0, 5, 25, hs+15, drawColor, 3); L(25, hs+15, 28, hs+20, drawColor, 3)
+                    L(0, 5, -25, -hs+15, drawColor, 3); L(-25, -hs+15, -28, -hs+20, drawColor, 3)
+                    g.saveGState()
+                    g.setStrokeColor(UIColor(red:1,green:0.4,blue:1,alpha:1).cgColor); g.setLineWidth(2)
+                    g.beginPath(); g.move(to: CGPoint(x: cx-14, y: cy-(h/2-10)))
+                    g.addCurve(to: CGPoint(x: cx-40-sin(t*3)*8, y: cy-(h/2-5)),
+                               control1: CGPoint(x: cx-25, y: cy-(h/2-5)),
+                               control2: CGPoint(x: cx-35-sin(t*2)*10, y: cy-(h/2+5)))
+                    g.strokePath(); g.restoreGState()
+                case .thunderMonk:
+                    C(0, h/2-14, 14, drawColor)
+                    let bc = UIColor(red:1,green:0.8,blue:0,alpha:1)
+                    for b in 0..<8 { let a = CGFloat(b) * .pi / 4; C(cos(a)*12, sin(a)*12+h/2-14, 3, bc) }
+                    L(0, 5, 15, hs, drawColor, lineW); L(0, 5, -15, -hs, drawColor, lineW)
+                case .bloodDemon:
+                    L(-10, h/2, -18, h/2+18, drawColor, lineW); L(10, h/2, 18, h/2+18, drawColor, lineW)
+                    L(0, 5, 20, hs, drawColor, lineW); L(0, 5, -20, -hs, drawColor, lineW)
+                    g.saveGState()
+                    g.setStrokeColor(drawColor.cgColor); g.setLineWidth(lineW); g.beginPath()
+                    g.move(to: CGPoint(x: cx, y: cy+10))
+                    g.addCurve(to: CGPoint(x: cx-35, y: cy),
+                               control1: CGPoint(x: cx-20, y: cy+20),
+                               control2: CGPoint(x: cx-30, y: cy+10-sin(t)*10))
+                    g.strokePath(); g.restoreGState()
+                    CS(0, 0, 35+sin(t*2)*5, UIColor(red:0.8,green:0,blue:0,alpha:0.3), 1)
+                case .shadowLord:
+                    g.saveGState()
+                    g.setFillColor(drawColor.cgColor); g.beginPath()
+                    g.move(to: CGPoint(x: cx-18, y: cy-(h/2-10)))
+                    g.addLine(to: CGPoint(x: cx, y: cy-(h/2+15)))
+                    g.addLine(to: CGPoint(x: cx+18, y: cy-(h/2-10)))
+                    g.closePath(); g.fillPath(); g.restoreGState()
+                    L(0, 5, 15, hs, drawColor, lineW); L(0, 5, -15, -hs, drawColor, lineW)
+                    let tc = UIColor(red:0.4,green:0.2,blue:0.8,alpha:1)
+                    for td in 0..<4 {
+                        let ta = CGFloat(td) * .pi / 2 + t * 0.5
+                        g.saveGState(); g.setStrokeColor(tc.cgColor); g.setLineWidth(2); g.beginPath()
+                        g.move(to: CGPoint(x: cx, y: cy+10))
+                        g.addCurve(to: CGPoint(x: cx+cos(ta)*35, y: cy+25+sin(ta+1)*10),
+                                   control1: CGPoint(x: cx+cos(ta)*20, y: cy+20+sin(ta)*10),
+                                   control2: CGPoint(x: cx+cos(ta)*30, y: cy+30))
+                        g.strokePath(); g.restoreGState()
+                    }
+                case .swordSaint:
+                    let cc=UIColor(red:1,green:0.8,blue:0,alpha:1)
+                    R(0, h/2+2, 24, 4, cc)
+                    for p in stride(from:CGFloat(-8),through:8,by:8) { R(p, h/2+8, 4, 8, cc) }
+                    L(0, 5, 35, hs+10, .white, 3); L(35, hs+10, 38, hs+20, .white, 3)
+                    L(0, 5, -15, -hs, drawColor, lineW)
+                    g.saveGState()
+                    g.setFillColor(drawColor.withAlphaComponent(0.3).cgColor); g.beginPath()
+                    g.move(to: CGPoint(x: cx-14, y: cy-(h/2-28)))
+                    g.addLine(to: CGPoint(x: cx-20, y: cy+30))
+                    g.addLine(to: CGPoint(x: cx+20, y: cy+30))
+                    g.addLine(to: CGPoint(x: cx+14, y: cy-(h/2-28)))
+                    g.closePath(); g.fillPath(); g.restoreGState()
                 }
-                g.restoreGState()
-            }
-            
-            // Helper: draw circle
-            func drawCircle(x: CGFloat, y: CGFloat, radius: CGFloat, fillColor: UIColor? = nil, strokeColor: UIColor? = nil, strokeWidth: CGFloat = 1, glow: CGFloat = 0) {
-                g.saveGState()
-                if glow > 0 {
-                    let glowColor = (fillColor ?? strokeColor ?? .white)
-                    g.setShadow(offset: .zero, blur: glow, color: glowColor.cgColor)
-                }
-                let rect = CGRect(x: cx2 + x - radius, y: cy2 - y - radius, width: radius * 2, height: radius * 2)
-                if let fc = fillColor {
-                    g.setFillColor(fc.cgColor)
-                    g.fillEllipse(in: rect)
-                }
-                if let sc = strokeColor {
-                    g.setStrokeColor(sc.cgColor)
-                    g.setLineWidth(strokeWidth)
-                    g.strokeEllipse(in: rect)
-                }
-                g.restoreGState()
-            }
-            
-            let glowSize: CGFloat = isBoss ? 12 : 8
-            
-            if isBoss {
-                self.renderBossVisual(g: g, drawColor: drawColor, lineW: lineW, t: t, h: h, cx: cx2, cy: cy2, glowSize: glowSize, drawLine: drawLine, drawRect: drawRect, drawCircle: drawCircle)
                 return
             }
             
-            if enemyType == .martial {
-                self.renderMartialVisual(g: g, drawColor: drawColor, lineW: lineW, t: t, h: h, cx: cx2, cy: cy2, glowSize: glowSize, drawLine: drawLine, drawRect: drawRect, drawCircle: drawCircle)
+            // ========= MARTIAL =========
+            if self.enemyType == .martial {
+                RS(0, h/2-10, 20, 20, .clear, drawColor, lineW)
+                let bandColor = self.enemyTier == 3 ? UIColor(red:0.8,green:0,blue:0,alpha:1) :
+                    (self.enemyTier == 2 ? UIColor(red:0.27,green:0.53,blue:0.8,alpha:1) :
+                     UIColor(red:1,green:0.27,blue:0.27,alpha:1))
+                R(0, h/2, 28, 4, bandColor)
+                L(0, h/2-20, 0, -5, drawColor, lineW)
+                
+                if combo == 0 {
+                    L(0, 10, 25, 15, drawColor, lineW); L(0, 10, -15, 0, drawColor, lineW)
+                    L(0, -5, 20, -25, drawColor, lineW); L(0, -5, -20, -25, drawColor, lineW)
+                } else if combo == 1 {
+                    L(0, 10, -10, 25, drawColor, lineW); L(0, 10, -20, -5, drawColor, lineW)
+                    L(0, -5, 35, -5, drawColor, lineW); L(0, -5, -10, -30, drawColor, lineW)
+                } else if combo == 2 {
+                    let sw = sin(t*3)*30
+                    L(0, 10, 10+sw, 20, drawColor, lineW); L(0, 10, -10-sw, 20, drawColor, lineW)
+                    L(0, -5, 25+sw, -20, drawColor, lineW); L(0, -5, -25-sw, -20, drawColor, lineW)
+                } else {
+                    L(0, 10, 5, 35, drawColor, lineW); L(0, 10, 20, 5, drawColor, lineW)
+                    L(0, -5, 10, -30, drawColor, lineW); L(0, -5, -10, -30, drawColor, lineW)
+                    let kc = self.enemyTier == 3 ? UIColor(red:0.8,green:0,blue:0,alpha:1) : UIColor(red:1,green:0.65,blue:0,alpha:1)
+                    CS(5, 30, 8, kc, 2)
+                }
                 return
             }
             
-            // Normal enemies with tier-based accessories
-            // Head
-            drawRect(x: 0, y: h / 2 - 10, w: 20, rh: 20, fillColor: .clear, strokeColor: drawColor, strokeWidth: lineW, glow: glowSize)
+            // ========= NORMAL ENEMIES =========
+            RS(0, h/2-10, 20, 20, .clear, drawColor, lineW)
+            L(0, h/2-20, 0, -5, drawColor, lineW)
+            let hs = sin(t) * 20
+            L(0, 10, 15, hs, drawColor, lineW); L(0, 10, -15, -hs, drawColor, lineW)
+            let ls = cos(t) * 20
+            L(0, -5, 15, -25-ls, drawColor, lineW); L(0, -5, -15, -25+ls, drawColor, lineW)
             
-            // Spine
-            drawLine(from: CGPoint(x: 0, y: h / 2 - 20), to: CGPoint(x: 0, y: -5), color: drawColor, width: lineW, glow: glowSize)
+            if self.enemyType == .scout { R(25, hs-5, 20, 5, drawColor) }
+            if self.enemyType == .heavy { RS(18, -5, 15, 50, .clear, drawColor, lineW) }
             
-            // Arms
-            let handSwing = sin(t) * 20
-            drawLine(from: CGPoint(x: 0, y: 10), to: CGPoint(x: 15, y: handSwing), color: drawColor, width: lineW, glow: glowSize)
-            drawLine(from: CGPoint(x: 0, y: 10), to: CGPoint(x: -15, y: -handSwing), color: drawColor, width: lineW, glow: glowSize)
-            
-            // Legs
-            let legSwing = cos(t) * 20
-            drawLine(from: CGPoint(x: 0, y: -5), to: CGPoint(x: 15, y: -25 - legSwing), color: drawColor, width: lineW, glow: glowSize)
-            drawLine(from: CGPoint(x: 0, y: -5), to: CGPoint(x: -15, y: -25 + legSwing), color: drawColor, width: lineW, glow: glowSize)
-            
-            // Type weapons
-            if enemyType == .scout {
-                drawRect(x: 25, y: handSwing - 5, w: 20, rh: 5, fillColor: drawColor, glow: 6)
-            }
-            if enemyType == .heavy {
-                drawRect(x: 18, y: -5, w: 15, rh: 50, fillColor: .clear, strokeColor: drawColor, strokeWidth: lineW, glow: 6)
-            }
-            
-            // Tier accessories
-            if enemyTier == 1 {
-                // Straw hat
-                drawRect(x: 0, y: h / 2 + 1.5, w: 28, rh: 3, fillColor: drawColor.withAlphaComponent(0.4))
-            } else if enemyTier == 2 {
-                // Helmet with plume
-                drawRect(x: 0, y: h / 2 + 2.5, w: 24, rh: 5, fillColor: drawColor)
-                drawRect(x: 0, y: h / 2 + 9, w: 3, rh: 8, fillColor: drawColor)
-                // Shoulder pads
-                drawRect(x: -15, y: 10, w: 6, rh: 6, fillColor: drawColor)
-                drawRect(x: 15, y: 10, w: 6, rh: 6, fillColor: drawColor)
-            } else if enemyTier >= 3 {
-                // Full armor + crest
-                drawRect(x: 0, y: h / 2 + 3, w: 28, rh: 6, fillColor: drawColor)
-                drawRect(x: 0, y: h / 2 + 11, w: 4, rh: 10, fillColor: drawColor)
-                // Shoulder armor
-                drawRect(x: -17, y: 12, w: 10, rh: 8, fillColor: drawColor)
-                drawRect(x: 17, y: 12, w: 10, rh: 8, fillColor: drawColor)
-                // Glowing eyes
-                drawRect(x: -4, y: h / 2 - 5, w: 4, rh: 3, fillColor: .red, glow: 3)
-                drawRect(x: 4, y: h / 2 - 5, w: 4, rh: 3, fillColor: .red, glow: 3)
+            if self.enemyTier == 1 {
+                R(0, h/2+1.5, 28, 3, drawColor.withAlphaComponent(0.4))
+            } else if self.enemyTier == 2 {
+                R(0, h/2+2.5, 24, 5, drawColor); R(0, h/2+9, 3, 8, drawColor)
+                R(-15, 10, 6, 6, drawColor); R(15, 10, 6, 6, drawColor)
+            } else if self.enemyTier >= 3 {
+                R(0, h/2+3, 28, 6, drawColor); R(0, h/2+11, 4, 10, drawColor)
+                R(-17, 12, 10, 8, drawColor); R(17, 12, 10, 8, drawColor)
+                R(-4, h/2-5, 4, 3, .red); R(4, h/2-5, 4, 3, .red)
             }
         }
         
-        let texture = SKTexture(image: image)
-        texture.filteringMode = .nearest
-        stickSprite.texture = texture
-        stickSprite.size = CGSize(width: size.width / renderScale, height: size.height / renderScale)
+        return SKTexture(image: image)
     }
     
-    // MARK: - Martial Arts Rendering
-    private func renderMartialVisual(g: CGContext, drawColor: UIColor, lineW: CGFloat, t: CGFloat, h: CGFloat, cx: CGFloat, cy: CGFloat, glowSize: CGFloat,
-                                     drawLine: (CGPoint, CGPoint, UIColor, CGFloat, CGFloat) -> Void,
-                                     drawRect: (CGFloat, CGFloat, CGFloat, CGFloat, UIColor, UIColor?, CGFloat, CGFloat) -> Void,
-                                     drawCircle: (CGFloat, CGFloat, CGFloat, UIColor?, UIColor?, CGFloat, CGFloat) -> Void) {
-        // Head
-        drawRect(0, h / 2 - 10, 20, 20, .clear, drawColor, lineW, glowSize)
-        
-        // Headband
-        let bandColor = enemyTier == 3 ? UIColor(red: 0.8, green: 0, blue: 0, alpha: 1) :
-                         (enemyTier == 2 ? UIColor(red: 0.27, green: 0.53, blue: 0.8, alpha: 1) :
-                          UIColor(red: 1, green: 0.27, blue: 0.27, alpha: 1))
-        drawRect(0, h / 2, 28, 4, bandColor, nil, 0, 0)
-        
-        // Spine
-        drawLine(CGPoint(x: 0, y: h / 2 - 20), CGPoint(x: 0, y: -5), drawColor, lineW, glowSize)
-        
-        // 4 martial arts poses
-        let combo = martialCombo
-        if combo == 0 {
-            drawLine(CGPoint(x: 0, y: 10), CGPoint(x: 25, y: 15), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: 10), CGPoint(x: -15, y: 0), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: -5), CGPoint(x: 20, y: -25), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: -5), CGPoint(x: -20, y: -25), drawColor, lineW, glowSize)
-        } else if combo == 1 {
-            drawLine(CGPoint(x: 0, y: 10), CGPoint(x: -10, y: 25), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: 10), CGPoint(x: -20, y: -5), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: -5), CGPoint(x: 35, y: -5), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: -5), CGPoint(x: -10, y: -30), drawColor, lineW, glowSize)
-        } else if combo == 2 {
-            let sw = sin(t * 3) * 30
-            drawLine(CGPoint(x: 0, y: 10), CGPoint(x: 10 + sw, y: 20), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: 10), CGPoint(x: -10 - sw, y: 20), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: -5), CGPoint(x: 25 + sw, y: -20), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: -5), CGPoint(x: -25 - sw, y: -20), drawColor, lineW, glowSize)
-        } else {
-            drawLine(CGPoint(x: 0, y: 10), CGPoint(x: 5, y: 35), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: 10), CGPoint(x: 20, y: 5), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: -5), CGPoint(x: 10, y: -30), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: -5), CGPoint(x: -10, y: -30), drawColor, lineW, glowSize)
-            // Flying kick energy circle
-            let kickColor = enemyTier == 3 ? UIColor(red: 0.8, green: 0, blue: 0, alpha: 1) : UIColor(red: 1, green: 0.65, blue: 0, alpha: 1)
-            drawCircle(5, 30, 8, nil, kickColor, 2, 0)
-        }
-    }
-    
-    // MARK: - Boss Rendering
-    private func renderBossVisual(g: CGContext, drawColor: UIColor, lineW: CGFloat, t: CGFloat, h: CGFloat, cx: CGFloat, cy: CGFloat, glowSize: CGFloat,
-                                  drawLine: (CGPoint, CGPoint, UIColor, CGFloat, CGFloat) -> Void,
-                                  drawRect: (CGFloat, CGFloat, CGFloat, CGFloat, UIColor, UIColor?, CGFloat, CGFloat) -> Void,
-                                  drawCircle: (CGFloat, CGFloat, CGFloat, UIColor?, UIColor?, CGFloat, CGFloat) -> Void) {
-        // Common boss body: larger head + body + legs
-        drawRect(0, h / 2 - 14, 28, 28, .clear, drawColor, lineW, 12)
-        
-        // Spine
-        drawLine(CGPoint(x: 0, y: h / 2 - 28), CGPoint(x: 0, y: -10), drawColor, lineW, glowSize)
-        
-        // Legs
-        let hs = sin(t) * 15
-        drawLine(CGPoint(x: 0, y: -10), CGPoint(x: 18, y: -30 - cos(t) * 10), drawColor, lineW, glowSize)
-        drawLine(CGPoint(x: 0, y: -10), CGPoint(x: -18, y: -30 + cos(t) * 10), drawColor, lineW, glowSize)
-        
-        // Boss type-specific accessories
-        guard let bt = bossType else {
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: 20, y: hs), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: -20, y: -hs), drawColor, lineW, glowSize)
-            return
-        }
-        
-        switch bt {
-        case .banditChief:
-            drawRect(0, h / 2 + 3, 40, 6, drawColor, nil, 0, 0)
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: 30, y: hs), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 30, y: hs), CGPoint(x: 40, y: hs - 5), drawColor, 8, glowSize)
-            
-        case .wolfKing:
-            drawLine(CGPoint(x: -10, y: h / 2), CGPoint(x: -15, y: h / 2 + 15), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: -15, y: h / 2 + 15), CGPoint(x: -5, y: h / 2), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 10, y: h / 2), CGPoint(x: 15, y: h / 2 + 15), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 15, y: h / 2 + 15), CGPoint(x: 5, y: h / 2), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: 20, y: hs), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: -20, y: -hs), drawColor, lineW, glowSize)
-            // Claws
-            for c in 0..<3 {
-                drawRect(18 + CGFloat(c) * 4, hs, 2, 8, drawColor, nil, 0, 0)
-            }
-            
-        case .ironFist:
-            let headband = UIColor(red: 1, green: 0.27, blue: 0, alpha: 1)
-            drawRect(0, h / 2 - 2, 36, 5, headband, nil, 0, 0)
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: 25, y: hs), drawColor, 10, glowSize)
-            drawRect(28, hs, 16, 16, drawColor, nil, 0, 0)
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: -25, y: -hs), drawColor, 10, glowSize)
-            drawRect(-28, -hs, 16, 16, drawColor, nil, 0, 0)
-            
-        case .shieldGeneral:
-            drawRect(0, h / 2 + 4, 32, 8, drawColor, nil, 0, 0)
-            drawRect(0, h / 2 + 12, 4, 10, drawColor, nil, 0, 0)
-            // Shield
-            drawRect(-21, 0, 18, 30, drawColor.withAlphaComponent(0.3), drawColor, 3, 0)
-            // Spear
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: 35, y: hs + 10), drawColor, lineW, glowSize)
-            
-        case .phantomArcher:
-            drawLine(CGPoint(x: -15, y: h / 2 - 5), CGPoint(x: 0, y: h / 2 + 12), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: h / 2 + 12), CGPoint(x: 15, y: h / 2 - 5), drawColor, lineW, glowSize)
-            // Bow (arc) — simplified for CoreGraphics
-            g.saveGState()
-            g.setShadow(offset: .zero, blur: 8, color: drawColor.cgColor)
-            g.setStrokeColor(drawColor.cgColor)
-            g.setLineWidth(lineW)
-            g.addArc(center: CGPoint(x: cx + 20, y: cy), radius: 20, startAngle: -.pi / 3, endAngle: .pi / 3, clockwise: true)
-            g.strokePath()
-            g.restoreGState()
-            // Bowstring
-            drawLine(CGPoint(x: 20, y: 10), CGPoint(x: 20, y: -10), drawColor, lineW, glowSize)
-            
-        case .twinBlade:
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: 25, y: hs + 15), drawColor, 3, glowSize)
-            drawLine(CGPoint(x: 25, y: hs + 15), CGPoint(x: 28, y: hs + 20), drawColor, 3, glowSize)
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: -25, y: -hs + 15), drawColor, 3, glowSize)
-            drawLine(CGPoint(x: -25, y: -hs + 15), CGPoint(x: -28, y: -hs + 20), drawColor, 3, glowSize)
-            // Scarf — simplified bezier
-            g.saveGState()
-            g.setStrokeColor(UIColor(red: 1, green: 0.4, blue: 1, alpha: 1).cgColor)
-            g.setLineWidth(2)
-            g.beginPath()
-            g.move(to: CGPoint(x: cx - 14, y: cy - (h / 2 - 10)))
-            g.addCurve(to: CGPoint(x: cx - 40 - sin(t * 3) * 8, y: cy - (h / 2 - 5)),
-                       control1: CGPoint(x: cx - 25, y: cy - (h / 2 - 5)),
-                       control2: CGPoint(x: cx - 35 - sin(t * 2) * 10, y: cy - (h / 2 + 5)))
-            g.strokePath()
-            g.restoreGState()
-            
-        case .thunderMonk:
-            // Bald head (circle)
-            drawCircle(0, h / 2 - 14, 14, drawColor, nil, 0, 0)
-            // Prayer beads
-            let beadColor = UIColor(red: 1, green: 0.8, blue: 0, alpha: 1)
-            for b in 0..<8 {
-                let ba = CGFloat(b) * .pi / 4
-                drawCircle(cos(ba) * 12, sin(ba) * 12 + h / 2 - 14, 3, beadColor, nil, 0, 0)
-            }
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: 15, y: hs), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: -15, y: -hs), drawColor, lineW, glowSize)
-            
-        case .bloodDemon:
-            // Horns
-            drawLine(CGPoint(x: -10, y: h / 2), CGPoint(x: -18, y: h / 2 + 18), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 10, y: h / 2), CGPoint(x: 18, y: h / 2 + 18), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: 20, y: hs), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: -20, y: -hs), drawColor, lineW, glowSize)
-            // Tail
-            g.saveGState()
-            g.setStrokeColor(drawColor.cgColor)
-            g.setLineWidth(lineW)
-            g.beginPath()
-            g.move(to: CGPoint(x: cx, y: cy + 10))
-            g.addCurve(to: CGPoint(x: cx - 35, y: cy),
-                       control1: CGPoint(x: cx - 20, y: cy + 20),
-                       control2: CGPoint(x: cx - 30, y: cy + 10 - sin(t) * 10))
-            g.strokePath()
-            g.restoreGState()
-            // Red aura
-            drawCircle(0, 0, 35 + sin(t * 2) * 5, nil, UIColor(red: 0.8, green: 0, blue: 0, alpha: 0.3), 1, 0)
-            
-        case .shadowLord:
-            // Hood
-            g.saveGState()
-            g.setFillColor(drawColor.cgColor)
-            g.setStrokeColor(drawColor.cgColor)
-            g.setLineWidth(lineW)
-            g.beginPath()
-            g.move(to: CGPoint(x: cx - 18, y: cy - (h / 2 - 10)))
-            g.addLine(to: CGPoint(x: cx, y: cy - (h / 2 + 15)))
-            g.addLine(to: CGPoint(x: cx + 18, y: cy - (h / 2 - 10)))
-            g.closePath()
-            g.drawPath(using: .fillStroke)
-            g.restoreGState()
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: 15, y: hs), drawColor, lineW, glowSize)
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: -15, y: -hs), drawColor, lineW, glowSize)
-            // Shadow tendrils
-            let tendrilColor = UIColor(red: 0.4, green: 0.2, blue: 0.8, alpha: 1)
-            for td in 0..<4 {
-                let ta = CGFloat(td) * .pi / 2 + t * 0.5
-                g.saveGState()
-                g.setStrokeColor(tendrilColor.cgColor)
-                g.setLineWidth(2)
-                g.beginPath()
-                g.move(to: CGPoint(x: cx, y: cy + 10))
-                g.addCurve(to: CGPoint(x: cx + cos(ta) * 35, y: cy + 25 + sin(ta + 1) * 10),
-                           control1: CGPoint(x: cx + cos(ta) * 20, y: cy + 20 + sin(ta) * 10),
-                           control2: CGPoint(x: cx + cos(ta) * 30, y: cy + 30))
-                g.strokePath()
-                g.restoreGState()
-            }
-            
-        case .swordSaint:
-            // Crown
-            let crownColor = UIColor(red: 1, green: 0.8, blue: 0, alpha: 1)
-            drawRect(0, h / 2 + 2, 24, 4, crownColor, nil, 0, 0)
-            for p in stride(from: CGFloat(-8), through: 8, by: 8) {
-                drawRect(p, h / 2 + 8, 4, 8, crownColor, nil, 0, 0)
-            }
-            // Glowing sword
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: 35, y: hs + 10), .white, 3, glowSize)
-            drawLine(CGPoint(x: 35, y: hs + 10), CGPoint(x: 38, y: hs + 20), .white, 3, glowSize)
-            drawLine(CGPoint(x: 0, y: 5), CGPoint(x: -15, y: -hs), drawColor, lineW, glowSize)
-            // Cape
-            g.saveGState()
-            g.setFillColor(drawColor.withAlphaComponent(0.3).cgColor)
-            g.beginPath()
-            g.move(to: CGPoint(x: cx - 14, y: cy - (h / 2 - 28)))
-            g.addLine(to: CGPoint(x: cx - 20, y: cy + 30))
-            g.addLine(to: CGPoint(x: cx + 20, y: cy + 30))
-            g.addLine(to: CGPoint(x: cx + 14, y: cy - (h / 2 - 28)))
-            g.closePath()
-            g.fillPath()
-            g.restoreGState()
-        }
-    }
-    
-    // MARK: - Update (called from GameScene, AI + physics only)
+    // MARK: - Update
     
     func update(playerPosition: CGPoint, platforms: [PlatformData]) {
         animPhase += 0.15
@@ -516,126 +390,51 @@ class EnemyNode: SKNode {
         let dist = playerPosition.x - position.x
         let dir: CGFloat = dist > 0 ? 1 : -1
         
-        // AI behavior — exact match to original
         switch enemyType {
-        case .chaser:
-            vx += (dir * baseSpeed - vx) * 0.12
-            
+        case .chaser: vx += (dir * baseSpeed - vx) * 0.12
         case .sniper:
-            if abs(dist) < 500 {
-                vx += (-dir * baseSpeed - vx) * 0.1
-            } else if abs(dist) > 700 {
-                vx += (dir * baseSpeed - vx) * 0.1
-            }
+            if abs(dist) < 500 { vx += (-dir * baseSpeed - vx) * 0.1 }
+            else if abs(dist) > 700 { vx += (dir * baseSpeed - vx) * 0.1 }
             aimTimer += 1
-            
-        default:
-            vx += (dir * baseSpeed - vx) * 0.1
+        default: vx += (dir * baseSpeed - vx) * 0.1
         }
         
-        // Boss rage
-        if isBoss && !rageMode && hp < maxHp / 2 {
-            rageMode = true
-            baseSpeed *= 1.5
-        }
+        if isBoss && !rageMode && hp < maxHp / 2 { rageMode = true; baseSpeed *= 1.5 }
         
-        // Gravity
         vy -= Physics.gravity
+        position.x += vx; position.y += vy
         
-        // Movement
-        position.x += vx
-        position.y += vy
-        
-        // Platform collision
         grounded = false
         for plat in platforms {
             let platTop = plat.y + plat.height
-            let enemyBottom = position.y - enemyHeight / 2
-            
-            if position.x + enemyWidth / 2 > plat.x &&
-               position.x - enemyWidth / 2 < plat.x + plat.width &&
-               enemyBottom < platTop &&
-               enemyBottom > plat.y - 20 &&
-               vy < 0 {
-                position.y = platTop + enemyHeight / 2
-                vy = 0
-                grounded = true
+            let eb = position.y - enemyHeight / 2
+            if position.x + enemyWidth/2 > plat.x && position.x - enemyWidth/2 < plat.x + plat.width &&
+               eb < platTop && eb > plat.y - 20 && vy < 0 {
+                position.y = platTop + enemyHeight / 2; vy = 0; grounded = true
             }
         }
         
-        // Random jumping
-        if grounded && CGFloat.random(in: 0...1) < 0.01 {
-            vy = CGFloat.random(in: 12...18)
-        }
+        if grounded && CGFloat.random(in: 0...1) < 0.01 { vy = CGFloat.random(in: 12...18) }
+        if enemyType != .chaser && enemyType != .sniper { shootTimer -= 1 }
+        if isBoss, let fill = hpFill { fill.xScale = max(0, hp / maxHp) }
         
-        // Shoot timer
-        if enemyType != .chaser && enemyType != .sniper {
-            shootTimer -= 1
-        }
+        xScale = playerPosition.x > position.x ? 1 : -1
+        stickSprite.position.y = sin(animPhase) * 6
         
-        // Boss HP bar
-        if isBoss, let fill = hpFill {
-            let ratio = hp / maxHp
-            fill.xScale = max(0, ratio)
-        }
-        
-        // Face player
-        let facingDir: CGFloat = playerPosition.x > position.x ? 1 : -1
-        xScale = facingDir
-        
-        // v1.6: Throttled redraw — only when animation phase changes OR damage flash transitions
-        let currentPhase = Int(animPhase * 3)  // Quantize to ~3 frames per redraw
-        let currentFlashState = damageFlash > 0
-        if currentPhase != lastDrawnPhase || currentFlashState != lastDamageFlashState {
-            drawStickFigure()
-            lastDrawnPhase = currentPhase
-            lastDamageFlashState = currentFlashState
-        }
-        
-        // Update sniper aim line
-        updateAimLine(playerPosition: playerPosition)
+        updateTexture()
+        if enemyType == .sniper { updateAimLine(playerPosition: playerPosition) }
     }
     
-    // MARK: - Sniper Aim Line (v1.6: cached as SKSpriteNode)
-    
     private func updateAimLine(playerPosition: CGPoint) {
-        guard enemyType == .sniper && aimTimer > 30 else {
-            aimLine?.isHidden = true
-            return
+        guard aimTimer > 30 else { aimLine?.isHidden = true; return }
+        if aimLine == nil {
+            let l = SKShapeNode(); l.strokeColor = .white; l.lineWidth = 1; l.alpha = 0.3; l.zPosition = -1
+            addChild(l); aimLine = l
         }
-        
-        let lineAlpha = min(1.0, CGFloat(aimTimer) / 100.0)
-        let alphaLevel = Int(lineAlpha * 5)  // Quantize to 5 levels
-        
-        if alphaLevel != lastAimAlphaLevel {
-            lastAimAlphaLevel = alphaLevel
-            aimLine?.removeFromParent()
-            
-            // Render aim line to texture
-            let lineWidth: CGFloat = 1000
-            let lineHeight: CGFloat = 4
-            let renderer = UIGraphicsImageRenderer(size: CGSize(width: lineWidth, height: lineHeight))
-            let image = renderer.image { ctx in
-                let g = ctx.cgContext
-                g.setStrokeColor(UIColor(white: 1, alpha: lineAlpha).cgColor)
-                g.setLineWidth(1)
-                var x: CGFloat = 0
-                while x < lineWidth {
-                    g.move(to: CGPoint(x: x, y: lineHeight / 2))
-                    g.addLine(to: CGPoint(x: min(x + 5, lineWidth), y: lineHeight / 2))
-                    x += 10
-                }
-                g.strokePath()
-            }
-            
-            let sprite = SKSpriteNode(texture: SKTexture(image: image))
-            sprite.anchorPoint = CGPoint(x: 0, y: 0.5)
-            sprite.size = CGSize(width: lineWidth, height: lineHeight)
-            sprite.zPosition = -1
-            addChild(sprite)
-            aimLine = sprite
-        }
-        
+        aimLine?.alpha = min(1.0, CGFloat(aimTimer) / 100.0)
         aimLine?.isHidden = false
+        let dx = playerPosition.x - position.x, dy = playerPosition.y - position.y
+        let path = CGMutablePath(); path.move(to: .zero); path.addLine(to: CGPoint(x: dx, y: dy))
+        aimLine?.path = path
     }
 }
