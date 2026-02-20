@@ -201,7 +201,7 @@ class GameScene: SKScene {
             bossActive = false
             bossSpawned = false
             spawnGrace = 120
-            hpMultiplier *= 3.0  // v1.6: Triple enemy HP each level
+            hpMultiplier *= 2.0  // v1.6: Double enemy HP each level
             playerNode.hp = 100  // v1.6: Full HP on level clear
             
             // Regenerate world
