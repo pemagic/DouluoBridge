@@ -41,7 +41,6 @@ class EnemyNode: SKNode {
     // v1.6.2: Pre-rendered sprite
     private var stickSprite: SKSpriteNode!
     private var hpFill: SKSpriteNode?
-    private var aimLine: SKShapeNode?
     private var lastFrameIndex: Int = -1
     private var lastFlashState: Bool = false
     private var normalFrames: [SKTexture] = []
@@ -422,20 +421,6 @@ class EnemyNode: SKNode {
         stickSprite.position.y = sin(animPhase) * 6
         
         updateTexture()
-        if enemyType == .sniper { updateAimLine(playerPosition: playerPosition) }
     }
     
-    private func updateAimLine(playerPosition: CGPoint) {
-        guard aimTimer > 30 else { aimLine?.isHidden = true; return }
-        if aimLine == nil {
-            let l = SKShapeNode(); l.strokeColor = .white; l.lineWidth = 1; l.alpha = 0.3; l.zPosition = -1
-            addChild(l); aimLine = l
-        }
-        aimLine?.alpha = min(1.0, CGFloat(aimTimer) / 100.0)
-        aimLine?.isHidden = false
-        let dx = (playerPosition.x - position.x) * xScale  // compensate for node's xScale flip
-        let dy = playerPosition.y - position.y
-        let path = CGMutablePath(); path.move(to: .zero); path.addLine(to: CGPoint(x: dx, y: dy))
-        aimLine?.path = path
-    }
 }
