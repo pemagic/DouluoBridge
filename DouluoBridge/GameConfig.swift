@@ -124,7 +124,7 @@ struct GameConfig {
     static let levels: [LevelDef] = [
         // Level 1: 初入江湖
         LevelDef(
-            name: "第一关·初入江湖", killTarget: 15, weaponCap: 2, enemyTier: 1,
+            name: "第一关·初入江湖", killTarget: 15, weaponCap: 3, enemyTier: 1,
             enemies: [.scout], bossHp: 600, bossSpeed: 1.0, bossType: .banditChief,
             colors: LevelColors(
                 bgColors: [c("#e8dcc8"), c("#d8ccb4"), c("#c8b89a"), c("#b0a080")],
@@ -137,7 +137,7 @@ struct GameConfig {
         ),
         // Level 2: 崭露锋芒
         LevelDef(
-            name: "第二关·崭露锋芒", killTarget: 20, weaponCap: 3, enemyTier: 1,
+            name: "第二关·崭露锋芒", killTarget: 20, weaponCap: 4, enemyTier: 1,
             enemies: [.scout, .chaser], bossHp: 900, bossSpeed: 1.1, bossType: .wolfKing,
             colors: LevelColors(
                 bgColors: [c("#dce8d0"), c("#c8d8bc"), c("#b4c8a0"), c("#a0b888")],
@@ -150,7 +150,7 @@ struct GameConfig {
         ),
         // Level 3: 拳脚相加
         LevelDef(
-            name: "第三关·拳脚相加", killTarget: 25, weaponCap: 4, enemyTier: 1,
+            name: "第三关·拳脚相加", killTarget: 25, weaponCap: 5, enemyTier: 1,
             enemies: [.scout, .chaser, .martial], bossHp: 1200, bossSpeed: 1.2, bossType: .ironFist,
             colors: LevelColors(
                 bgColors: [c("#e0c8a0"), c("#d0b890"), c("#c0a878"), c("#aa9060")],
@@ -163,7 +163,7 @@ struct GameConfig {
         ),
         // Level 4: 铁甲连城
         LevelDef(
-            name: "第四关·铁甲连城", killTarget: 30, weaponCap: 5, enemyTier: 2,
+            name: "第四关·铁甲连城", killTarget: 30, weaponCap: 6, enemyTier: 2,
             enemies: [.scout, .chaser, .martial, .heavy], bossHp: 1600, bossSpeed: 1.3, bossType: .shieldGeneral,
             colors: LevelColors(
                 bgColors: [c("#c8d0d8"), c("#b0b8c8"), c("#98a0b0"), c("#808898")],
@@ -176,7 +176,7 @@ struct GameConfig {
         ),
         // Level 5: 百步穿杨
         LevelDef(
-            name: "第五关·百步穿杨", killTarget: 35, weaponCap: 6, enemyTier: 2,
+            name: "第五关·百步穿杨", killTarget: 35, weaponCap: 7, enemyTier: 2,
             enemies: [.scout, .chaser, .martial, .heavy, .sniper], bossHp: 2000, bossSpeed: 1.4, bossType: .phantomArcher,
             colors: LevelColors(
                 bgColors: [c("#c8a878"), c("#b89868"), c("#a08050"), c("#886838")],
@@ -189,7 +189,7 @@ struct GameConfig {
         ),
         // Level 6: 刀光剑影
         LevelDef(
-            name: "第六关·刀光剑影", killTarget: 40, weaponCap: 7, enemyTier: 2,
+            name: "第六关·刀光剑影", killTarget: 40, weaponCap: 8, enemyTier: 2,
             enemies: [.chaser, .martial, .heavy, .sniper], bossHp: 2500, bossSpeed: 1.5, bossType: .twinBlade,
             colors: LevelColors(
                 bgColors: [c("#4a5568"), c("#3a4558"), c("#2a3548"), c("#1a2538")],
@@ -202,7 +202,7 @@ struct GameConfig {
         ),
         // Level 7: 龙争虎斗
         LevelDef(
-            name: "第七关·龙争虎斗", killTarget: 45, weaponCap: 8, enemyTier: 3,
+            name: "第七关·龙争虎斗", killTarget: 45, weaponCap: 9, enemyTier: 3,
             enemies: [.martial, .heavy, .sniper, .chaser], bossHp: 3200, bossSpeed: 1.7, bossType: .thunderMonk,
             colors: LevelColors(
                 bgColors: [c("#3a2848"), c("#2a1838"), c("#1a0828"), c("#100018")],
@@ -215,7 +215,7 @@ struct GameConfig {
         ),
         // Level 8: 万夫莫敌
         LevelDef(
-            name: "第八关·万夫莫敌", killTarget: 50, weaponCap: 9, enemyTier: 3,
+            name: "第八关·万夫莫敌", killTarget: 50, weaponCap: 10, enemyTier: 3,
             enemies: [.martial, .heavy, .sniper], bossHp: 4000, bossSpeed: 1.9, bossType: .bloodDemon,
             colors: LevelColors(
                 bgColors: [c("#3a1010"), c("#2a0808"), c("#1a0000"), c("#100000")],
@@ -228,7 +228,7 @@ struct GameConfig {
         ),
         // Level 9: 天下无双
         LevelDef(
-            name: "第九关·天下无双", killTarget: 55, weaponCap: 9, enemyTier: 3,
+            name: "第九关·天下无双", killTarget: 55, weaponCap: 10, enemyTier: 3,
             enemies: [.martial, .heavy, .sniper], bossHp: 5000, bossSpeed: 2.1, bossType: .shadowLord,
             colors: LevelColors(
                 bgColors: [c("#101828"), c("#081018"), c("#000810"), c("#000008")],
