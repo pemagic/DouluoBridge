@@ -391,8 +391,11 @@ class GameScene: SKScene {
         }
         
         // Set scene bg color as fallback
-        if let lastColor = currentLevelDef.colors.bgColors.last {
-            backgroundColor = lastColor
+        // v1.7: Use first (lightest) color so the transparent background fades into light, not dark
+        if let firstColor = currentLevelDef.colors.bgColors.first {
+            backgroundColor = firstColor
+        } else {
+            backgroundColor = .white
         }
     }
     
