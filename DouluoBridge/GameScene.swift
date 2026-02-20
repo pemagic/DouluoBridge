@@ -371,18 +371,19 @@ class GameScene: SKScene {
             let texture = SKTexture(image: bgImage)
             let bgNode = SKSpriteNode(texture: texture)
             
-            // Fit mode: show the FULL image without cropping
-            let imgAspect = bgImage.size.width / bgImage.size.height  // 3040/1408 ≈ 2.16
+            // Fill mode: cover the entire screen without letterboxing
+            let imgAspect = bgImage.size.width / bgImage.size.height
             let viewAspect = visW / visH
             
             if imgAspect > viewAspect {
-                // Image is wider than viewport — fit width, image will be shorter
-                bgNode.size = CGSize(width: visW, height: visW / imgAspect)
-            } else {
-                // Image is taller — fit height, image will be narrower
+                // Image is wider than viewport — scale by height to fill the screen (clip width)
                 bgNode.size = CGSize(width: visH * imgAspect, height: visH)
+            } else {
+                // Image is taller — scale by width to fill the screen (clip height)
+                bgNode.size = CGSize(width: visW, height: visW / imgAspect)
             }
             
+            // Re-center just to be safe
             bgNode.position = CGPoint(x: 0, y: 0)  // Center of camera
             bgNode.zPosition = -200
             bgNode.alpha = 0.4  // More transparent to highlight gameplay elements
