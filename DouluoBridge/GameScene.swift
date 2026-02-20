@@ -361,9 +361,10 @@ class GameScene: SKScene {
         // Clear all camera background elements
         cameraNode.children.filter { $0.name == "bgSky" || $0.name == "bgMist" || $0.name == "bgCloud" || $0.name == "bgMtn" }.forEach { $0.removeFromParent() }
         
-        // For camera children, visible area = scene size (camera scale affects both equally)
-        let visW = self.size.width
-        let visH = self.size.height
+        // For camera children, the actual visible area is affected by the camera's scale.
+        // E.g., if camera.scale = 1.8, the camera sees 1.8x more area than self.size.
+        let visW = self.size.width * cameraNode.xScale
+        let visH = self.size.height * cameraNode.yScale
         
         // Level-specific ink-wash painting background (bg_level_1 through bg_level_10)
         let bgName = "bg_level_\(currentLevel)"
