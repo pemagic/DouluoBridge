@@ -577,7 +577,7 @@ class GameScene: SKScene {
                         gameDelegate?.triggerHaptic(.light)
                     } else if playerNode.iframe <= 0 {
                         playerNode.hp -= 15
-                        playerNode.iframe = 30  // original: iframe = 30
+                        playerNode.iframe = 18  // v1.6: 0.3s invincibility
                         gameDelegate?.triggerHaptic(.medium)
                     }
                     enemy.hp = 0  // self-destruct
@@ -601,19 +601,22 @@ class GameScene: SKScene {
                                      playerNode.position.x - enemy.position.x)
                     let speed: CGFloat = 14
                     let neonColor = PlayerNode.neonColors[Int.random(in: 0..<PlayerNode.neonColors.count)]
+                    // v1.6: Cap enemy projectiles
+                    if projectiles.filter({ $0.owner == .enemy }).count < 30 {
                     let proj = ProjectileNode(
                         vx: cos(angle) * speed,
                         vy: sin(angle) * speed,
                         damage: 12,
                         owner: .enemy,
                         color: neonColor,
-                        life: 60,  // Range: 14 * 60 = 840px (~0.5 screen)
+                        life: 60,
                         size: 10
                     )
                     proj.position = CGPoint(x: enemy.position.x,
                                            y: enemy.position.y)
                     entityLayer.addChild(proj)
                     projectiles.append(proj)
+                    }
                     enemy.shootTimer = 70 + CGFloat.random(in: 0...50)
                 }
             }
@@ -641,19 +644,22 @@ class GameScene: SKScene {
                                  playerNode.position.x - enemy.position.x)
                 let speed: CGFloat = 42
                 let neonColor = PlayerNode.neonColors[Int.random(in: 0..<PlayerNode.neonColors.count)]
+                // v1.6: Cap enemy projectiles
+                if projectiles.filter({ $0.owner == .enemy }).count < 30 {
                 let proj = ProjectileNode(
                     vx: cos(angle) * speed,
                     vy: sin(angle) * speed,
                     damage: 30,
                     owner: .enemy,
                     color: neonColor,
-                    life: 20,  // Range: 42 * 20 = 840px (~0.5 screen)
+                    life: 20,
                     size: 10
                 )
                 proj.position = CGPoint(x: enemy.position.x,
                                        y: enemy.position.y)
                 entityLayer.addChild(proj)
                 projectiles.append(proj)
+                }
                 enemy.aimTimer = 0
             }
         }
@@ -720,7 +726,7 @@ class GameScene: SKScene {
                         shieldState.active = max(0, shieldState.active - 10)
                     } else {
                         playerNode.hp -= proj.damage
-                        playerNode.iframe = 30  // v1.6: 0.5s invincibility on all damage
+                        playerNode.iframe = 18  // v1.6: 0.3s invincibility
                         createParticles(x: playerNode.position.x, y: playerNode.position.y,
                                        color: .red, count: 15)
                         gameDelegate?.triggerHaptic(.medium)
@@ -873,8 +879,8 @@ class GameScene: SKScene {
         spawnCooldown -= 1
         if spawnCooldown > 0 { return }
         
-        // Fix 6: Scale max enemies with BOTH level and weapon level
-        let maxEnemies = 10 + currentLevel * 3 + playerNode.weaponLevel * 3
+        // v1.6: Hard cap on max enemies for performance
+        let maxEnemies = min(25, 10 + currentLevel * 3 + playerNode.weaponLevel * 2)
         if enemies.count >= maxEnemies { return }
         
         // Fast respawn: if NO enemies exist and level isn't complete, spawn immediately
@@ -883,7 +889,7 @@ class GameScene: SKScene {
         }
         
         // Batch spawn: more enemies per tick at higher levels
-        let batchSize = max(1, (currentLevel - 3) / 2)  // 1@L1-4, 2@L5-6, 3@L7-8, 4@L9-10
+        let batchSize = max(1, min(2, (currentLevel - 3) / 2))  // cap at 2 for performance
         
         for _ in 0..<batchSize {
             if enemies.count >= maxEnemies { break }
@@ -933,7 +939,7 @@ class GameScene: SKScene {
         }
         
         // Faster spawn cooldown at higher levels
-        spawnCooldown = max(3, 35 - currentLevel * 2 - playerNode.weaponLevel * 2)
+        spawnCooldown = max(10, 35 - currentLevel * 2 - playerNode.weaponLevel)
     }
     
     // MARK: - Camera (match original offset)
@@ -994,7 +1000,7 @@ class GameScene: SKScene {
     func handleAttack() {
         guard gameState == .playing, playerNode.shootTimer <= 0 else { return }
         // v1.6: Cap projectiles to prevent GPU overload
-        guard projectiles.count < 150 else { return }
+        guard projectiles.count < 80 else { return }
         let lvl = playerNode.weaponLevel
         
         // Damage scales with level, doubled during ult
@@ -1388,7 +1394,7 @@ class GameScene: SKScene {
     // v1.6: Static texture cache for particles to avoid re-rendering
     private static var particleTextureCache: [String: SKTexture] = [:]
     private var activeParticleCount: Int = 0
-    private static let maxParticles = 200
+    private static let maxParticles = 100
     
     private func particleTexture(size: CGFloat, color: UIColor) -> SKTexture {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
