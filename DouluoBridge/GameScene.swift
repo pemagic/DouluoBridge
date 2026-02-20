@@ -23,6 +23,7 @@ class GameScene: SKScene {
     var bossSpawned: Bool = false
     var screenFlash: Int = 0
     var bossStallTimer: Int = 0  // Safety timer to detect boss stuck/lost
+    var hpMultiplier: CGFloat = 1.0  // v1.6: 3x HP scaling per level clear
 
     
     // MARK: - Camera
@@ -142,6 +143,7 @@ class GameScene: SKScene {
         bossActive = false
         bossSpawned = false
         spawnGrace = 120
+        hpMultiplier = 1.0  // v1.6: Reset HP multiplier
         
         // Reset player
         playerNode.reset()
@@ -199,6 +201,7 @@ class GameScene: SKScene {
             bossActive = false
             bossSpawned = false
             spawnGrace = 120
+            hpMultiplier *= 3.0  // v1.6: Triple enemy HP each level
             
             // Regenerate world
             generatePlatforms()
@@ -825,7 +828,8 @@ class GameScene: SKScene {
                 bossSpeed: lvl.bossSpeed,
                 color: bossColor,
                 enemyTier: lvl.enemyTier,
-                bossType: lvl.bossType
+                bossType: lvl.bossType,
+                hpMultiplier: hpMultiplier
             )
             boss.position = CGPoint(
                 x: playerNode.position.x + (playerNode.facing > 0 ? 500 : -500),
@@ -880,7 +884,8 @@ class GameScene: SKScene {
                 type: type,
                 playerWeaponLevel: playerNode.weaponLevel,
                 color: color,
-                enemyTier: lvl.enemyTier
+                enemyTier: lvl.enemyTier,
+                hpMultiplier: hpMultiplier
             )
             
             // At higher levels, spawn from all directions (left, right, above, diagonal)
@@ -976,6 +981,8 @@ class GameScene: SKScene {
     
     func handleAttack() {
         guard gameState == .playing, playerNode.shootTimer <= 0 else { return }
+        // v1.6: Cap projectiles to prevent GPU overload
+        guard projectiles.count < 150 else { return }
         let lvl = playerNode.weaponLevel
         
         // Damage scales with level, doubled during ult
@@ -1364,31 +1371,67 @@ class GameScene: SKScene {
         return dx < Physics.gameWidth / 2 + 200 && dy < Physics.gameHeight / 2 + 200
     }
     
-    // MARK: - Particle System (match original createParticles)
+    // MARK: - Particle System (v1.6: Cached SKSpriteNode textures)
+    
+    // v1.6: Static texture cache for particles to avoid re-rendering
+    private static var particleTextureCache: [String: SKTexture] = [:]
+    private var activeParticleCount: Int = 0
+    private static let maxParticles = 200
+    
+    private func particleTexture(size: CGFloat, color: UIColor) -> SKTexture {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.getRed(&r, green: &g, blue: &b, alpha: &a)
+        let sizeKey = Int(size)
+        let key = "p_\(sizeKey)_\(Int(r*5))_\(Int(g*5))_\(Int(b*5))"
+        
+        if let cached = GameScene.particleTextureCache[key] { return cached }
+        
+        let pad: CGFloat = 6  // glow padding
+        let texSize = size + pad * 2
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: texSize, height: texSize))
+        let image = renderer.image { ctx in
+            let g = ctx.cgContext
+            g.setShadow(offset: .zero, blur: 2, color: color.cgColor)
+            g.setFillColor(color.cgColor)
+            g.fill(CGRect(x: pad, y: pad, width: size, height: size))
+        }
+        let texture = SKTexture(image: image)
+        texture.filteringMode = .nearest
+        GameScene.particleTextureCache[key] = texture
+        return texture
+    }
     
     func createParticles(x: CGFloat, y: CGFloat, color: UIColor, count: Int, speedScale: CGFloat = 1, sizeScale: CGFloat = 1) {
-        for _ in 0..<count {
+        // v1.6: Cap total concurrent particles
+        let actualCount = min(count, GameScene.maxParticles - activeParticleCount)
+        guard actualCount > 0 else { return }
+        
+        for _ in 0..<actualCount {
             let size = (2 + CGFloat.random(in: 0...4)) * sizeScale
-            let particle = SKShapeNode(rectOf: CGSize(width: size, height: size))
-            particle.fillColor = color
-            particle.strokeColor = .clear
+            let texture = particleTexture(size: size, color: color)
+            let pad: CGFloat = 6
+            let particle = SKSpriteNode(texture: texture)
+            particle.size = CGSize(width: size + pad * 2, height: size + pad * 2)
             particle.position = CGPoint(x: x, y: y)
             particle.zPosition = 40
-            particle.glowWidth = 2
             
             let vx = (CGFloat.random(in: 0...1) - 0.5) * 25 * speedScale
             let vy = (CGFloat.random(in: 0...1) - 0.5) * 25 * speedScale
             let life = 1.0
             let decay = 0.02 + CGFloat.random(in: 0...0.02)
-            let duration = life / decay / 60.0  // approximate frame-based to time-based
+            let duration = life / decay / 60.0
             
             let move = SKAction.moveBy(x: vx * CGFloat(duration) * 30, y: vy * CGFloat(duration) * 30, duration: duration)
             let fade = SKAction.fadeOut(withDuration: duration)
             let group = SKAction.group([move, fade])
-            let remove = SKAction.removeFromParent()
-            particle.run(SKAction.sequence([group, remove]))
+            let remove = SKAction.run { [weak self] in
+                self?.activeParticleCount -= 1
+            }
+            let removeNode = SKAction.removeFromParent()
+            particle.run(SKAction.sequence([group, remove, removeNode]))
             
             entityLayer.addChild(particle)
+            activeParticleCount += 1
         }
     }
 }

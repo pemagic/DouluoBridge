@@ -26,6 +26,8 @@ class PlayerNode: SKNode {
     // Visual layers
     private var bodyGroup: SKNode!
     private var orbitNode: SKNode?
+    private var shieldNode: SKSpriteNode?   // v1.6: Cached shield visual
+    private var ultGlowNode: SKSpriteNode?  // v1.6: Cached ult glow visual
     
     // Neon palette (from original)
     static let neonColors: [UIColor] = [
@@ -45,6 +47,7 @@ class PlayerNode: SKNode {
         setupSkills()
         bodyGroup = SKNode()
         addChild(bodyGroup)
+        setupCachedEffects()
         rebuildVisual()
     }
     
@@ -56,6 +59,44 @@ class PlayerNode: SKNode {
         for def in GameConfig.skillDefs {
             skills[def.id] = SkillState()
         }
+    }
+    
+    // v1.6: Pre-create shield and ult glow nodes (hidden by default)
+    private func setupCachedEffects() {
+        // Shield circle — rendered to texture
+        let shieldSize: CGFloat = 90  // diameter
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: shieldSize, height: shieldSize))
+        let shieldImg = renderer.image { ctx in
+            let g = ctx.cgContext
+            let rect = CGRect(x: 3, y: 3, width: shieldSize - 6, height: shieldSize - 6)
+            g.setFillColor(UIColor(red: 1, green: 0.84, blue: 0, alpha: 0.2).cgColor)
+            g.fillEllipse(in: rect)
+            g.setStrokeColor(UIColor(red: 1, green: 0.84, blue: 0, alpha: 0.8).cgColor)
+            g.setLineWidth(3)
+            g.strokeEllipse(in: rect)
+        }
+        let sn = SKSpriteNode(texture: SKTexture(image: shieldImg))
+        sn.size = CGSize(width: shieldSize, height: shieldSize)
+        sn.zPosition = 10
+        sn.isHidden = true
+        addChild(sn)
+        shieldNode = sn
+        
+        // Ult glow — rendered to texture
+        let glowSize: CGFloat = 110
+        let glowRenderer = UIGraphicsImageRenderer(size: CGSize(width: glowSize, height: glowSize))
+        let glowImg = glowRenderer.image { ctx in
+            let g = ctx.cgContext
+            let rect = CGRect(x: 5, y: 5, width: glowSize - 10, height: glowSize - 10)
+            g.setFillColor(UIColor(white: 1, alpha: 0.15).cgColor)
+            g.fillEllipse(in: rect)
+        }
+        let gn = SKSpriteNode(texture: SKTexture(image: glowImg))
+        gn.size = CGSize(width: glowSize, height: glowSize)
+        gn.zPosition = -1
+        gn.isHidden = true
+        addChild(gn)
+        ultGlowNode = gn
     }
     
     func reset() {
@@ -97,20 +138,18 @@ class PlayerNode: SKNode {
         bodyGroup.addChild(cape)
         
         // 2. Body/Torso — white rectangle
-        // HTML: fillRect(-10, -10, 20, 40). Center Y=10 (down). Relative to player center (32), this is 10px below center.
-        // Swift center is (0,0). To match, move body down 10px.
         let torso = SKShapeNode(rectOf: CGSize(width: 20, height: 40))
         torso.fillColor = (lvl >= 7 ? .white : UIColor(white: 0.93, alpha: 1)).darkened(0.6)
         torso.strokeColor = .clear
-        torso.position = CGPoint(x: 0, y: -10) // Offset -10 to match HTML visual
+        torso.position = CGPoint(x: 0, y: -10)
         bodyGroup.addChild(torso)
         
         // 3. 斗笠 Hat — triangle
         let hatWidth: CGFloat = 25 + CGFloat(lvl) * 1.2
         let hatHeight: CGFloat = 15 + CGFloat(lvl) / 1.5
         let hatColor: UIColor = lvl >= 7
-            ? UIColor(red: 0.98, green: 0.75, blue: 0.14, alpha: 1).darkened(0.6) // #fbbf24 gold
-            : UIColor(red: 0.27, green: 0.27, blue: 0.27, alpha: 1).darkened(0.6) // #444
+            ? UIColor(red: 0.98, green: 0.75, blue: 0.14, alpha: 1).darkened(0.6)
+            : UIColor(red: 0.27, green: 0.27, blue: 0.27, alpha: 1).darkened(0.6)
         
         let hatPath = UIBezierPath()
         hatPath.move(to: CGPoint(x: -hatWidth, y: 25))
@@ -145,7 +184,6 @@ class PlayerNode: SKNode {
         sword.lineWidth = swordWidth
         sword.lineCap = .round
         sword.zPosition = 3
-        // Glow at all levels for combat visibility; stronger at higher levels
         if lvl >= 10 {
             sword.glowWidth = 10
         } else if lvl >= 7 {
@@ -174,7 +212,6 @@ class PlayerNode: SKNode {
             addChild(orbit)
             orbitNode = orbit
             
-            // Rotate continuously: original gameTime*0.1 = 6 rad/s = 2π in ~1.05s
             let rotate = SKAction.rotate(byAngle: .pi * 2, duration: 1.05)
             orbit.run(SKAction.repeatForever(rotate))
         }
@@ -192,8 +229,7 @@ class PlayerNode: SKNode {
         let bob = sin(animTime) * 5
         bodyGroup.position.y = bob
         
-        // Iframe flash: original: if(player.iframe % 4 < 2) drawPlayer(...)
-        // Show player when iframe%4 < 2, hide when >= 2
+        // Iframe flash
         if iframe > 0 {
             alpha = (iframe % 4 < 2) ? 1.0 : 0.0
         } else {
@@ -221,28 +257,14 @@ class PlayerNode: SKNode {
             }
         }
         
-        // Shield Visual
+        // v1.6: Shield Visual — toggle cached node visibility instead of creating new SKShapeNode
         if let shield = skills["shield"], shield.active > 0 {
-             let s = SKShapeNode(circleOfRadius: 40)
-             s.strokeColor = UIColor(red: 1, green: 0.84, blue: 0, alpha: 0.8) // Gold
-             s.lineWidth = 3
-             s.fillColor = UIColor(red: 1, green: 0.84, blue: 0, alpha: 0.2)
-             s.zPosition = 10
-             addChild(s)
-             s.run(SKAction.sequence([SKAction.wait(forDuration: 0.05), SKAction.removeFromParent()]))
+            shieldNode?.isHidden = false
+        } else {
+            shieldNode?.isHidden = true
         }
         
-        // Ultimate glow effect
-        if ultActive > 0 {
-            let glow = SKShapeNode(circleOfRadius: 50)
-            glow.fillColor = UIColor(white: 1, alpha: 0.15)
-            glow.strokeColor = .clear
-            glow.zPosition = -1
-            glow.run(SKAction.sequence([
-                SKAction.fadeOut(withDuration: 0.1),
-                SKAction.removeFromParent()
-            ]))
-            addChild(glow)
-        }
+        // v1.6: Ultimate glow — toggle cached node visibility
+        ultGlowNode?.isHidden = ultActive <= 0
     }
 }

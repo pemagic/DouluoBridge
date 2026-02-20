@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6] - 2026-02-20
+
+### New Features
+- **怪物血量递增 (HP Scaling)**: 每通关一关，下一关所有怪物（含 Boss）血量增加 3 倍。第 1 关为基础血量，第 2 关 ×3，第 3 关 ×9，以此类推，大幅提升后期关卡挑战难度。
+
+### Performance Optimizations (深度优化)
+- **敌人渲染重构**: 将每个敌人 15-30 个 `SKShapeNode`（火柴人各部位）合并为 1 个 `SKSpriteNode`，使用 `CoreGraphics` 预渲染纹理。30+ 怪物同屏从 500+ draw calls 降至 ~30。
+- **子弹纹理缓存**: `ProjectileNode` 从 `SKShapeNode` + `glowWidth` 改为缓存的 `SKSpriteNode` 纹理，按 owner/size/color 缓存避免重复渲染。
+- **粒子系统优化**: 粒子从 `SKShapeNode` 改为缓存的 `SKSpriteNode` 纹理，新增 200 粒子并发上限防止帧率崩溃。
+- **护盾/必杀特效缓存**: `PlayerNode` 护盾光圈和必杀光效由每帧创建/销毁 `SKShapeNode` 改为预渲染 `SKSpriteNode` 切换可见性。
+- **Boss 血条优化**: Boss 血条从 `SKShapeNode` 改为 `SKSpriteNode`。
+- **狙击手瞄准线缓存**: 瞄准线 alpha 量化为 5 级，仅在等级变化时重新渲染。
+- **子弹数量上限**: 新增 150 发子弹同屏上限，防止高武器等级下 GPU 过载。
+
 ## [1.5.2] - 2026-02-19
 
 ### Improvements
