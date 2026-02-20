@@ -1,6 +1,15 @@
 import UIKit
 import SpriteKit
 
+class PassThroughView: UIView {
+    // Only intercept touches that hit an interactive subview (like a UIButton)
+    // Touches on the background of this container will pass through
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let view = super.hitTest(point, with: event)
+        return view == self ? nil : view
+    }
+}
+
 class GameViewController: UIViewController, GameSceneDelegate {
     
     // MARK: - Properties
@@ -89,9 +98,8 @@ class GameViewController: UIViewController, GameSceneDelegate {
     // MARK: - HUD Setup
     
     private func setupHUD() {
-        hudContainer = UIView()
+        hudContainer = PassThroughView()
         hudContainer.isHidden = true
-        hudContainer.isUserInteractionEnabled = false
         view.addSubview(hudContainer)
         hudContainer.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([

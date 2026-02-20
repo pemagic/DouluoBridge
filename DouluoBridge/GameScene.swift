@@ -1329,7 +1329,7 @@ class GameScene: SKScene {
             path.addLine(to: CGPoint(x: 0, y: -10))
             path.close()
             heart.path = path.cgPath
-            heart.fillColor = UIColor(red: 0, green: 1, blue: 0.5, alpha: 1)
+            heart.fillColor = UIColor(red: 0.82, green: 0.08, blue: 0.08, alpha: 1) // Blood red
             heart.strokeColor = .white
             heart.lineWidth = 2
             heart.glowWidth = 5
@@ -1349,7 +1349,7 @@ class GameScene: SKScene {
              path.move(to: CGPoint(x: 0, y: 0))
              path.addLine(to: CGPoint(x: -4, y: -4))
              sword.path = path.cgPath
-             sword.fillColor = UIColor(red: 1, green: 0.8, blue: 0.2, alpha: 1)
+             sword.fillColor = UIColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1) // Golden yellow
              sword.strokeColor = .white
              sword.lineWidth = 1
              sword.glowWidth = 4
