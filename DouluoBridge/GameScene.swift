@@ -579,7 +579,7 @@ class GameScene: SKScene {
                         gameDelegate?.triggerHaptic(.light)
                     } else if playerNode.iframe <= 0 {
                         playerNode.hp -= 15
-                        playerNode.iframe = 18  // v1.6: 0.3s invincibility
+                        playerNode.iframe = 24  // v1.6: 0.4s invincibility
                         gameDelegate?.triggerHaptic(.medium)
                     }
                     enemy.hp = 0  // self-destruct
@@ -732,7 +732,7 @@ class GameScene: SKScene {
                         shieldState.active = max(0, shieldState.active - 10)
                     } else {
                         playerNode.hp -= proj.damage
-                        playerNode.iframe = 18  // v1.6: 0.3s invincibility
+                        playerNode.iframe = 24  // v1.6: 0.4s invincibility
                         createParticles(x: playerNode.position.x, y: playerNode.position.y,
                                        color: .red, count: 15)
                         gameDelegate?.triggerHaptic(.medium)
