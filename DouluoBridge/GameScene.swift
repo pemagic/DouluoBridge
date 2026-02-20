@@ -387,7 +387,13 @@ class GameScene: SKScene {
             // Re-center just to be safe
             bgNode.position = CGPoint(x: 0, y: 0)  // Center of camera
             bgNode.zPosition = -200
-            bgNode.alpha = 1.0  // Fully opaque background image
+            
+            // v1.7: Instead of alpha transparency (which caused splits), we use color blending
+            // to wash out the image with white. This keeps it 100% opaque but much brighter.
+            bgNode.color = .white
+            bgNode.colorBlendFactor = 0.6  // Mix 60% white into the image pixels
+            bgNode.alpha = 1.0
+            
             bgNode.name = "bgSky"
             cameraNode.addChild(bgNode)
         }
