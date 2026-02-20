@@ -8,4 +8,17 @@ extension UIColor {
         }
         return self
     }
+    
+    func lightened(minBrightness: CGFloat = 0.85, maxSaturation: CGFloat = 0.3) -> UIColor {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        if getHue(&h, saturation: &s, brightness: &b, alpha: &a) {
+            return UIColor(
+                hue: h,
+                saturation: min(s, maxSaturation),     // Fade out strong colors to pastel
+                brightness: max(b, minBrightness),     // Ensure it's very bright
+                alpha: a
+            )
+        }
+        return self
+    }
 }

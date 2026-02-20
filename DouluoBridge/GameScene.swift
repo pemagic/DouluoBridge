@@ -391,8 +391,13 @@ class GameScene: SKScene {
         }
         
         // Set scene bg color as fallback
-        // Set scene bg color as fallback (always white so the alpha blend is light)
-        backgroundColor = .white
+        // v1.7: Use the first color (lightest in palette) but force it to be very bright and pastel
+        // This keeps the thematic tint of the level but prevents the 0.4 alpha background from looking dark/muddy
+        if let baseColor = currentLevelDef.colors.bgColors.first {
+            backgroundColor = baseColor.lightened()
+        } else {
+            backgroundColor = .white
+        }
     }
     
     // Helper for gradient interpolation
@@ -1523,6 +1528,19 @@ extension UIColor {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         if getRed(&r, green: &g, blue: &b, alpha: &a) {
             return UIColor(red: max(r * factor, 0), green: max(g * factor, 0), blue: max(b * factor, 0), alpha: a)
+        }
+        return self
+    }
+    
+    func lightened(minBrightness: CGFloat = 0.85, maxSaturation: CGFloat = 0.3) -> UIColor {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        if getHue(&h, saturation: &s, brightness: &b, alpha: &a) {
+            return UIColor(
+                hue: h,
+                saturation: min(s, maxSaturation),
+                brightness: max(b, minBrightness),
+                alpha: a
+            )
         }
         return self
     }
