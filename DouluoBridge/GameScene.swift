@@ -314,7 +314,7 @@ class GameScene: SKScene {
     private func drawPlatform(_ plat: PlatformData) {
         // V1.1 (lines 1794-1813): solid fill + brush stroke top edge + floating shadow
         // OPTIMIZATION: Use SKSpriteNode for main body to reduce draw calls/lag
-        let node = SKSpriteNode(color: plat.color.darkened(0.6), size: CGSize(width: plat.width, height: plat.height))
+        let node = SKSpriteNode(color: plat.color.darkened(0.42), size: CGSize(width: plat.width, height: plat.height))
         node.alpha = plat.isGround ? 0.5 : 0.35  // Semi-transparent so background shows through
         node.position = CGPoint(
             x: plat.x + plat.width / 2,
@@ -334,8 +334,8 @@ class GameScene: SKScene {
         }
         let edge = SKShapeNode(path: edgePath)
         edge.strokeColor = plat.isGround
-            ? UIColor(red: 0.54, green: 0.48, blue: 0.38, alpha: 1).darkened(0.6)  // #8a7a60
-            : UIColor(red: 0.44, green: 0.38, blue: 0.31, alpha: 1).darkened(0.6)  // #706050
+            ? UIColor(red: 0.54, green: 0.48, blue: 0.38, alpha: 1).darkened(0.42)  // #8a7a60
+            : UIColor(red: 0.44, green: 0.38, blue: 0.31, alpha: 1).darkened(0.42)  // #706050
         edge.lineWidth = plat.isGround ? 3 : 2
         edge.fillColor = .clear
         edge.zPosition = 1
@@ -902,7 +902,7 @@ class GameScene: SKScene {
             if enemies.count >= maxEnemies { break }
             
             let type = lvl.enemies.randomElement() ?? .scout
-            let color = lvl.colors.enemyColors.randomElement()?.darkened(0.6) ?? .cyan
+            let color = lvl.colors.enemyColors.randomElement()?.darkened(0.42) ?? .cyan
 
             
             let enemy = EnemyNode(

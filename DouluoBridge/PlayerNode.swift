@@ -119,10 +119,10 @@ class PlayerNode: SKNode {
         
         // 1. Cape/Cloak — quadratic curve shape
         let cloakColor: UIColor
-        if lvl >= 10 { cloakColor = PlayerNode.neonColors[0].darkened(0.6) }
-        else if lvl >= 7 { cloakColor = UIColor(red: 0.30, green: 0.11, blue: 0.58, alpha: 1).darkened(0.6) } // #4c1d95
-        else if lvl >= 4 { cloakColor = UIColor(red: 0.19, green: 0.18, blue: 0.51, alpha: 1).darkened(0.6) } // #312e81
-        else { cloakColor = UIColor(red: 0.13, green: 0.13, blue: 0.13, alpha: 1).darkened(0.6) } // #222
+        if lvl >= 10 { cloakColor = PlayerNode.neonColors[0].darkened(0.42) }
+        else if lvl >= 7 { cloakColor = UIColor(red: 0.30, green: 0.11, blue: 0.58, alpha: 1).darkened(0.42) } // #4c1d95
+        else if lvl >= 4 { cloakColor = UIColor(red: 0.19, green: 0.18, blue: 0.51, alpha: 1).darkened(0.42) } // #312e81
+        else { cloakColor = UIColor(red: 0.13, green: 0.13, blue: 0.13, alpha: 1).darkened(0.42) } // #222
         
         let capePath = UIBezierPath()
         let capeWidth: CGFloat = 30 + CGFloat(lvl) * 3
@@ -139,7 +139,7 @@ class PlayerNode: SKNode {
         
         // 2. Body/Torso — white rectangle
         let torso = SKShapeNode(rectOf: CGSize(width: 20, height: 40))
-        torso.fillColor = (lvl >= 7 ? .white : UIColor(white: 0.93, alpha: 1)).darkened(0.6)
+        torso.fillColor = (lvl >= 7 ? .white : UIColor(white: 0.93, alpha: 1)).darkened(0.42)
         torso.strokeColor = .clear
         torso.position = CGPoint(x: 0, y: -10)
         bodyGroup.addChild(torso)
@@ -148,8 +148,8 @@ class PlayerNode: SKNode {
         let hatWidth: CGFloat = 25 + CGFloat(lvl) * 1.2
         let hatHeight: CGFloat = 15 + CGFloat(lvl) / 1.5
         let hatColor: UIColor = lvl >= 7
-            ? UIColor(red: 0.98, green: 0.75, blue: 0.14, alpha: 1).darkened(0.6)
-            : UIColor(red: 0.27, green: 0.27, blue: 0.27, alpha: 1).darkened(0.6)
+            ? UIColor(red: 0.98, green: 0.75, blue: 0.14, alpha: 1).darkened(0.42)
+            : UIColor(red: 0.27, green: 0.27, blue: 0.27, alpha: 1).darkened(0.42)
         
         let hatPath = UIBezierPath()
         hatPath.move(to: CGPoint(x: -hatWidth, y: 25))
@@ -159,7 +159,7 @@ class PlayerNode: SKNode {
         
         let hat = SKShapeNode(path: hatPath.cgPath)
         hat.fillColor = hatColor
-        hat.strokeColor = lvl >= 10 ? .white.darkened(0.6) : .clear
+        hat.strokeColor = lvl >= 10 ? .white.darkened(0.42) : .clear
         hat.lineWidth = lvl >= 10 ? 2 : 0
         hat.zPosition = 2
         if lvl >= 10 {
@@ -171,9 +171,9 @@ class PlayerNode: SKNode {
         let swordLength: CGFloat = 35 + CGFloat(lvl) * 2.5
         let swordWidth: CGFloat = 3 + CGFloat(lvl) / 2.5
         let swordColor: UIColor
-        if lvl >= 10 { swordColor = PlayerNode.neonColors[0].darkened(0.6) }
-        else if lvl >= 7 { swordColor = UIColor(red: 0.98, green: 0.75, blue: 0.14, alpha: 1).darkened(0.6) }
-        else { swordColor = .white.darkened(0.6) }
+        if lvl >= 10 { swordColor = PlayerNode.neonColors[0].darkened(0.42) }
+        else if lvl >= 7 { swordColor = UIColor(red: 0.98, green: 0.75, blue: 0.14, alpha: 1).darkened(0.42) }
+        else { swordColor = .white.darkened(0.42) }
         
         let swordPath = UIBezierPath()
         swordPath.move(to: CGPoint(x: 10, y: 0))
@@ -202,7 +202,7 @@ class PlayerNode: SKNode {
             for i in 0..<8 {
                 let ang = CGFloat(i) / 8.0 * .pi * 2
                 let swordOrbit = SKShapeNode(rectOf: CGSize(width: 4, height: 36))
-                swordOrbit.fillColor = PlayerNode.neonColors[i % PlayerNode.neonColors.count].darkened(0.6)
+                swordOrbit.fillColor = PlayerNode.neonColors[i % PlayerNode.neonColors.count].darkened(0.42)
                 swordOrbit.strokeColor = .clear
                 swordOrbit.position = CGPoint(x: cos(ang) * 55, y: sin(ang) * 55)
                 swordOrbit.zRotation = ang + .pi / 2
