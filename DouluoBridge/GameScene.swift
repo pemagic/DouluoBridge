@@ -1235,17 +1235,16 @@ class GameScene: SKScene {
         let comboBonus = Double(combo) * 0.005
         let cap = currentLevelDef.weaponCap
         
-        // Fix 4: Smooth weapon scaling — target ~1 weapon level per game level
+        // v1.6: Higher drop rates to ensure ~1 weapon level per game level
         let weaponProb: Double
         if playerNode.weaponLevel >= 10 {
-            weaponProb = 0.01  // Max level, almost no drops
+            weaponProb = 0.01
         } else if playerNode.weaponLevel >= cap {
-            weaponProb = 0.02  // Already at cap for this level, very rare
+            weaponProb = 0.02
         } else {
-            // Scale based on deficit from cap — more drops if behind
             let deficit = cap - playerNode.weaponLevel
             let levelProgress = Double(levelKills) / max(1.0, Double(currentLevelDef.killTarget))
-            weaponProb = min(0.15, 0.04 + Double(deficit) * 0.035) * (1.0 - levelProgress * 0.4) + comboBonus
+            weaponProb = min(0.35, 0.12 + Double(deficit) * 0.08) * (1.0 - levelProgress * 0.3) + comboBonus
         }
         
         let healthProb = 0.08 + Double(max(0, 100 - playerNode.hp)) * 0.002 + comboBonus
