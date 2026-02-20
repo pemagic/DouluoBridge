@@ -53,13 +53,15 @@ class ProjectileNode: SKNode {
     var size: Int
     var homing: Bool
     var color: UIColor
+    var pierceCount: Int          // v1.6: how many enemies this projectile can hit
+    var hitEnemies: Set<ObjectIdentifier> = []  // v1.6: track already-hit enemies
     
     enum ProjectileOwner {
         case player, enemy
     }
     
     init(vx: CGFloat, vy: CGFloat, damage: Int, owner: ProjectileOwner,
-         color: UIColor, life: Int, size: Int = 10, homing: Bool = false) {
+         color: UIColor, life: Int, size: Int = 10, homing: Bool = false, pierceCount: Int = 1) {
         self.vx = vx
         self.vy = vy
         self.damage = damage
@@ -68,6 +70,7 @@ class ProjectileNode: SKNode {
         self.life = life
         self.size = size
         self.homing = homing
+        self.pierceCount = pierceCount
         
         super.init()
         setupVisual()

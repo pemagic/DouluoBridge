@@ -683,18 +683,29 @@ class GameScene: SKScene {
                 // Original AABB: pj.x < e.x+e.w && pj.x+70 > e.x && pj.y < e.y+e.h && pj.y+pj.size > e.y
                 // In center-distance: dx < (e.w + 70) / 2, dy < (e.h + pj.size) / 2
                 for (ei, enemy) in enemies.enumerated().reversed() {
+                    let eid = ObjectIdentifier(enemy)
+                    if proj.hitEnemies.contains(eid) { continue }  // v1.6: skip already-hit
                     let dx = abs(proj.position.x - enemy.position.x)
                     let dy = abs(proj.position.y - enemy.position.y)
                     if dx < (enemy.enemyWidth + 70) / 2 &&
                        dy < (enemy.enemyHeight + CGFloat(proj.size)) / 2 {
-                        enemy.hp -= CGFloat(proj.damage)
+                        // v1.6: Piercing damage — 10% decay per enemy hit
+                        let decayFactor = pow(0.9, Double(proj.hitEnemies.count))
+                        let pierceDmg = Int(Double(proj.damage) * decayFactor)
+                        enemy.hp -= CGFloat(pierceDmg)
                         enemy.damageFlash = 6
-                        proj.removeFromParent()
-                        projectiles.remove(at: i)
+                        proj.hitEnemies.insert(eid)
+                        
                         if enemy.hp <= 0 {
                             handleEnemyDeath(at: ei)
                         }
-                        break
+                        
+                        // v1.6: Remove projectile only when pierce exhausted
+                        if proj.hitEnemies.count >= proj.pierceCount {
+                            proj.removeFromParent()
+                            projectiles.remove(at: i)
+                            break
+                        }
                     }
                 }
             } else {
@@ -709,7 +720,7 @@ class GameScene: SKScene {
                         shieldState.active = max(0, shieldState.active - 10)
                     } else {
                         playerNode.hp -= proj.damage
-                        playerNode.iframe = 35  // Original: player.iframe = 35
+                        playerNode.iframe = 30  // v1.6: 0.5s invincibility on all damage
                         createParticles(x: playerNode.position.x, y: playerNode.position.y,
                                        color: .red, count: 15)
                         gameDelegate?.triggerHaptic(.medium)
@@ -1008,7 +1019,8 @@ class GameScene: SKScene {
                 owner: .player,
                 color: bColor,
                 life: 50,
-                size: Int(10 * sizeMult)
+                size: Int(10 * sizeMult),
+                pierceCount: lvl  // v1.6: pierce count = weapon level
             )
             // Canvas: x = player.x + (facing === 1 ? player.w : -80)
             //   facing right: rightEdge = leftEdge + w = leftEdge + 40
