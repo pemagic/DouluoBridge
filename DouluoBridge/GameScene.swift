@@ -22,8 +22,9 @@ class GameScene: SKScene {
     var bossActive: Bool = false
     var bossSpawned: Bool = false
     var screenFlash: Int = 0
-    var bossStallTimer: Int = 0  // Safety timer to detect boss stuck/lost
-    var hpMultiplier: CGFloat = 1.0  // v1.6: 3x HP scaling per level clear
+    var bossStallTimer: Int = 0
+    var hpMultiplier: CGFloat = 1.0
+    var enemyProjectileCount: Int = 0  // v1.6: O(1) counter instead of filter()
 
     
     // MARK: - Camera
@@ -143,7 +144,8 @@ class GameScene: SKScene {
         bossActive = false
         bossSpawned = false
         spawnGrace = 120
-        hpMultiplier = 1.0  // v1.6: Reset HP multiplier
+        hpMultiplier = 1.0
+        enemyProjectileCount = 0
         
         // Reset player
         playerNode.reset()
@@ -601,8 +603,8 @@ class GameScene: SKScene {
                                      playerNode.position.x - enemy.position.x)
                     let speed: CGFloat = 14
                     let neonColor = PlayerNode.neonColors[Int.random(in: 0..<PlayerNode.neonColors.count)]
-                    // v1.6: Cap enemy projectiles
-                    if projectiles.filter({ $0.owner == .enemy }).count < 30 {
+                    // v1.6: Cap enemy projectiles (O(1) counter)
+                    if enemyProjectileCount < 30 {
                     let proj = ProjectileNode(
                         vx: cos(angle) * speed,
                         vy: sin(angle) * speed,
@@ -616,6 +618,7 @@ class GameScene: SKScene {
                                            y: enemy.position.y)
                     entityLayer.addChild(proj)
                     projectiles.append(proj)
+                    enemyProjectileCount += 1
                     }
                     enemy.shootTimer = 70 + CGFloat.random(in: 0...50)
                 }
@@ -644,8 +647,8 @@ class GameScene: SKScene {
                                  playerNode.position.x - enemy.position.x)
                 let speed: CGFloat = 42
                 let neonColor = PlayerNode.neonColors[Int.random(in: 0..<PlayerNode.neonColors.count)]
-                // v1.6: Cap enemy projectiles
-                if projectiles.filter({ $0.owner == .enemy }).count < 30 {
+                // v1.6: Cap enemy projectiles (O(1) counter)
+                if enemyProjectileCount < 30 {
                 let proj = ProjectileNode(
                     vx: cos(angle) * speed,
                     vy: sin(angle) * speed,
@@ -659,6 +662,7 @@ class GameScene: SKScene {
                                        y: enemy.position.y)
                 entityLayer.addChild(proj)
                 projectiles.append(proj)
+                enemyProjectileCount += 1
                 }
                 enemy.aimTimer = 0
             }
@@ -672,6 +676,7 @@ class GameScene: SKScene {
             
             // Remove dead projectiles
             if proj.life <= 0 {
+                if proj.owner == .enemy { enemyProjectileCount -= 1 }
                 proj.removeFromParent()
                 projectiles.remove(at: i)
                 continue
@@ -679,6 +684,7 @@ class GameScene: SKScene {
             
             // Off-screen
             if !isOnScreen(proj) {
+                if proj.owner == .enemy { enemyProjectileCount -= 1 }
                 proj.removeFromParent()
                 projectiles.remove(at: i)
                 continue
@@ -733,6 +739,7 @@ class GameScene: SKScene {
                     }
                     proj.removeFromParent()
                     projectiles.remove(at: i)
+                    enemyProjectileCount -= 1
                 }
             }
         }
@@ -939,7 +946,7 @@ class GameScene: SKScene {
         }
         
         // Faster spawn cooldown at higher levels
-        spawnCooldown = max(10, 35 - currentLevel * 2 - playerNode.weaponLevel)
+        spawnCooldown = max(8, 28 - currentLevel * 2 - playerNode.weaponLevel)
     }
     
     // MARK: - Camera (match original offset)

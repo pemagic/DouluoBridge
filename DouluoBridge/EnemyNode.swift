@@ -433,7 +433,8 @@ class EnemyNode: SKNode {
         }
         aimLine?.alpha = min(1.0, CGFloat(aimTimer) / 100.0)
         aimLine?.isHidden = false
-        let dx = playerPosition.x - position.x, dy = playerPosition.y - position.y
+        let dx = (playerPosition.x - position.x) * xScale  // compensate for node's xScale flip
+        let dy = playerPosition.y - position.y
         let path = CGMutablePath(); path.move(to: .zero); path.addLine(to: CGPoint(x: dx, y: dy))
         aimLine?.path = path
     }
