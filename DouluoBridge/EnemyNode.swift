@@ -90,7 +90,7 @@ class EnemyNode: SKNode {
             self.hp = baseHp * (1 + lvlBonus) * hpMultiplier
             self.maxHp = self.hp
             
-            // baseSpeed: (8 + Math.random()*6) * typeMult * (1 + lvlBonus * 0.5)
+            // baseSpeed: (8 + Math.random()*6) * typeMult — v1.6: removed lvlBonus speed scaling to keep pace constant
             let rawSpeed = 8 + CGFloat.random(in: 0...6)
             let typeMult: CGFloat
             switch type {
@@ -98,7 +98,7 @@ class EnemyNode: SKNode {
             case .heavy:  typeMult = 0.4
             default:      typeMult = 0.7  // scout, sniper
             }
-            self.baseSpeed = rawSpeed * typeMult * (1 + lvlBonus * 0.5)
+            self.baseSpeed = rawSpeed * typeMult  // No speed scaling — only HP scales
             
             // Dimensions: w = heavy ? 80 : 50, h = heavy ? 90 : 70
             self.enemyWidth = (type == .heavy) ? 80 : 50
