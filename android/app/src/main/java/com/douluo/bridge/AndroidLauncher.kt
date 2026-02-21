@@ -215,8 +215,11 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
 
         startBtn.setOnClickListener {
             mainMenuView.visibility = View.GONE
-            val screen = douluoGame.screen as? DouluoGameScreen
-            screen?.startGame()
+            // startGame() calls generatePlatforms()+drawBackground() which create GL Textures
+            // MUST run on GL thread via postRunnable
+            Gdx.app.postRunnable {
+                (douluoGame.screen as? DouluoGameScreen)?.startGame()
+            }
             audioManager?.startBGM(0, 100f)
         }
 
@@ -261,8 +264,9 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
 
         restartBtn.setOnClickListener {
             gameOverView.visibility = View.GONE
-            val screen = douluoGame.screen as? DouluoGameScreen
-            screen?.startGame()
+            Gdx.app.postRunnable {
+                (douluoGame.screen as? DouluoGameScreen)?.startGame()
+            }
             audioManager?.startBGM(0, 100f)
         }
 
@@ -284,8 +288,9 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         pauseOverlay.addView(label, params)
 
         pauseOverlay.setOnClickListener {
-            val screen = douluoGame.screen as? DouluoGameScreen
-            screen?.resumeGame()
+            Gdx.app.postRunnable {
+                (douluoGame.screen as? DouluoGameScreen)?.resumeGame()
+            }
         }
 
         uiContainer.addView(pauseOverlay, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
