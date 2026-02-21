@@ -110,15 +110,38 @@ class PlayerNode : Group() {
         rebuildVisual()
     }
 
-    fun rebuildVisual() {
+    // Save references to created textures so we can dispose them properly
+    // to avoid Memory Leak/OOM when rebuildVisual is called (e.g. on weapon pickup)
+    private val createdTextures = mutableListOf<Texture>()
+
+    private fun disposeVisual() {
         bodyGroup.clear()
+        createdTextures.forEach { it.dispose() }
+        createdTextures.clear()
+    }
+
+    fun rebuildVisual() {
+        disposeVisual()
         orbitNode?.remove()
         orbitNode = null
 
         val lvl = weaponLevel
         val darkened = { c: Color -> Color(c).mul(0.58f) } // approx iOS darkened(0.42)
 
-        // 1. Cape (Simplification: Triangle in libGDX Pixmap instead of QuadCurve)
+        // Helper: draw line with given color and width (simulated by offset lines)
+        fun L(pix: Pixmap, cx: Float, cy: Float, fx: Float, fy: Float, tx: Float, ty: Float, c: Color, lw: Int) {
+            pix.setColor(c)
+            val x1 = (cx + fx).toInt(); val y1 = (cy + fy).toInt()
+            val x2 = (cx + tx).toInt(); val y2 = (cy + ty).toInt()
+            val half = lw / 2
+            val dx = Math.abs(x2 - x1); val dy = Math.abs(y2 - y1)
+            for (off in -half..half) {
+                if (dx >= dy) pix.drawLine(x1, y1 + off, x2, y2 + off)
+                else pix.drawLine(x1 + off, y1, x2 + off, y2)
+            }
+        }
+
+        // 1. Cape (Simplified QuadCurve simulation with lines)
         val cloakColor = when {
             lvl >= 10 -> darkened(neonColors[0])
             lvl >= 7 -> darkened(Color.valueOf("4c1d95"))
@@ -134,19 +157,37 @@ class PlayerNode : Group() {
             0, capeH.toInt() + 10,
             capeW.toInt() * 2, capeH.toInt() + 10
         )
-        val capeImg = Image(Texture(pixCape))
+        val texCape = Texture(pixCape)
+        createdTextures.add(texCape)
+        val capeImg = Image(texCape)
         capeImg.setPosition(-capeW + width / 2f, height / 2f - capeH)
         capeImg.zIndex = 0
         bodyGroup.addActor(capeImg)
         pixCape.dispose()
 
-        // 2. Torso
+        // 2. Torso & Limbs (Stick-figure style)
         val torsoColor = if (lvl >= 7) darkened(Color.WHITE) else darkened(Color(0.93f, 0.93f, 0.93f, 1f))
-        val pixTorso = Pixmap(20, 40, Pixmap.Format.RGBA8888)
+        val pixTorso = Pixmap(60, 80, Pixmap.Format.RGBA8888)
+        val cx = 30f
+        val cy = 40f
+        
+        // Head
         pixTorso.setColor(torsoColor)
-        pixTorso.fill()
-        val torsoImg = Image(Texture(pixTorso))
-        torsoImg.setPosition(width / 2f - 10f, height / 2f - 20f - 10f)
+        pixTorso.fillCircle(cx.toInt(), (cy - 20).toInt(), 8)
+        // Body
+        L(pixTorso, cx, cy, 0f, -12f, 0f, 15f, torsoColor, 6)
+        // Arms
+        L(pixTorso, cx, cy, 0f, -5f, -15f, 5f, torsoColor, 4)
+        L(pixTorso, cx, cy, 0f, -5f, 15f, 5f, torsoColor, 4)
+        // Legs
+        L(pixTorso, cx, cy, 0f, 15f, -12f, 35f, torsoColor, 5)
+        L(pixTorso, cx, cy, 0f, 15f, 12f, 35f, torsoColor, 5)
+
+        val texTorso = Texture(pixTorso)
+        createdTextures.add(texTorso)
+        val torsoImg = Image(texTorso)
+        // Center offset adjustment
+        torsoImg.setPosition(width / 2f - 30f, height / 2f - 40f)
         bodyGroup.addActor(torsoImg)
         pixTorso.dispose()
 
@@ -157,12 +198,15 @@ class PlayerNode : Group() {
         val pixHat = Pixmap((hatW * 2).toInt(), hatH.toInt(), Pixmap.Format.RGBA8888)
         pixHat.setColor(hatColor)
         pixHat.fillTriangle(hatW.toInt(), 0, 0, hatH.toInt(), (hatW * 2).toInt(), hatH.toInt())
-        val hatImg = Image(Texture(pixHat))
+        val texHat = Texture(pixHat)
+        createdTextures.add(texHat)
+        val hatImg = Image(texHat)
         hatImg.setPosition(width / 2f - hatW, height / 2f + 25f)
         bodyGroup.addActor(hatImg)
         pixHat.dispose()
 
         // 4. Sword
+        // Sword drawn with drawLine to look like a glowing blade
         val swordL = 35f + lvl * 2.5f
         val swordW = 3f + lvl / 2.5f
         val swordColor = when {
@@ -170,10 +214,11 @@ class PlayerNode : Group() {
             lvl >= 7 -> darkened(Color.valueOf("faca23"))
             else -> darkened(Color.WHITE)
         }
-        val pixSword = Pixmap(swordL.toInt(), swordW.toInt() + 4, Pixmap.Format.RGBA8888)
-        pixSword.setColor(swordColor)
-        pixSword.fillRectangle(0, 2, swordL.toInt(), swordW.toInt())
-        val swordImg = Image(Texture(pixSword))
+        val pixSword = Pixmap(swordL.toInt() + 10, swordW.toInt() + 4, Pixmap.Format.RGBA8888)
+        L(pixSword, 0f, 0f, 5f, swordW/2+2f, swordL, swordW/2+2f, swordColor, swordW.toInt())
+        val texSword = Texture(pixSword)
+        createdTextures.add(texSword)
+        val swordImg = Image(texSword)
         swordImg.setPosition(width / 2f + 10f, height / 2f)
         swordImg.setOrigin(0f, swordW / 2f)
         swordImg.rotation = -20f
@@ -191,7 +236,9 @@ class PlayerNode : Group() {
                 val pixOSword = Pixmap(36, 4, Pixmap.Format.RGBA8888)
                 pixOSword.setColor(darkened(neonColors[i % neonColors.size]))
                 pixOSword.fill()
-                val oSword = Image(Texture(pixOSword))
+                val texOSword = Texture(pixOSword)
+                createdTextures.add(texOSword)
+                val oSword = Image(texOSword)
                 oSword.setPosition(MathUtils.cos(ang) * 55f - 18f, MathUtils.sin(ang) * 55f - 2f)
                 oSword.setOrigin(18f, 2f)
                 oSword.rotation = ang * MathUtils.radiansToDegrees + 90f

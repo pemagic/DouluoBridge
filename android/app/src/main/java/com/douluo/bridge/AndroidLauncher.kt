@@ -184,44 +184,73 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
 
     private fun setupMainMenu() {
         mainMenuView = LinearLayout(this)
-        mainMenuView.orientation = LinearLayout.VERTICAL
-        mainMenuView.gravity = Gravity.CENTER
-        mainMenuView.setBackgroundColor(Color.BLACK)
+        mainMenuView.orientation = LinearLayout.HORIZONTAL
+        mainMenuView.gravity = Gravity.CENTER_VERTICAL or Gravity.START
+        mainMenuView.setBackgroundColor(Color.argb((255*0.85).toInt(), 0, 0, 0))
         
+        // Left side: Titles
+        val leftPanel = LinearLayout(this)
+        leftPanel.orientation = LinearLayout.VERTICAL
+        leftPanel.setPadding(dpToPx(60f), dpToPx(20f), dpToPx(40f), dpToPx(20f))
+
         val title = TextView(this)
         title.text = "斗罗大桥"
         title.setTextColor(Color.WHITE)
-        title.textSize = 64f
-        title.setTypeface(null, Typeface.BOLD)
-        mainMenuView.addView(title)
+        title.textSize = 72f
+        title.typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD_ITALIC)
+        leftPanel.addView(title)
+
+        val engTitle = TextView(this)
+        engTitle.text = "WUXIA PIXEL"
+        engTitle.setTextColor(Color.argb(255, 234, 178, 7))
+        engTitle.textSize = 24f
+        engTitle.letterSpacing = 0.5f // Add letter spacing for stylistic effect
+        engTitle.setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
+        val engParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        engParams.topMargin = dpToPx(8f)
+        leftPanel.addView(engTitle, engParams)
+
+        mainMenuView.addView(leftPanel, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+
+        // Right side: Stats and Start Button
+        val rightPanel = LinearLayout(this)
+        rightPanel.orientation = LinearLayout.VERTICAL
+        rightPanel.gravity = Gravity.CENTER
+        rightPanel.setPadding(dpToPx(20f), dpToPx(20f), dpToPx(80f), dpToPx(20f))
 
         val sub = TextView(this)
-        sub.text = "最高层数: 第 $bestLevel 关  |  累计击杀: $bestKills"
+        sub.text = "最高层数: 第 $bestLevel 关\n累计击杀: $bestKills"
         sub.setTextColor(Color.argb(255, 240, 69, 69))
-        mainMenuView.addView(sub)
+        sub.textSize = 18f
+        sub.gravity = Gravity.CENTER
+        sub.setTypeface(null, Typeface.BOLD)
+        rightPanel.addView(sub)
 
         val startBtn = TextView(this)
         startBtn.text = "杀出血路"
         startBtn.setTextColor(Color.WHITE)
-        startBtn.textSize = 28f
+        startBtn.textSize = 32f
         startBtn.setTypeface(null, Typeface.BOLD)
         startBtn.setPadding(dpToPx(48f), dpToPx(16f), dpToPx(48f), dpToPx(16f))
+        
         val bg = android.graphics.drawable.GradientDrawable()
         bg.setStroke(dpToPx(3f), Color.WHITE)
+        bg.setColor(Color.argb(80, 200, 30, 30)) // Add a subtle red background tint
         startBtn.background = bg
+        
         val btnParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-        btnParams.topMargin = dpToPx(32f)
-        mainMenuView.addView(startBtn, btnParams)
+        btnParams.topMargin = dpToPx(40f)
+        rightPanel.addView(startBtn, btnParams)
 
         startBtn.setOnClickListener {
             mainMenuView.visibility = View.GONE
-            // startGame() calls generatePlatforms()+drawBackground() which create GL Textures
-            // MUST run on GL thread via postRunnable
             Gdx.app.postRunnable {
                 (douluoGame.screen as? DouluoGameScreen)?.startGame()
             }
             audioManager?.startBGM(0, 100f)
         }
+
+        mainMenuView.addView(rightPanel, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
 
         uiContainer.addView(mainMenuView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
     }

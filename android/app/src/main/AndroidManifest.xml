@@ -11,6 +11,7 @@
         <activity
             android:name=".AndroidLauncher"
             android:exported="true"
+            android:theme="@style/Theme.DouluoSplash"
             android:screenOrientation="landscape"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout">
             <intent-filter>

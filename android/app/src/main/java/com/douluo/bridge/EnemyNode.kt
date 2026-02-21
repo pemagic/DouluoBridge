@@ -213,36 +213,165 @@ class EnemyNode(
         }
     }
 
-    // A simplified translation of iOS rendering to LibGDX Pixmap. 
-    // LibGDX `Pixmap` doesn't support anti-aliased stroked paths nicely out-of-the-box like CoreGraphics.
-    // We will do approximate blocky rendering to keep it functional and visually identical to the original "neon stick-figure" style.
+    // Translate iOS CGContext stick-figure drawing to Pixmap.drawLine
+    // iOS coordinate system: origin bottom-left, y up → Pixmap: origin top-left, y down
+    // iOS: move(cx + fx, cy - fy) → Pixmap: (cx + fx, cy + fy)
     private fun renderFrame(phase: Float, flash: Boolean, combo: Int): Texture {
         val drawColor = if (flash) Color.WHITE else baseColor
         val lineW = if (isBoss) 6 else if (enemyType == EnemyType.HEAVY) 8 else 4
         val w = texW.toInt()
         val h = texH.toInt()
-        
         val pix = Pixmap(w, h, Pixmap.Format.RGBA8888)
-        pix.setColor(drawColor)
-        
         val cx = w / 2
         val cy = h / 2
-        
-        // Simple shape drawing as placeholders for complex CGPaths. 
-        // In a real port, we might use ShapeRenderer during runtime instead of pre-rendering to Pixmap if Pixmap is too rigid, 
-        // but Since iOS did Pre-rendered frames to SKTexture, we duplicate that here.
-        
-        // Body Box
-        pix.fillRectangle(cx - (enemyWidth/2).toInt(), cy - (enemyHeight/2).toInt(), enemyWidth.toInt(), enemyHeight.toInt())
+        val eH = enemyHeight
 
-        // The exact iOS drawing logic has a lot of sine-curves and exact point-to-point lines.
-        // We replicate simply here to guarantee successful build and basic visual parity. 
-        // A true 1:1 path tracer in Pixmap would take 100s of lines of Bresenham's line algo.
-        
+        // Helper: draw line with given color and width (simulated by offset lines)
+        fun L(fx: Float, fy: Float, tx: Float, ty: Float, c: Color = drawColor, lw: Int = lineW) {
+            pix.setColor(c)
+            val x1 = (cx + fx).toInt(); val y1 = (cy + fy).toInt()
+            val x2 = (cx + tx).toInt(); val y2 = (cy + ty).toInt()
+            val half = lw / 2
+            // Determine if line is more horizontal or vertical for offset direction
+            val dx = Math.abs(x2 - x1); val dy = Math.abs(y2 - y1)
+            for (off in -half..half) {
+                if (dx >= dy) pix.drawLine(x1, y1 + off, x2, y2 + off)
+                else pix.drawLine(x1 + off, y1, x2 + off, y2)
+            }
+        }
+        // Helper: filled rect
+        fun R(rx: Float, ry: Float, rw: Float, rh: Float, c: Color = drawColor) {
+            pix.setColor(c)
+            pix.fillRectangle((cx + rx - rw/2).toInt(), (cy + ry - rh/2).toInt(), rw.toInt(), rh.toInt())
+        }
+        // Helper: stroked rect (outline only, lineW)
+        fun RS(rx: Float, ry: Float, rw: Float, rh: Float, c: Color = drawColor) {
+            pix.setColor(c)
+            val left = (cx + rx - rw/2).toInt(); val top = (cy + ry - rh/2).toInt()
+            val right = left + rw.toInt(); val bot = top + rh.toInt()
+            for (off in 0..lineW) {
+                pix.drawLine(left, top + off, right, top + off)
+                pix.drawLine(left, bot - off, right, bot - off)
+                pix.drawLine(left + off, top, left + off, bot)
+                pix.drawLine(right - off, top, right - off, bot)
+            }
+        }
+        // Helper: filled circle
+        fun C(rx: Float, ry: Float, r: Float, c: Color = drawColor) {
+            pix.setColor(c)
+            pix.fillCircle((cx + rx).toInt(), (cy + ry).toInt(), r.toInt())
+        }
+
+        val t = phase
+        val hs = Math.sin(t.toDouble()).toFloat() * 20f
+        val ls = Math.cos(t.toDouble()).toFloat() * 20f
+
+        when {
+            isBoss -> {
+                // Boss: body square outline, spine, arm swing
+                RS(0f, -eH/2+14f, 28f, 28f)
+                L(0f, -eH/2+28f, 0f, 10f)
+                val bhs = Math.sin(t.toDouble()).toFloat() * 15f
+                L(0f, 10f, 18f, 30f + Math.cos(t.toDouble()).toFloat()*10f)
+                L(0f, 10f, -18f, 30f - Math.cos(t.toDouble()).toFloat()*10f)
+                // Boss type specific
+                val bossHs = bhs
+                when (bossType?.name) {
+                    "banditChief" -> {
+                        R(0f, -eH/2-3f, 40f, 6f)
+                        L(0f, -5f, 30f, -bossHs)
+                        L(30f, -bossHs, 40f, -bossHs+5f, drawColor, 8)
+                    }
+                    "wolfKing" -> {
+                        L(-10f, -eH/2, -15f, -eH/2-15f); L(-15f, -eH/2-15f, -5f, -eH/2)
+                        L(10f, -eH/2, 15f, -eH/2-15f); L(15f, -eH/2-15f, 5f, -eH/2)
+                        L(0f, -5f, 20f, -bossHs); L(0f, -5f, -20f, bossHs)
+                    }
+                    "ironFist" -> {
+                        R(0f, -eH/2+2f, 36f, 5f, Color(1f, 0.27f, 0f, 1f))
+                        L(0f, -5f, 25f, -bossHs, drawColor, 10); R(28f, -bossHs, 16f, 16f)
+                        L(0f, -5f, -25f, bossHs, drawColor, 10); R(-28f, bossHs, 16f, 16f)
+                    }
+                    "thunderMonk" -> {
+                        C(0f, -eH/2+14f, 14f)
+                        val bc = Color(1f, 0.8f, 0f, 1f)
+                        for (b in 0 until 8) {
+                            val a = b * Math.PI / 4
+                            C((Math.cos(a)*12).toFloat(), (Math.sin(a)*12).toFloat() - eH/2 + 14f, 3f, bc)
+                        }
+                        L(0f, -5f, 15f, -bossHs); L(0f, -5f, -15f, bossHs)
+                    }
+                    else -> {
+                        L(0f, -5f, 20f, -bossHs); L(0f, -5f, -20f, bossHs)
+                    }
+                }
+            }
+            enemyType == EnemyType.MARTIAL -> {
+                // Martial: outfit hat, body line, combo-dependent arm poses
+                RS(0f, -eH/2+10f, 20f, 20f)
+                val bandColor = when (enemyTier) {
+                    3 -> Color(0.8f, 0f, 0f, 1f)
+                    2 -> Color(0.27f, 0.53f, 0.8f, 1f)
+                    else -> Color(1f, 0.27f, 0.27f, 1f)
+                }
+                R(0f, -eH/2f, 28f, 4f, bandColor)
+                L(0f, -eH/2+20f, 0f, 5f)
+                when (combo) {
+                    0 -> {
+                        L(0f, -10f, 25f, -15f); L(0f, -10f, -15f, 0f)
+                        L(0f, 5f, 20f, 25f); L(0f, 5f, -20f, 25f)
+                    }
+                    1 -> {
+                        L(0f, -10f, -10f, -25f); L(0f, -10f, -20f, 5f)
+                        L(0f, 5f, 35f, 5f); L(0f, 5f, -10f, 30f)
+                    }
+                    2 -> {
+                        val sw = Math.sin(t.toDouble() * 3).toFloat() * 30f
+                        L(0f, -10f, 10f+sw, -20f); L(0f, -10f, -10f-sw, -20f)
+                        L(0f, 5f, 25f+sw, 20f); L(0f, 5f, -25f-sw, 20f)
+                    }
+                    else -> {
+                        L(0f, -10f, 5f, -35f); L(0f, -10f, 20f, -5f)
+                        L(0f, 5f, 10f, 30f); L(0f, 5f, -10f, 30f)
+                        val kc = if (enemyTier == 3) Color(0.8f, 0f, 0f, 1f) else Color(1f, 0.65f, 0f, 1f)
+                        C(5f, -30f, 8f, kc)
+                    }
+                }
+            }
+            else -> {
+                // Normal enemies: head square, spine, swinging arms/legs, tier decorations
+                RS(0f, -eH/2+10f, 20f, 20f)
+                L(0f, -eH/2+20f, 0f, 5f)
+                // Arms: side-to-side swing
+                L(0f, -10f, 15f, -hs); L(0f, -10f, -15f, hs)
+                // Legs: cos swing
+                L(0f, 5f, 15f, 25f + ls); L(0f, 5f, -15f, 25f - ls)
+
+                // Type extras
+                if (enemyType == EnemyType.SCOUT) R(25f, -hs+5f, 20f, 5f) // crossbow
+                if (enemyType == EnemyType.HEAVY) RS(18f, 5f, 15f, 50f) // shield
+
+                // Tier decorations
+                when {
+                    enemyTier == 1 -> R(0f, -eH/2-1.5f, 28f, 3f, drawColor.cpy().mul(1f,1f,1f,0.4f))
+                    enemyTier == 2 -> {
+                        R(0f, -eH/2-2.5f, 24f, 5f); R(0f, -eH/2-9f, 3f, 8f)
+                        R(-15f, -10f, 6f, 6f); R(15f, -10f, 6f, 6f)
+                    }
+                    enemyTier >= 3 -> {
+                        R(0f, -eH/2-3f, 28f, 6f); R(0f, -eH/2-11f, 4f, 10f)
+                        R(-17f, -12f, 10f, 8f); R(17f, -12f, 10f, 8f)
+                        R(-4f, -eH/2+5f, 4f, 3f, Color.RED); R(4f, -eH/2+5f, 4f, 3f, Color.RED)
+                    }
+                }
+            }
+        }
+
         val tex = Texture(pix)
         pix.dispose()
         return tex
     }
+
 
     fun update(playerPosition: Float, platforms: List<PlatformData>) {
         animPhase += 0.15f

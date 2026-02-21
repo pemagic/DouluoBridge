@@ -54,6 +54,10 @@ class DouluoGameScreen(
     var hpMultiplier = 1.0f
     var enemyProjectileCount = 0
 
+    // Fixed timestep: decouple logic (60 Hz) from render frame rate
+    private var accumulator = 0f
+    private val STEP = 1f / 60f
+
     private val stage: Stage
     private val camera: OrthographicCamera
     private val batch: SpriteBatch = game.batch
@@ -345,7 +349,13 @@ class DouluoGameScreen(
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
         if (gameState == GameState.PLAYING) {
-            updateLogic()
+            // Fixed timestep: run logic at exactly 60 Hz regardless of render frame rate
+            // Clamp delta to 0.25s to avoid spiral-of-death on slow devices
+            accumulator += delta.coerceAtMost(0.25f)
+            while (accumulator >= STEP) {
+                updateLogic()
+                accumulator -= STEP
+            }
         }
 
         // Keep background fixed to camera roughly
@@ -551,10 +561,15 @@ class DouluoGameScreen(
                 for (enemy in enemies) {
                     val eid = System.identityHashCode(enemy)
                     if (proj.hitEnemies.contains(eid)) continue
-                    
-                    val dx = Math.abs(proj.x - enemy.x)
-                    val dy = Math.abs(proj.y - enemy.y)
-                    if (dx < (enemy.enemyWidth + 70)/2 && dy < (enemy.enemyHeight + proj.size)/2) {
+
+                    // Use center coordinates for both: enemy center = (x + w/2, y + h/2)
+                    val projCx = proj.x + 35f  // half of ~70px projectile width
+                    val projCy = proj.y + proj.size / 2f
+                    val enemyCx = enemy.x + enemy.enemyWidth / 2f
+                    val enemyCy = enemy.y + enemy.enemyHeight / 2f
+                    val dx = Math.abs(projCx - enemyCx)
+                    val dy = Math.abs(projCy - enemyCy)
+                    if (dx < (enemy.enemyWidth / 2 + 50) && dy < (enemy.enemyHeight / 2 + proj.size / 2)) {
                         val decayFactor = Math.pow(0.9, proj.hitEnemies.size.toDouble())
                         val pierceDmg = (proj.damage * decayFactor).toInt()
                         
@@ -579,9 +594,14 @@ class DouluoGameScreen(
                     }
                 }
             } else {
-                val dx = Math.abs(proj.x - playerNode.x)
-                val dy = Math.abs(proj.y - playerNode.y)
-                if (dx < (playerNode.width/2 + proj.size) && dy < (playerNode.height/2 + proj.size) && playerNode.iframe <= 0) {
+                // Enemy projectile hits player: use center coords
+                val projCx = proj.x + 35f
+                val projCy = proj.y + proj.size / 2f
+                val playerCx = playerNode.x + playerNode.width / 2f
+                val playerCy = playerNode.y + playerNode.height / 2f
+                val dx = Math.abs(projCx - playerCx)
+                val dy = Math.abs(projCy - playerCy)
+                if (dx < (playerNode.width / 2 + proj.size) && dy < (playerNode.height / 2 + proj.size) && playerNode.iframe <= 0) {
                     val shield = playerNode.skills["shield"]
                     if (shield != null && shield.active > 0) {
                         shield.active = Math.max(0, shield.active - 10)
