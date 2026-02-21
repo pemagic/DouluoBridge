@@ -111,4 +111,5 @@ jobs:
           files: |
             DouluoBridge-Android-${{ github.ref_name }}.apk
             DouluoBridge-iOS-${{ github.ref_name }}.xcarchive.zip
-          body_path: RELEASE_LOG.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
