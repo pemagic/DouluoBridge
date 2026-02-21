@@ -283,7 +283,7 @@ class DouluoGameScreen(
         
         if (!plat.isGround) {
             // Floating platforms: draw coloured block + top edge (same as iOS)
-            val darkColor = Color(plat.color).mul(0.58f)
+            val darkColor = Color(plat.color).mul(0.58f, 0.58f, 0.58f, 1f)
             val platW = plat.width
             val platH = plat.height
             
@@ -301,7 +301,7 @@ class DouluoGameScreen(
         } else {
             // Ground: draw only the wavy top edge (a thin strip), no body — matches iOS
             val edgeH = 4f
-            val edgeColor = Color(0.54f, 0.48f, 0.38f, 1f).mul(0.58f)
+            val edgeColor = Color(0.54f, 0.48f, 0.38f, 1f).mul(0.58f, 0.58f, 0.58f, 1f)
             val eW = plat.width
             
             val edge = Image(whiteTex)
@@ -433,6 +433,7 @@ class DouluoGameScreen(
         if (p.dashActive > 0) {
             p.vx = p.facing * Physics.dashForce
             p.vy = 0f
+            if (p.dashActive % 2 == 0) spawnDashTrail(p.x, p.y, p.facing)
             p.dashActive -= 1
         } else {
             if (inputLeft) {
@@ -970,6 +971,7 @@ class DouluoGameScreen(
         playerNode.energy = Math.min(100, playerNode.energy + 4)
 
         spawnDrop(enemy.x, enemy.y)
+        spawnExplosion(enemy.x + enemy.enemyWidth/2f, enemy.y + enemy.enemyHeight/2f, enemy.baseColor)
         delegate.triggerHaptic(if (wasBoss) HapticType.HEAVY else HapticType.MEDIUM)
 
         if (wasBoss) {
@@ -1066,6 +1068,41 @@ class DouluoGameScreen(
         pix.dispose()
         dropTextureCache[key] = tex
         return tex
+    }
+
+    private fun spawnExplosion(cx: Float, cy: Float, color: Color) {
+        for (i in 0 until 12) {
+            val img = Image(whiteTex)
+            img.color = color
+            val size = MathUtils.random(4f, 12f)
+            img.setSize(size, size)
+            img.setPosition(cx - size/2, cy - size/2)
+            
+            val angle = MathUtils.random(MathUtils.PI2)
+            val speed = MathUtils.random(50f, 200f)
+            val dur = MathUtils.random(0.3f, 0.6f)
+            
+            val move = com.badlogic.gdx.scenes.scene2d.actions.Actions.moveBy(MathUtils.cos(angle)*speed, MathUtils.sin(angle)*speed, dur, com.badlogic.gdx.math.Interpolation.circleOut)
+            val fade = com.badlogic.gdx.scenes.scene2d.actions.Actions.fadeOut(dur)
+            val parallel = com.badlogic.gdx.scenes.scene2d.actions.Actions.parallel(move, fade)
+            val remove = com.badlogic.gdx.scenes.scene2d.actions.Actions.removeActor()
+            
+            img.addAction(com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence(parallel, remove))
+            effectLayer.addActor(img)
+        }
+    }
+
+    private fun spawnDashTrail(px: Float, py: Float, facing: Int) {
+        val img = Image(whiteTex)
+        img.color = Color(0f, 1f, 1f, 0.6f)
+        val h = playerNode.height * 0.8f
+        img.setSize(playerNode.width, h)
+        img.setPosition(px + playerNode.width / 2f - img.width / 2f, py + (playerNode.height - h)/2)
+        
+        val fade = com.badlogic.gdx.scenes.scene2d.actions.Actions.fadeOut(0.3f)
+        val remove = com.badlogic.gdx.scenes.scene2d.actions.Actions.removeActor()
+        img.addAction(com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence(fade, remove))
+        effectLayer.addActor(img)
     }
 
     private fun spawnDropIcon(x: Float, y: Float, type: DropData.DropType) {
