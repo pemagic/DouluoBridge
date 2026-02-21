@@ -53,13 +53,21 @@ dependencies {
     natives("com.badlogicgames.gdx:gdx-platform:1.12.1:natives-x86_64")
 }
 
-// Ensure natives are copied before build
+// Remove custom copy task and rely on standard JNI packaging
+android {
+    sourceSets {
+        getByName("main") {
+            jniLibs.srcDirs("src/main/jniLibs", layout.buildDirectory.dir("libs"))
+        }
+    }
+}
 tasks.register<Copy>("copyAndroidNatives") {
-    from(natives)
+    from(configurations.getByName("natives").map { zipTree(it) })
     into(layout.buildDirectory.dir("libs"))
+    include("**/*.so")
 }
 tasks.whenTaskAdded {
-    if (name.startsWith("preBuild")) {
+    if (name.contains("package")) {
         dependsOn("copyAndroidNatives")
     }
 }
