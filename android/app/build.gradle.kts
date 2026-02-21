@@ -55,9 +55,11 @@ dependencies {
 
 // Ensure natives are copied before build
 tasks.register<Copy>("copyAndroidNatives") {
-    from(configurations.getByName("natives"))
+    from(natives)
     into(layout.buildDirectory.dir("libs"))
 }
-tasks.named("preBuild") {
-    dependsOn("copyAndroidNatives")
+tasks.whenTaskAdded {
+    if (name.startsWith("preBuild")) {
+        dependsOn("copyAndroidNatives")
+    }
 }
