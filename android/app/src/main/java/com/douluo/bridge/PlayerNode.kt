@@ -24,6 +24,8 @@ class PlayerNode : Group() {
     // Size defined in iOS is 40x64
     init {
         setSize(40f, 64f)
+        setOrigin(20f, 0f)
+        setScale(1.3f)
         setupSkills()
         
         bodyGroup = Group()

@@ -101,6 +101,8 @@ class EnemyNode(
         }
 
         setSize(enemyWidth, enemyHeight)
+        setOrigin(enemyWidth / 2f, 0f)
+        setScale(1.3f)
 
         stickSprite = Image()
         addActor(stickSprite)

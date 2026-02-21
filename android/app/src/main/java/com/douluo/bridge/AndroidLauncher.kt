@@ -597,13 +597,14 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
                 }
             }
 
+            levelBanner.animate().cancel()
             levelBannerTitle.text = name
             levelBanner.visibility = View.VISIBLE
             levelBanner.alpha = 0f
             levelBanner.translationY = -dpToPx(50f).toFloat()
 
-            levelBanner.animate().alpha(1f).translationY(0f).setDuration(400).withEndAction {
-                levelBanner.animate().alpha(0f).translationY(-dpToPx(50f).toFloat()).setDuration(400).setStartDelay(2000).withEndAction {
+            levelBanner.animate().alpha(1f).translationY(0f).setDuration(300).withEndAction {
+                levelBanner.animate().alpha(0f).translationY(-dpToPx(50f).toFloat()).setDuration(400).setStartDelay(1500).withEndAction {
                     levelBanner.visibility = View.GONE
                 }.start()
             }.start()

@@ -559,7 +559,9 @@ class GameScene: SKScene {
                         playerNode.iframe = 24  // v1.6: 0.4s invincibility
                         gameDelegate?.triggerHaptic(.medium)
                     }
-                    enemy.hp = 0  // self-destruct
+                    if !enemy.isBoss {
+                        enemy.hp = 0  // self-destruct only if it's not a boss
+                    }
                 }
             }
             
