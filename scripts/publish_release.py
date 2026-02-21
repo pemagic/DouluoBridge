@@ -61,24 +61,17 @@ except urllib.error.HTTPError as e:
     if e.code != 404:
         print(f"警告: {e}")
 
-# 动态读取最近的 Git Commits 作为 Release 说明
+# 动态读取最新的 Git Commit 作为当前版本的 Release 说明
 body_text = f"## 🚀 DouluoBridge v{version} 正式发布\n\n"
 try:
-    # 获取最新的 git tag
-    last_tag = subprocess.check_output(["git", "describe", "--tags", "--abbrev=0"]).decode().strip()
-    # 获取从 latest tag 到现在的 commits
-    commits = subprocess.check_output(["git", "log", f"{last_tag}..HEAD", "--pretty=format:- %s"]).decode()
+    # 仅获取最近一次的 commit（即发版 commit）作为本次版本内容
+    commits = subprocess.check_output(["git", "log", "-1", "--pretty=format:%s%n%b"]).decode().strip()
     if commits:
-        body_text += "### ✨ 更新内容 (Changelog)\n" + commits
+        body_text += "### ✨ 更新内容\n- " + commits.replace('\n', '\n- ')
     else:
         body_text += "常规稳定性维护与性能优化。"
 except Exception:
-    # 容错：如果没有 tag 或者任何 git 报错，则取最近的 3 条 commit
-    try:
-        commits = subprocess.check_output(["git", "log", "-n", "3", "--pretty=format:- %s"]).decode()
-        body_text += "### ✨ 最新提交 (Recent Commits)\n" + commits
-    except:
-        body_text += "v{version} release"
+    body_text += f"v{version} release"
 
 # 创建 Release
 payload = json.dumps({
