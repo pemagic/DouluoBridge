@@ -23,6 +23,8 @@ android {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Use debug signing for release builds so that they are installable for testing
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {

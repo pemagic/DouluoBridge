@@ -19,7 +19,37 @@ if [ ! -d "$ROOT_DIR/ios" ] || [ ! -d "$ROOT_DIR/android" ]; then
     exit 1
 fi
 
-echo "🚀 Starting Release Process for v$VERSION..."
+echo "🚀 启动 v$VERSION 发布流程..."
+
+# 0. 本地环境校验 (Local Verification)
+echo "🔍 正在进行本地构建与安装校验..."
+cd "$ROOT_DIR/android"
+./gradlew assembleDebug > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo "❌ 错误: 本地 Android 构建失败，请先修复代码再发布。"
+    exit 1
+fi
+
+ADB="/Users/mac/android-sdk/platform-tools/adb"
+DEVICE=$($ADB devices | grep -w "device" | head -n 1 | cut -f1)
+
+if [ -z "$DEVICE" ]; then
+    echo "⚠️ 警告: 未检测到连接的安卓设备/模拟器。根据您的要求，必须在本地安装测试通过后才能执行 Git 同步。"
+    echo "请连接设备并确保其处于 'device' 状态后再重试。"
+    exit 1
+fi
+
+echo "📲 正在安装到设备 ($DEVICE) 进行最后验证..."
+$ADB -s $DEVICE install -r app/build/outputs/apk/debug/app-debug.apk > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo "❌ 错误: APK 安装到设备失败。请检查设备连接或存储空间。"
+    exit 1
+fi
+
+echo "✅ 本地安装成功！请在手机上确认运行正常。确认无误后按任意键继续执行 Git 同步（或 Ctrl+C 退出）..."
+read -n 1 -s
+
+cd "$ROOT_DIR"
 
 # 1. Update Android Version
 echo "🤖 Updating Android version..."
