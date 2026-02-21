@@ -65,6 +65,7 @@ tasks.register<Copy>("copyAndroidNatives") {
     from(configurations.getByName("natives").map { zipTree(it) })
     into(layout.buildDirectory.dir("libs"))
     include("**/*.so")
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 tasks.whenTaskAdded {
     if (name.contains("package")) {

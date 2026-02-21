@@ -1,186 +1,186 @@
-﻿2026-02-21T16:38:55.7322235Z Current runner version: '2.331.0'
-2026-02-21T16:38:55.7346802Z ##[group]Runner Image Provisioner
-2026-02-21T16:38:55.7347656Z Hosted Compute Agent
-2026-02-21T16:38:55.7348424Z Version: 20260123.484
-2026-02-21T16:38:55.7349240Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
-2026-02-21T16:38:55.7350028Z Build Date: 2026-01-23T19:41:17Z
-2026-02-21T16:38:55.7350755Z Worker ID: {f7fff26c-f1cb-4dbf-815c-26fbdfd38ee0}
-2026-02-21T16:38:55.7351883Z Azure Region: northcentralus
-2026-02-21T16:38:55.7352857Z ##[endgroup]
-2026-02-21T16:38:55.7354925Z ##[group]Operating System
-2026-02-21T16:38:55.7355625Z Ubuntu
-2026-02-21T16:38:55.7356124Z 24.04.3
-2026-02-21T16:38:55.7356824Z LTS
-2026-02-21T16:38:55.7357441Z ##[endgroup]
-2026-02-21T16:38:55.7357996Z ##[group]Runner Image
-2026-02-21T16:38:55.7358552Z Image: ubuntu-24.04
-2026-02-21T16:38:55.7359020Z Version: 20260201.15.1
-2026-02-21T16:38:55.7360725Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260201.15/images/ubuntu/Ubuntu2404-Readme.md
-2026-02-21T16:38:55.7362270Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260201.15
-2026-02-21T16:38:55.7363727Z ##[endgroup]
-2026-02-21T16:38:55.7364829Z ##[group]GITHUB_TOKEN Permissions
-2026-02-21T16:38:55.7366881Z Contents: write
-2026-02-21T16:38:55.7367892Z Metadata: read
-2026-02-21T16:38:55.7368448Z ##[endgroup]
-2026-02-21T16:38:55.7370488Z Secret source: Actions
-2026-02-21T16:38:55.7371771Z Prepare workflow directory
-2026-02-21T16:38:55.7728906Z Prepare all required actions
-2026-02-21T16:38:55.7768141Z Getting action download info
-2026-02-21T16:38:56.0983789Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
-2026-02-21T16:38:56.1916284Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
-2026-02-21T16:38:56.7186137Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
-2026-02-21T16:38:56.9449839Z Complete job name: Build Android App
-2026-02-21T16:38:57.0179985Z ##[group]Run actions/checkout@v4
-2026-02-21T16:38:57.0180868Z with:
-2026-02-21T16:38:57.0181316Z   repository: pemagic/DouluoBridge
-2026-02-21T16:38:57.0182058Z   token: ***
-2026-02-21T16:38:57.0182475Z   ssh-strict: true
-2026-02-21T16:38:57.0183138Z   ssh-user: git
-2026-02-21T16:38:57.0183565Z   persist-credentials: true
-2026-02-21T16:38:57.0184034Z   clean: true
-2026-02-21T16:38:57.0184470Z   sparse-checkout-cone-mode: true
-2026-02-21T16:38:57.0184964Z   fetch-depth: 1
-2026-02-21T16:38:57.0185373Z   fetch-tags: false
-2026-02-21T16:38:57.0185794Z   show-progress: true
-2026-02-21T16:38:57.0186224Z   lfs: false
-2026-02-21T16:38:57.0186632Z   submodules: false
-2026-02-21T16:38:57.0187055Z   set-safe-directory: true
-2026-02-21T16:38:57.0187788Z ##[endgroup]
-2026-02-21T16:38:57.1327452Z Syncing repository: pemagic/DouluoBridge
-2026-02-21T16:38:57.1330439Z ##[group]Getting Git version info
-2026-02-21T16:38:57.1331786Z Working directory is '/home/runner/work/DouluoBridge/DouluoBridge'
-2026-02-21T16:38:57.1333988Z [command]/usr/bin/git version
-2026-02-21T16:38:57.1404871Z git version 2.52.0
-2026-02-21T16:38:57.1432070Z ##[endgroup]
-2026-02-21T16:38:57.1446414Z Temporarily overriding HOME='/home/runner/work/_temp/e74fa566-be21-446f-90e0-7a0f4c3b7621' before making global git config changes
-2026-02-21T16:38:57.1447841Z Adding repository directory to the temporary git global config as a safe directory
-2026-02-21T16:38:57.1459017Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/DouluoBridge/DouluoBridge
-2026-02-21T16:38:57.1498410Z Deleting the contents of '/home/runner/work/DouluoBridge/DouluoBridge'
-2026-02-21T16:38:57.1502014Z ##[group]Initializing the repository
-2026-02-21T16:38:57.1506447Z [command]/usr/bin/git init /home/runner/work/DouluoBridge/DouluoBridge
-2026-02-21T16:38:57.1611072Z hint: Using 'master' as the name for the initial branch. This default branch name
-2026-02-21T16:38:57.1612858Z hint: will change to "main" in Git 3.0. To configure the initial branch name
-2026-02-21T16:38:57.1614578Z hint: to use in all of your new repositories, which will suppress this warning,
-2026-02-21T16:38:57.1615942Z hint: call:
-2026-02-21T16:38:57.1616392Z hint:
-2026-02-21T16:38:57.1617568Z hint: 	git config --global init.defaultBranch <name>
-2026-02-21T16:38:57.1618712Z hint:
-2026-02-21T16:38:57.1619764Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
-2026-02-21T16:38:57.1621512Z hint: 'development'. The just-created branch can be renamed via this command:
-2026-02-21T16:38:57.1623107Z hint:
-2026-02-21T16:38:57.1623867Z hint: 	git branch -m <name>
-2026-02-21T16:38:57.1624682Z hint:
-2026-02-21T16:38:57.1625759Z hint: Disable this message with "git config set advice.defaultBranchName false"
-2026-02-21T16:38:57.1627704Z Initialized empty Git repository in /home/runner/work/DouluoBridge/DouluoBridge/.git/
-2026-02-21T16:38:57.1630794Z [command]/usr/bin/git remote add origin https://github.com/pemagic/DouluoBridge
-2026-02-21T16:38:57.1665639Z ##[endgroup]
-2026-02-21T16:38:57.1666992Z ##[group]Disabling automatic garbage collection
-2026-02-21T16:38:57.1670495Z [command]/usr/bin/git config --local gc.auto 0
-2026-02-21T16:38:57.1699550Z ##[endgroup]
-2026-02-21T16:38:57.1700857Z ##[group]Setting up auth
-2026-02-21T16:38:57.1707252Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
-2026-02-21T16:38:57.1738581Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
-2026-02-21T16:38:57.2153782Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
-2026-02-21T16:38:57.2185376Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
-2026-02-21T16:38:57.2409416Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
-2026-02-21T16:38:57.2441137Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
-2026-02-21T16:38:57.2659266Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
-2026-02-21T16:38:57.2692473Z ##[endgroup]
-2026-02-21T16:38:57.2694055Z ##[group]Fetching the repository
-2026-02-21T16:38:57.2702099Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +eb06704e0fddd71f8ecc0cb67b861c1758e0af00:refs/tags/v0.6.0-demo
-2026-02-21T16:38:57.9411609Z From https://github.com/pemagic/DouluoBridge
-2026-02-21T16:38:57.9413026Z  * [new ref]         eb06704e0fddd71f8ecc0cb67b861c1758e0af00 -> v0.6.0-demo
-2026-02-21T16:38:57.9440857Z ##[endgroup]
-2026-02-21T16:38:57.9441724Z ##[group]Determining the checkout info
-2026-02-21T16:38:57.9443379Z ##[endgroup]
-2026-02-21T16:38:57.9448499Z [command]/usr/bin/git sparse-checkout disable
-2026-02-21T16:38:57.9492114Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
-2026-02-21T16:38:57.9520198Z ##[group]Checking out the ref
-2026-02-21T16:38:57.9524560Z [command]/usr/bin/git checkout --progress --force refs/tags/v0.6.0-demo
-2026-02-21T16:38:58.0300776Z Note: switching to 'refs/tags/v0.6.0-demo'.
-2026-02-21T16:38:58.0301775Z 
-2026-02-21T16:38:58.0302436Z You are in 'detached HEAD' state. You can look around, make experimental
-2026-02-21T16:38:58.0304400Z changes and commit them, and you can discard any commits you make in this
-2026-02-21T16:38:58.0305978Z state without impacting any branches by switching back to a branch.
-2026-02-21T16:38:58.0306896Z 
-2026-02-21T16:38:58.0307457Z If you want to create a new branch to retain commits you create, you may
-2026-02-21T16:38:58.0308873Z do so (now or later) by using -c with the switch command. Example:
-2026-02-21T16:38:58.0309742Z 
-2026-02-21T16:38:58.0310026Z   git switch -c <new-branch-name>
-2026-02-21T16:38:58.0311010Z 
-2026-02-21T16:38:58.0311288Z Or undo this operation with:
-2026-02-21T16:38:58.0311803Z 
-2026-02-21T16:38:58.0312038Z   git switch -
-2026-02-21T16:38:58.0312411Z 
-2026-02-21T16:38:58.0313460Z Turn off this advice by setting config variable advice.detachedHead to false
-2026-02-21T16:38:58.0315269Z 
-2026-02-21T16:38:58.0316729Z HEAD is now at eb06704 Fix AndroidManifest package attribute conflict and enable stacktrace
-2026-02-21T16:38:58.0321332Z ##[endgroup]
-2026-02-21T16:38:58.0360581Z [command]/usr/bin/git log -1 --format=%H
-2026-02-21T16:38:58.0383317Z eb06704e0fddd71f8ecc0cb67b861c1758e0af00
-2026-02-21T16:38:58.0718357Z ##[group]Run actions/setup-java@v4
-2026-02-21T16:38:58.0719148Z with:
-2026-02-21T16:38:58.0719630Z   distribution: temurin
-2026-02-21T16:38:58.0720241Z   java-version: 17
-2026-02-21T16:38:58.0720799Z   java-package: jdk
-2026-02-21T16:38:58.0721420Z   check-latest: false
-2026-02-21T16:38:58.0722003Z   server-id: github
-2026-02-21T16:38:58.0722788Z   server-username: GITHUB_ACTOR
-2026-02-21T16:38:58.0723593Z   server-password: GITHUB_TOKEN
-2026-02-21T16:38:58.0724323Z   overwrite-settings: true
-2026-02-21T16:38:58.0724961Z   job-status: success
-2026-02-21T16:38:58.0725775Z   token: ***
-2026-02-21T16:38:58.0726266Z ##[endgroup]
-2026-02-21T16:38:58.2732020Z ##[group]Installed distributions
-2026-02-21T16:38:58.2988313Z Resolved Java 17.0.18+8 from tool-cache
-2026-02-21T16:38:58.2989958Z Setting Java 17.0.18+8 as the default
-2026-02-21T16:38:58.3005636Z Creating toolchains.xml for JDK version 17 from temurin
-2026-02-21T16:38:58.3085313Z Writing to /home/runner/.m2/toolchains.xml
-2026-02-21T16:38:58.3086962Z 
-2026-02-21T16:38:58.3087524Z Java configuration:
-2026-02-21T16:38:58.3088910Z   Distribution: temurin
-2026-02-21T16:38:58.3090328Z   Version: 17.0.18+8
-2026-02-21T16:38:58.3092017Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
-2026-02-21T16:38:58.3094000Z 
-2026-02-21T16:38:58.3095706Z ##[endgroup]
-2026-02-21T16:38:58.3113884Z Creating settings.xml with server-id: github
-2026-02-21T16:38:58.3115121Z Writing to /home/runner/.m2/settings.xml
-2026-02-21T16:38:58.3261271Z ##[group]Run cd android
-2026-02-21T16:38:58.3262512Z [36;1mcd android[0m
-2026-02-21T16:38:58.3263899Z [36;1mchmod +x gradlew[0m
-2026-02-21T16:38:58.3306179Z shell: /usr/bin/bash -e {0}
-2026-02-21T16:38:58.3307323Z env:
-2026-02-21T16:38:58.3308633Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
-2026-02-21T16:38:58.3310845Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
-2026-02-21T16:38:58.3312812Z ##[endgroup]
-2026-02-21T16:38:58.3553490Z ##[group]Run cd android
-2026-02-21T16:38:58.3554475Z [36;1mcd android[0m
-2026-02-21T16:38:58.3559658Z [36;1m./gradlew assembleRelease --no-daemon --stacktrace > build.log 2>&1 || (git config --global user.name 'github-actions[bot]' && git config --global user.email 'github-actions[bot]@users.noreply.github.com' && git switch -c ci-failure && mv build.log error.log && git add error.log && git commit -m "Upload error log" && git push -f origin ci-failure && exit 1)[0m
-2026-02-21T16:38:58.3600490Z shell: /usr/bin/bash -e {0}
-2026-02-21T16:38:58.3601403Z env:
-2026-02-21T16:38:58.3602789Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
-2026-02-21T16:38:58.3604777Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
-2026-02-21T16:38:58.3606328Z ##[endgroup]
-2026-02-21T16:41:34.4195380Z Switched to a new branch 'ci-failure'
-2026-02-21T16:41:34.4924742Z [ci-failure 285a413] Upload error log
-2026-02-21T16:41:34.4925365Z  1 file changed, 162 insertions(+), 12 deletions(-)
-2026-02-21T16:41:34.9603578Z To https://github.com/pemagic/DouluoBridge
-2026-02-21T16:41:34.9604167Z  + cf4c417...285a413 ci-failure -> ci-failure (forced update)
-2026-02-21T16:41:34.9665460Z ##[error]Process completed with exit code 1.
-2026-02-21T16:41:34.9789128Z Post job cleanup.
-2026-02-21T16:41:35.1611726Z Post job cleanup.
-2026-02-21T16:41:35.2573548Z [command]/usr/bin/git version
-2026-02-21T16:41:35.2609976Z git version 2.52.0
-2026-02-21T16:41:35.2647871Z Copying '/home/runner/.gitconfig' to '/home/runner/work/_temp/f80bde07-91bb-48fa-a0ef-da9a3838707c/.gitconfig'
-2026-02-21T16:41:35.2657470Z Temporarily overriding HOME='/home/runner/work/_temp/f80bde07-91bb-48fa-a0ef-da9a3838707c' before making global git config changes
-2026-02-21T16:41:35.2658697Z Adding repository directory to the temporary git global config as a safe directory
-2026-02-21T16:41:35.2662950Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/DouluoBridge/DouluoBridge
-2026-02-21T16:41:35.2703878Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
-2026-02-21T16:41:35.2743753Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
-2026-02-21T16:41:35.2998364Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
-2026-02-21T16:41:35.3023767Z http.https://github.com/.extraheader
-2026-02-21T16:41:35.3037781Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
-2026-02-21T16:41:35.3071488Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
-2026-02-21T16:41:35.3316327Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
-2026-02-21T16:41:35.3356133Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
-2026-02-21T16:41:35.3708666Z Cleaning up orphan processes
+﻿2026-02-21T16:50:24.0097716Z Current runner version: '2.331.0'
+2026-02-21T16:50:24.0121323Z ##[group]Runner Image Provisioner
+2026-02-21T16:50:24.0122126Z Hosted Compute Agent
+2026-02-21T16:50:24.0122642Z Version: 20260123.484
+2026-02-21T16:50:24.0123319Z Commit: 6bd6555ca37d84114959e1c76d2c01448ff61c5d
+2026-02-21T16:50:24.0123982Z Build Date: 2026-01-23T19:41:17Z
+2026-02-21T16:50:24.0124628Z Worker ID: {23218e06-b83b-4609-9d62-8a00df200a6b}
+2026-02-21T16:50:24.0125279Z Azure Region: eastus2
+2026-02-21T16:50:24.0126029Z ##[endgroup]
+2026-02-21T16:50:24.0128138Z ##[group]Operating System
+2026-02-21T16:50:24.0129355Z Ubuntu
+2026-02-21T16:50:24.0130132Z 24.04.3
+2026-02-21T16:50:24.0130599Z LTS
+2026-02-21T16:50:24.0131180Z ##[endgroup]
+2026-02-21T16:50:24.0131664Z ##[group]Runner Image
+2026-02-21T16:50:24.0132221Z Image: ubuntu-24.04
+2026-02-21T16:50:24.0132744Z Version: 20260201.15.1
+2026-02-21T16:50:24.0133946Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260201.15/images/ubuntu/Ubuntu2404-Readme.md
+2026-02-21T16:50:24.0135465Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260201.15
+2026-02-21T16:50:24.0136363Z ##[endgroup]
+2026-02-21T16:50:24.0137298Z ##[group]GITHUB_TOKEN Permissions
+2026-02-21T16:50:24.0139730Z Contents: write
+2026-02-21T16:50:24.0140329Z Metadata: read
+2026-02-21T16:50:24.0140947Z ##[endgroup]
+2026-02-21T16:50:24.0142993Z Secret source: Actions
+2026-02-21T16:50:24.0143743Z Prepare workflow directory
+2026-02-21T16:50:24.0459750Z Prepare all required actions
+2026-02-21T16:50:24.0497020Z Getting action download info
+2026-02-21T16:50:24.3946333Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+2026-02-21T16:50:24.5117575Z Download action repository 'actions/setup-java@v4' (SHA:c1e323688fd81a25caa38c78aa6df2d33d3e20d9)
+2026-02-21T16:50:24.8234819Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-02-21T16:50:25.0473184Z Complete job name: Build Android App
+2026-02-21T16:50:25.1189691Z ##[group]Run actions/checkout@v4
+2026-02-21T16:50:25.1190653Z with:
+2026-02-21T16:50:25.1191109Z   repository: pemagic/DouluoBridge
+2026-02-21T16:50:25.1191815Z   token: ***
+2026-02-21T16:50:25.1192247Z   ssh-strict: true
+2026-02-21T16:50:25.1192678Z   ssh-user: git
+2026-02-21T16:50:25.1193109Z   persist-credentials: true
+2026-02-21T16:50:25.1193595Z   clean: true
+2026-02-21T16:50:25.1194035Z   sparse-checkout-cone-mode: true
+2026-02-21T16:50:25.1194561Z   fetch-depth: 1
+2026-02-21T16:50:25.1194988Z   fetch-tags: false
+2026-02-21T16:50:25.1195440Z   show-progress: true
+2026-02-21T16:50:25.1195919Z   lfs: false
+2026-02-21T16:50:25.1196348Z   submodules: false
+2026-02-21T16:50:25.1196798Z   set-safe-directory: true
+2026-02-21T16:50:25.1197516Z ##[endgroup]
+2026-02-21T16:50:25.2271522Z Syncing repository: pemagic/DouluoBridge
+2026-02-21T16:50:25.2273354Z ##[group]Getting Git version info
+2026-02-21T16:50:25.2274153Z Working directory is '/home/runner/work/DouluoBridge/DouluoBridge'
+2026-02-21T16:50:25.2275338Z [command]/usr/bin/git version
+2026-02-21T16:50:25.2357328Z git version 2.52.0
+2026-02-21T16:50:25.2383359Z ##[endgroup]
+2026-02-21T16:50:25.2397431Z Temporarily overriding HOME='/home/runner/work/_temp/144285e8-df49-4885-bb84-00446e7b14cb' before making global git config changes
+2026-02-21T16:50:25.2399800Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-21T16:50:25.2410174Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/DouluoBridge/DouluoBridge
+2026-02-21T16:50:25.2449047Z Deleting the contents of '/home/runner/work/DouluoBridge/DouluoBridge'
+2026-02-21T16:50:25.2452642Z ##[group]Initializing the repository
+2026-02-21T16:50:25.2456569Z [command]/usr/bin/git init /home/runner/work/DouluoBridge/DouluoBridge
+2026-02-21T16:50:25.2575039Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-02-21T16:50:25.2576784Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-02-21T16:50:25.2578383Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-02-21T16:50:25.2579869Z hint: call:
+2026-02-21T16:50:25.2580503Z hint:
+2026-02-21T16:50:25.2581308Z hint: 	git config --global init.defaultBranch <name>
+2026-02-21T16:50:25.2582323Z hint:
+2026-02-21T16:50:25.2583028Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-02-21T16:50:25.2584020Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-02-21T16:50:25.2585212Z hint:
+2026-02-21T16:50:25.2585665Z hint: 	git branch -m <name>
+2026-02-21T16:50:25.2586143Z hint:
+2026-02-21T16:50:25.2586797Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-02-21T16:50:25.2587893Z Initialized empty Git repository in /home/runner/work/DouluoBridge/DouluoBridge/.git/
+2026-02-21T16:50:25.2591021Z [command]/usr/bin/git remote add origin https://github.com/pemagic/DouluoBridge
+2026-02-21T16:50:25.2626055Z ##[endgroup]
+2026-02-21T16:50:25.2627488Z ##[group]Disabling automatic garbage collection
+2026-02-21T16:50:25.2631344Z [command]/usr/bin/git config --local gc.auto 0
+2026-02-21T16:50:25.2660542Z ##[endgroup]
+2026-02-21T16:50:25.2667789Z ##[group]Setting up auth
+2026-02-21T16:50:25.2669350Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-02-21T16:50:25.2699574Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-02-21T16:50:25.3060042Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-21T16:50:25.3091393Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-02-21T16:50:25.3310602Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-21T16:50:25.3347814Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-02-21T16:50:25.3565778Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-02-21T16:50:25.3599268Z ##[endgroup]
+2026-02-21T16:50:25.3600723Z ##[group]Fetching the repository
+2026-02-21T16:50:25.3609232Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +cbcbc88caeaed78f50ba06ca052694317fcfee6f:refs/tags/v0.7.0-demo
+2026-02-21T16:50:26.1126413Z From https://github.com/pemagic/DouluoBridge
+2026-02-21T16:50:26.1128379Z  * [new ref]         cbcbc88caeaed78f50ba06ca052694317fcfee6f -> v0.7.0-demo
+2026-02-21T16:50:26.1156995Z ##[endgroup]
+2026-02-21T16:50:26.1159256Z ##[group]Determining the checkout info
+2026-02-21T16:50:26.1161524Z ##[endgroup]
+2026-02-21T16:50:26.1165200Z [command]/usr/bin/git sparse-checkout disable
+2026-02-21T16:50:26.1210168Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-02-21T16:50:26.1236796Z ##[group]Checking out the ref
+2026-02-21T16:50:26.1240488Z [command]/usr/bin/git checkout --progress --force refs/tags/v0.7.0-demo
+2026-02-21T16:50:26.1949545Z Note: switching to 'refs/tags/v0.7.0-demo'.
+2026-02-21T16:50:26.1950791Z 
+2026-02-21T16:50:26.1951907Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-02-21T16:50:26.1954729Z changes and commit them, and you can discard any commits you make in this
+2026-02-21T16:50:26.1957678Z state without impacting any branches by switching back to a branch.
+2026-02-21T16:50:26.1959720Z 
+2026-02-21T16:50:26.1960834Z If you want to create a new branch to retain commits you create, you may
+2026-02-21T16:50:26.1963570Z do so (now or later) by using -c with the switch command. Example:
+2026-02-21T16:50:26.1965216Z 
+2026-02-21T16:50:26.1965772Z   git switch -c <new-branch-name>
+2026-02-21T16:50:26.1967159Z 
+2026-02-21T16:50:26.1967569Z Or undo this operation with:
+2026-02-21T16:50:26.1968252Z 
+2026-02-21T16:50:26.1968683Z   git switch -
+2026-02-21T16:50:26.1969505Z 
+2026-02-21T16:50:26.1970538Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-02-21T16:50:26.1972422Z 
+2026-02-21T16:50:26.1973679Z HEAD is now at cbcbc88 Fix Gradle dependency configuration mutation error during release build
+2026-02-21T16:50:26.1978308Z ##[endgroup]
+2026-02-21T16:50:26.2010556Z [command]/usr/bin/git log -1 --format=%H
+2026-02-21T16:50:26.2031397Z cbcbc88caeaed78f50ba06ca052694317fcfee6f
+2026-02-21T16:50:26.2401023Z ##[group]Run actions/setup-java@v4
+2026-02-21T16:50:26.2402123Z with:
+2026-02-21T16:50:26.2402886Z   distribution: temurin
+2026-02-21T16:50:26.2403800Z   java-version: 17
+2026-02-21T16:50:26.2404705Z   java-package: jdk
+2026-02-21T16:50:26.2405573Z   check-latest: false
+2026-02-21T16:50:26.2406460Z   server-id: github
+2026-02-21T16:50:26.2407348Z   server-username: GITHUB_ACTOR
+2026-02-21T16:50:26.2408418Z   server-password: GITHUB_TOKEN
+2026-02-21T16:50:26.2409692Z   overwrite-settings: true
+2026-02-21T16:50:26.2410759Z   job-status: success
+2026-02-21T16:50:26.2412002Z   token: ***
+2026-02-21T16:50:26.2412769Z ##[endgroup]
+2026-02-21T16:50:26.4439326Z ##[group]Installed distributions
+2026-02-21T16:50:26.4510206Z Resolved Java 17.0.18+8 from tool-cache
+2026-02-21T16:50:26.4512122Z Setting Java 17.0.18+8 as the default
+2026-02-21T16:50:26.4525413Z Creating toolchains.xml for JDK version 17 from temurin
+2026-02-21T16:50:26.4601286Z Writing to /home/runner/.m2/toolchains.xml
+2026-02-21T16:50:26.4602779Z 
+2026-02-21T16:50:26.4603355Z Java configuration:
+2026-02-21T16:50:26.4604773Z   Distribution: temurin
+2026-02-21T16:50:26.4606240Z   Version: 17.0.18+8
+2026-02-21T16:50:26.4608297Z   Path: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-02-21T16:50:26.4610285Z 
+2026-02-21T16:50:26.4611714Z ##[endgroup]
+2026-02-21T16:50:26.4629644Z Creating settings.xml with server-id: github
+2026-02-21T16:50:26.4634887Z Writing to /home/runner/.m2/settings.xml
+2026-02-21T16:50:26.4776145Z ##[group]Run cd android
+2026-02-21T16:50:26.4777197Z [36;1mcd android[0m
+2026-02-21T16:50:26.4778038Z [36;1mchmod +x gradlew[0m
+2026-02-21T16:50:26.4818378Z shell: /usr/bin/bash -e {0}
+2026-02-21T16:50:26.4819579Z env:
+2026-02-21T16:50:26.4820723Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-02-21T16:50:26.4822730Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-02-21T16:50:26.4824279Z ##[endgroup]
+2026-02-21T16:50:26.5052238Z ##[group]Run cd android
+2026-02-21T16:50:26.5053162Z [36;1mcd android[0m
+2026-02-21T16:50:26.5058160Z [36;1m./gradlew assembleRelease --no-daemon --stacktrace > build.log 2>&1 || (git config --global user.name 'github-actions[bot]' && git config --global user.email 'github-actions[bot]@users.noreply.github.com' && git switch -c ci-failure && mv build.log error.log && git add error.log && git commit -m "Upload error log" && git push -f origin ci-failure && exit 1)[0m
+2026-02-21T16:50:26.5096316Z shell: /usr/bin/bash -e {0}
+2026-02-21T16:50:26.5097218Z env:
+2026-02-21T16:50:26.5098328Z   JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-02-21T16:50:26.5100426Z   JAVA_HOME_17_X64: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.18-8/x64
+2026-02-21T16:50:26.5101928Z ##[endgroup]
+2026-02-21T16:51:34.3439522Z Switched to a new branch 'ci-failure'
+2026-02-21T16:51:34.4870027Z [ci-failure fbabc6d] Upload error log
+2026-02-21T16:51:34.4870823Z  1 file changed, 150 insertions(+), 113 deletions(-)
+2026-02-21T16:51:35.0373746Z To https://github.com/pemagic/DouluoBridge
+2026-02-21T16:51:35.0374598Z  + 285a413...fbabc6d ci-failure -> ci-failure (forced update)
+2026-02-21T16:51:35.0434089Z ##[error]Process completed with exit code 1.
+2026-02-21T16:51:35.0544744Z Post job cleanup.
+2026-02-21T16:51:35.2306697Z Post job cleanup.
+2026-02-21T16:51:35.3248332Z [command]/usr/bin/git version
+2026-02-21T16:51:35.3284879Z git version 2.52.0
+2026-02-21T16:51:35.3324050Z Copying '/home/runner/.gitconfig' to '/home/runner/work/_temp/34d8eb9c-1014-4fcc-b103-b6166c275cfe/.gitconfig'
+2026-02-21T16:51:35.3333903Z Temporarily overriding HOME='/home/runner/work/_temp/34d8eb9c-1014-4fcc-b103-b6166c275cfe' before making global git config changes
+2026-02-21T16:51:35.3335325Z Adding repository directory to the temporary git global config as a safe directory
+2026-02-21T16:51:35.3347126Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/DouluoBridge/DouluoBridge
+2026-02-21T16:51:35.3381751Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-02-21T16:51:35.3413259Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-02-21T16:51:35.3656415Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-02-21T16:51:35.3679207Z http.https://github.com/.extraheader
+2026-02-21T16:51:35.3692331Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-02-21T16:51:35.3723405Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-02-21T16:51:35.3948656Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-02-21T16:51:35.3979552Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-02-21T16:51:35.4311262Z Cleaning up orphan processes
