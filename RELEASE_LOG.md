@@ -1,4 +1,4 @@
-## 🚀 DouluoBridge v1.8.14 终极更新
+## 🚀 DouluoBridge 跨时代核心更新 (Cross-Platform Evolution)
 
 非常高兴地通知您！本次版本解决了诸多深层痛点，达成了前所未有的表现力与稳定性！✨
 

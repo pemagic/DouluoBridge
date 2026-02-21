@@ -61,8 +61,10 @@ except urllib.error.HTTPError as e:
     if e.code != 404:
         print(f"警告: {e}")
 
-# 读取 Release 说明
-body_text = open(RELEASE_LOG).read() if os.path.exists(RELEASE_LOG) else f"v{version} release"
+# 读取 Release 说明并动态注入当前版本号头衔
+body_text = f"## 🚀 DouluoBridge v{version} 正式发布\n\n"
+if os.path.exists(RELEASE_LOG):
+    body_text += open(RELEASE_LOG).read()
 
 # 创建 Release
 payload = json.dumps({
