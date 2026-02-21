@@ -69,7 +69,7 @@ class GameScene: SKScene {
     // MARK: - Scene Lifecycle
     
     override func didMove(to view: SKView) {
-        backgroundColor = UIColor(red: 0.02, green: 0.02, blue: 0.02, alpha: 1)  // #050505
+        backgroundColor = .white
         anchorPoint = CGPoint(x: 0, y: 0)  // Bottom-left origin
         
         // Setup camera
@@ -104,32 +104,10 @@ class GameScene: SKScene {
         gameState = .menu
         gameDelegate?.gameStateChanged(.menu)
         
-        // Add CRT Scanline Overlay (Visual Fidelity)
-        createCRTOverlay()
+
     }
     
-    func createCRTOverlay() {
-        // Create a pattern texture for scanlines (1px clear, 1px dark)
-        let size = CGSize(width: 4, height: 4)
-        // IMPORTANT: opaque must be false so UIColor.clear actually produces transparent pixels
-        UIGraphicsBeginImageContextWithOptions(size, false, 1.0)
-        let ctx = UIGraphicsGetCurrentContext()!
-        ctx.clear(CGRect(x: 0, y: 0, width: 4, height: 4))  // Fully transparent
-        // Reduced from 0.15 to 0.06 — v1.1 scanlines were very subtle
-        ctx.setFillColor(UIColor.black.withAlphaComponent(0.06).cgColor)
-        ctx.fill(CGRect(x: 0, y: 0, width: 4, height: 2)) // Dark lines
-        let image = UIGraphicsGetImageFromCurrentImageContext()!
-        UIGraphicsEndImageContext()
-        
-        let texture = SKTexture(image: image)
-        texture.filteringMode = .nearest  // Keep crisp scanline pixels
-        let overlay = SKSpriteNode(texture: texture)
-        overlay.size = CGSize(width: Physics.gameWidth * 4, height: Physics.gameHeight * 4)
-        overlay.alpha = 1.0
-        overlay.zPosition = 1000 // Topmost
-        overlay.blendMode = .alpha
-        cameraNode.addChild(overlay)
-    }
+
     
     // MARK: - Game Flow
     
@@ -312,18 +290,19 @@ class GameScene: SKScene {
     }
     
     private func drawPlatform(_ plat: PlatformData) {
-        // V1.1 (lines 1794-1813): solid fill + brush stroke top edge + floating shadow
-        // OPTIMIZATION: Use SKSpriteNode for main body to reduce draw calls/lag
-        let node = SKSpriteNode(color: plat.color.darkened(0.42), size: CGSize(width: plat.width, height: plat.height))
-        node.alpha = plat.isGround ? 0.5 : 1.0  // Ground is semi-transparent, but floating platforms are solid
-        node.position = CGPoint(
-            x: plat.x + plat.width / 2,
-            y: plat.y + plat.height / 2
-        )
-        node.zPosition = 0
-        platformLayer.addChild(node)
+        // Only draw solid block for floating platforms (not ground)
+        if !plat.isGround {
+            let node = SKSpriteNode(color: plat.color.darkened(0.42), size: CGSize(width: plat.width, height: plat.height))
+            node.alpha = 1.0
+            node.position = CGPoint(
+                x: plat.x + plat.width / 2,
+                y: plat.y + plat.height / 2
+            )
+            node.zPosition = 0
+            platformLayer.addChild(node)
+        }
         
-        // Brush stroke wavy top edge (v1.1 lines 1800-1807)
+        // Brush stroke wavy top edge
         let edgePath = CGMutablePath()
         let topY = plat.y + plat.height
         edgePath.move(to: CGPoint(x: plat.x, y: topY))
@@ -334,19 +313,19 @@ class GameScene: SKScene {
         }
         let edge = SKShapeNode(path: edgePath)
         edge.strokeColor = plat.isGround
-            ? UIColor(red: 0.54, green: 0.48, blue: 0.38, alpha: 1).darkened(0.42)  // #8a7a60
-            : UIColor(red: 0.44, green: 0.38, blue: 0.31, alpha: 1).darkened(0.42)  // #706050
+            ? UIColor(red: 0.54, green: 0.48, blue: 0.38, alpha: 1).darkened(0.42)
+            : UIColor(red: 0.44, green: 0.38, blue: 0.31, alpha: 1).darkened(0.42)
         edge.lineWidth = plat.isGround ? 3 : 2
         edge.fillColor = .clear
         edge.zPosition = 1
         platformLayer.addChild(edge)
         
-        // Floating platform drop shadow (v1.1 lines 1809-1812)
+        // Floating platform drop shadow
         if !plat.isGround {
             let shadow = SKSpriteNode(color: UIColor(white: 0, alpha: 0.08), size: CGSize(width: plat.width - 10, height: 4))
             shadow.position = CGPoint(
                 x: plat.x + plat.width / 2 + 5,
-                y: plat.y - 2  // just below platform bottom
+                y: plat.y - 2
             )
             shadow.zPosition = 0
             platformLayer.addChild(shadow)
@@ -361,46 +340,32 @@ class GameScene: SKScene {
         // Clear all camera background elements
         cameraNode.children.filter { $0.name == "bgSky" || $0.name == "bgMist" || $0.name == "bgCloud" || $0.name == "bgMtn" }.forEach { $0.removeFromParent() }
         
-        // For camera children, the actual visible area is affected by the camera's scale.
-        // E.g., if camera.scale = 1.8, the camera sees 1.8x more area than self.size.
-        let visW = self.size.width * cameraNode.xScale
-        let visH = self.size.height * cameraNode.yScale
-        
-        // Level-specific ink-wash painting background (bg_level_1 through bg_level_10)
+        // Level-specific background
         let bgName = "bg_level_\(currentLevel)"
-        if let bgImage = UIImage(named: bgName) {
-            let texture = SKTexture(image: bgImage)
+        let texture = SKTexture(imageNamed: bgName)
+        let texSize = texture.size()
+        
+        // Only proceed if texture loaded (size > 0)
+        if texSize.width > 0 && texSize.height > 0 {
             let bgNode = SKSpriteNode(texture: texture)
             
-            // Fill mode: cover the entire screen without letterboxing
-            let imgAspect = bgImage.size.width / bgImage.size.height
-            let viewAspect = visW / visH
+            // Aspect-fill: scale image to fill screen using its natural aspect ratio.
+            let imgAspect = texSize.width / texSize.height
+            let screenAspect = self.size.width / self.size.height
             
-            if imgAspect > viewAspect {
-                // Image is wider than viewport — scale by height to fill the screen (clip width)
-                bgNode.size = CGSize(width: visH * imgAspect, height: visH)
+            if imgAspect > screenAspect {
+                bgNode.size = CGSize(width: self.size.height * imgAspect, height: self.size.height)
             } else {
-                // Image is taller — scale by width to fill the screen (clip height)
-                bgNode.size = CGSize(width: visW, height: visW / imgAspect)
+                bgNode.size = CGSize(width: self.size.width, height: self.size.width / imgAspect)
             }
-            
-            // Re-center just to be safe
-            bgNode.position = CGPoint(x: 0, y: 0)  // Center of camera
+            bgNode.position = CGPoint(x: 0, y: 0)
             bgNode.zPosition = -200
-            
-            // v1.7: Instead of alpha transparency (which caused splits), we use color blending
-            // to wash out the image with white. This keeps it 100% opaque but much brighter.
-            bgNode.color = .white
-            bgNode.colorBlendFactor = 0.6  // Mix 60% white into the image pixels
             bgNode.alpha = 1.0
-            
             bgNode.name = "bgSky"
             cameraNode.addChild(bgNode)
         }
         
         // Set scene bg color as fallback
-        // v1.7: Use the first color (lightest in palette) but force it to be very bright and pastel
-        // This keeps the thematic tint of the level but prevents the 0.4 alpha background from looking dark/muddy
         if let baseColor = currentLevelDef.colors.bgColors.first {
             backgroundColor = baseColor.lightened()
         } else {
