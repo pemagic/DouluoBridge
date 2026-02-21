@@ -122,8 +122,6 @@ class DouluoGameScreen(
         projectiles.clear()
         for (d in drops) d.node?.remove()
         drops.clear()
-        for (ef in effects) ef.node?.remove()
-        effects.clear()
         
         spawnGrace = 120
         hpMultiplier = 1.0f
@@ -182,8 +180,6 @@ class DouluoGameScreen(
             playerNode.hp = 100
 
             clearEntities()
-            effects.forEach { it.node?.remove() }
-            effects.clear()
 
             generatePlatforms()
             drawBackground()
