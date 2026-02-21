@@ -103,6 +103,20 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         setupControls()
 
         setControlsVisible(false)
+
+        // Show custom Splash overlay (bypasses Android 12+ static splash icon restrictions)
+        val splashOverlay = android.widget.ImageView(this)
+        splashOverlay.setImageResource(R.drawable.splash_img)
+        splashOverlay.scaleType = android.widget.ImageView.ScaleType.CENTER_CROP
+        splashOverlay.setBackgroundColor(Color.BLACK)
+        rootLayout.addView(splashOverlay, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+        
+        splashOverlay.postDelayed({
+            splashOverlay.animate()
+                .alpha(0f)
+                .setDuration(400)
+                .withEndAction { splashOverlay.visibility = View.GONE }
+        }, 1500)
     }
 
     override fun onDestroy() {
@@ -184,63 +198,57 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
 
     private fun setupMainMenu() {
         mainMenuView = LinearLayout(this)
-        mainMenuView.orientation = LinearLayout.HORIZONTAL
-        mainMenuView.gravity = Gravity.CENTER_VERTICAL or Gravity.START
-        mainMenuView.setBackgroundColor(Color.argb((255*0.85).toInt(), 0, 0, 0))
+        mainMenuView.orientation = LinearLayout.VERTICAL
+        mainMenuView.gravity = Gravity.CENTER
+        mainMenuView.setBackgroundColor(Color.BLACK)
         
-        // Left side: Titles
-        val leftPanel = LinearLayout(this)
-        leftPanel.orientation = LinearLayout.VERTICAL
-        leftPanel.setPadding(dpToPx(60f), dpToPx(20f), dpToPx(40f), dpToPx(20f))
+        val versionLabel = TextView(this)
+        versionLabel.text = "PIXEL WUXIA"
+        versionLabel.setTextColor(Color.argb((255*0.3).toInt(), 255, 255, 255))
+        versionLabel.textSize = 12f
+        versionLabel.letterSpacing = 0.1f
+        versionLabel.setTypeface(Typeface.MONOSPACE, Typeface.NORMAL)
+        versionLabel.gravity = Gravity.CENTER
+        mainMenuView.addView(versionLabel)
 
         val title = TextView(this)
         title.text = "斗罗大桥"
         title.setTextColor(Color.WHITE)
-        title.textSize = 72f
-        title.typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD_ITALIC)
-        leftPanel.addView(title)
+        title.textSize = 64f
+        title.setTypeface(null, Typeface.BOLD)
+        // Red glow shadow emulation
+        title.setShadowLayer(15f, 0f, 0f, Color.argb(230, 219, 38, 38))
+        title.gravity = Gravity.CENTER
+        val titleParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        titleParams.topMargin = dpToPx(8f)
+        mainMenuView.addView(title, titleParams)
 
         val engTitle = TextView(this)
-        engTitle.text = "WUXIA PIXEL"
-        engTitle.setTextColor(Color.argb(255, 234, 178, 7))
-        engTitle.textSize = 24f
-        engTitle.letterSpacing = 0.5f // Add letter spacing for stylistic effect
-        engTitle.setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
+        engTitle.text = "万剑归宗 | Ten Thousand Swords"
+        engTitle.setTextColor(Color.argb(255, 240, 69, 69))
+        engTitle.textSize = 16f
+        engTitle.letterSpacing = 0.05f
+        engTitle.setTypeface(Typeface.MONOSPACE, Typeface.NORMAL)
+        engTitle.gravity = Gravity.CENTER
         val engParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         engParams.topMargin = dpToPx(8f)
-        leftPanel.addView(engTitle, engParams)
-
-        mainMenuView.addView(leftPanel, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-
-        // Right side: Stats and Start Button
-        val rightPanel = LinearLayout(this)
-        rightPanel.orientation = LinearLayout.VERTICAL
-        rightPanel.gravity = Gravity.CENTER
-        rightPanel.setPadding(dpToPx(20f), dpToPx(20f), dpToPx(80f), dpToPx(20f))
-
-        val sub = TextView(this)
-        sub.text = "最高层数: 第 $bestLevel 关\n累计击杀: $bestKills"
-        sub.setTextColor(Color.argb(255, 240, 69, 69))
-        sub.textSize = 18f
-        sub.gravity = Gravity.CENTER
-        sub.setTypeface(null, Typeface.BOLD)
-        rightPanel.addView(sub)
+        mainMenuView.addView(engTitle, engParams)
 
         val startBtn = TextView(this)
         startBtn.text = "杀出血路"
         startBtn.setTextColor(Color.WHITE)
-        startBtn.textSize = 32f
+        startBtn.textSize = 28f
         startBtn.setTypeface(null, Typeface.BOLD)
         startBtn.setPadding(dpToPx(48f), dpToPx(16f), dpToPx(48f), dpToPx(16f))
         
         val bg = android.graphics.drawable.GradientDrawable()
         bg.setStroke(dpToPx(3f), Color.WHITE)
-        bg.setColor(Color.argb(80, 200, 30, 30)) // Add a subtle red background tint
+        bg.setColor(Color.TRANSPARENT)
         startBtn.background = bg
         
         val btnParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-        btnParams.topMargin = dpToPx(40f)
-        rightPanel.addView(startBtn, btnParams)
+        btnParams.topMargin = dpToPx(32f)
+        mainMenuView.addView(startBtn, btnParams)
 
         startBtn.setOnClickListener {
             mainMenuView.visibility = View.GONE
@@ -249,8 +257,6 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
             }
             audioManager?.startBGM(0, 100f)
         }
-
-        mainMenuView.addView(rightPanel, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
 
         uiContainer.addView(mainMenuView, FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
     }
@@ -267,15 +273,17 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         title.setTextColor(Color.argb(255, 219, 38, 38))
         title.textSize = 48f
         title.setTypeface(null, Typeface.BOLD)
+        title.gravity = Gravity.CENTER
         gameOverView.addView(title)
 
         val stats = TextView(this)
         stats.id = 101
-        stats.setTextColor(Color.LTGRAY)
+        stats.setTextColor(Color.argb((255*0.7).toInt(), 255, 255, 255))
         stats.textSize = 16f
         stats.gravity = Gravity.CENTER
+        stats.setTypeface(Typeface.MONOSPACE, Typeface.BOLD)
         val statsParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-        statsParams.topMargin = dpToPx(16f)
+        statsParams.topMargin = dpToPx(20f)
         gameOverView.addView(stats, statsParams)
 
         val restartBtn = TextView(this)
@@ -284,11 +292,14 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         restartBtn.textSize = 20f
         restartBtn.setTypeface(null, Typeface.BOLD)
         restartBtn.setPadding(dpToPx(36f), dpToPx(12f), dpToPx(36f), dpToPx(12f))
+        
         val bg = android.graphics.drawable.GradientDrawable()
         bg.setStroke(dpToPx(2f), Color.argb(255, 219, 38, 38))
+        bg.setColor(Color.TRANSPARENT)
         restartBtn.background = bg
+        
         val btnParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-        btnParams.topMargin = dpToPx(32f)
+        btnParams.topMargin = dpToPx(20f)
         gameOverView.addView(restartBtn, btnParams)
 
         restartBtn.setOnClickListener {

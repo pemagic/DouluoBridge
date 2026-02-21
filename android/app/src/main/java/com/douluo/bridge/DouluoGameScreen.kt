@@ -115,6 +115,16 @@ class DouluoGameScreen(
         gameTime = 0
         bossActive = false
         bossSpawned = false
+        
+        for (e in enemies) e.remove()
+        enemies.clear()
+        for (p in projectiles) p.remove()
+        projectiles.clear()
+        for (d in drops) d.node?.remove()
+        drops.clear()
+        for (ef in effects) ef.node?.remove()
+        effects.clear()
+        
         spawnGrace = 120
         hpMultiplier = 1.0f
         enemyProjectileCount = 0
@@ -170,6 +180,10 @@ class DouluoGameScreen(
             spawnGrace = 120
             hpMultiplier *= 1.5f
             playerNode.hp = 100
+
+            clearEntities()
+            effects.forEach { it.node?.remove() }
+            effects.clear()
 
             generatePlatforms()
             drawBackground()
