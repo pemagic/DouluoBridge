@@ -200,6 +200,15 @@ class DouluoGameScreen(
         }
     }
 
+    private val whiteTex: Texture by lazy {
+        val pix = Pixmap(1, 1, Pixmap.Format.RGBA8888)
+        pix.setColor(Color.WHITE)
+        pix.fill()
+        val tex = Texture(pix)
+        pix.dispose()
+        tex
+    }
+
     private fun generatePlatforms() {
         platformLayer.clear()
         platforms.clear()
@@ -269,37 +278,42 @@ class DouluoGameScreen(
     }
 
     private fun drawPlatform(plat: PlatformData) {
+        val platGroup = Group()
+        platGroup.setPosition(plat.x, plat.y)
+        
         if (!plat.isGround) {
             // Floating platforms: draw coloured block + top edge (same as iOS)
             val darkColor = Color(plat.color).mul(0.58f)
-            val platW = plat.width.toInt().coerceAtLeast(1)
-            val platH = plat.height.toInt().coerceAtLeast(1)
-            val pix = Pixmap(platW, platH, Pixmap.Format.RGBA8888)
-            pix.setColor(darkColor)
-            pix.fill()
+            val platW = plat.width
+            val platH = plat.height
+            
+            val body = Image(whiteTex)
+            body.color = darkColor
+            body.setSize(platW, platH)
+            platGroup.addActor(body)
+            
             // Top edge highlight
-            pix.setColor(Color(plat.color))
-            pix.fillRectangle(0, platH - 2, platW, 2)
-            val pImg = Image(Texture(pix))
-            pImg.setPosition(plat.x, plat.y)
-            platformLayer.addActor(pImg)
-            pix.dispose()
+            val edge = Image(whiteTex)
+            edge.color = Color(plat.color)
+            edge.setSize(platW, 2f)
+            edge.setPosition(0f, platH - 2f)
+            platGroup.addActor(edge)
+        } else {
+            // Ground: draw only the wavy top edge (a thin strip), no body — matches iOS
+            val edgeH = 4f
+            val edgeColor = Color(0.54f, 0.48f, 0.38f, 1f).mul(0.58f)
+            val eW = plat.width
+            
+            val edge = Image(whiteTex)
+            edge.color = edgeColor
+            edge.setSize(eW, edgeH)
+            edge.setPosition(0f, plat.height - edgeH)
+            platGroup.addActor(edge)
         }
-        // Ground: draw only the wavy top edge (a thin strip), no body — matches iOS
-        val edgeH = if (plat.isGround) 4 else 2
-        val edgeColor = if (plat.isGround)
-            Color(0.54f, 0.48f, 0.38f, 1f).mul(0.58f)
-        else
-            Color(0.44f, 0.38f, 0.31f, 1f).mul(0.58f)
-        val eW = plat.width.toInt().coerceAtLeast(1)
-        val ePix = Pixmap(eW, edgeH, Pixmap.Format.RGBA8888)
-        ePix.setColor(edgeColor)
-        ePix.fill()
-        val eImg = Image(Texture(ePix))
-        eImg.setPosition(plat.x, plat.y + plat.height - edgeH)
-        platformLayer.addActor(eImg)
-        ePix.dispose()
+        platformLayer.addActor(platGroup)
     }
+
+    private val bgTextureCache = mutableMapOf<Int, Texture>()
 
     private fun drawBackground() {
         backgroundNode.clear()
@@ -320,6 +334,8 @@ class DouluoGameScreen(
                 bgImg.setPosition(camera.position.x - Physics.gameWidth/2, camera.position.y - Physics.gameHeight/2)
                 bgImg.color.a = 1.0f
                 backgroundNode.addActor(bgImg)
+                bgTextureCache[currentLevel]?.dispose()
+                bgTextureCache[currentLevel] = tex
                 bgLoaded = true
             }
         } catch (e: Exception) {
@@ -332,20 +348,26 @@ class DouluoGameScreen(
             val topColor = levelColors.bgColors.getOrElse(0) { Color(0.6f, 0.8f, 1f, 1f) }.cpy().mul(1.3f).apply { clamp() }
             val botColor = levelColors.bgColors.getOrElse(1) { Color(0.9f, 0.95f, 1f, 1f) }
 
-            // Wide background covering the full scrollable world (camera-relative fixed)
+            // Create a 1-pixel-wide gradient to save extremely huge alloc overhead, and stretch it
             val bgW = (Physics.gameWidth * 3).toInt().coerceAtLeast(1)
             val bgH = Physics.gameHeight.toInt().coerceAtLeast(1)
-            val pix = Pixmap(bgW, bgH, Pixmap.Format.RGBA8888)
-            for (row in 0 until bgH) {
-                val t = row.toFloat() / bgH
-                val r = botColor.r + (topColor.r - botColor.r) * t
-                val g = botColor.g + (topColor.g - botColor.g) * t
-                val b = botColor.b + (topColor.b - botColor.b) * t
-                pix.setColor(r.coerceIn(0f,1f), g.coerceIn(0f,1f), b.coerceIn(0f,1f), 1f)
-                pix.fillRectangle(0, row, bgW, 1)
+            
+            var bgTex = bgTextureCache[currentLevel]
+            if (bgTex == null) {
+                val pix = Pixmap(1, bgH, Pixmap.Format.RGBA8888)
+                for (row in 0 until bgH) {
+                    val t = row.toFloat() / bgH
+                    val r = botColor.r + (topColor.r - botColor.r) * t
+                    val g = botColor.g + (topColor.g - botColor.g) * t
+                    val b = botColor.b + (topColor.b - botColor.b) * t
+                    pix.setColor(r.coerceIn(0f,1f), g.coerceIn(0f,1f), b.coerceIn(0f,1f), 1f)
+                    pix.fillRectangle(0, row, 1, 1)
+                }
+                bgTex = Texture(pix)
+                pix.dispose()
+                bgTextureCache[currentLevel] = bgTex
             }
-            val bgTex = Texture(pix)
-            pix.dispose()
+            
             val bgImg = Image(bgTex)
             bgImg.setSize(bgW.toFloat(), bgH.toFloat())
             bgImg.setPosition(-bgW / 3f, 0f)
@@ -1073,5 +1095,8 @@ class DouluoGameScreen(
         stage.dispose()
         dropTextureCache.values.forEach { it.dispose() }
         dropTextureCache.clear()
+        bgTextureCache.values.forEach { it.dispose() }
+        bgTextureCache.clear()
+        whiteTex.dispose()
     }
 }
