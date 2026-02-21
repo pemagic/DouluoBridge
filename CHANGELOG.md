@@ -2,6 +2,13 @@
 
 本项目的所有重大变更都将记录在此文件中。
 
+## [1.8.5] - 2026-02-21
+
+### 安卓端根本性修复 (Android Root-cause Fix)
+- **所有渲染 bug 根因修复**：`startGame()` 在 UI 线程 `OnClickListener` 里直接调用，导致内部 `generatePlatforms()` + `drawBackground()` 创建所有 `Pixmap/Texture`（GL 操作）在错误线程执行，造成背景丢失、平台不显示、所有视觉元素渲染失败。现改为 `Gdx.app.postRunnable { startGame() }`，确保在 GL 线程执行。
+- **修复范围**：开始游戏按钮、游戏结束重开按钮、暂停继续按钮，全部改为 `postRunnable`。
+- **配合 v1.8.4**：功能按钮（攻击/跳跃/冲刺/技能）同样修复，所有 UI → 游戏逻辑调用现在全部在 GL 线程安全执行。
+
 ## [1.8.4] - 2026-02-21
 
 ### 安卓端关键 Bug 修复 (Android Critical Fixes)
