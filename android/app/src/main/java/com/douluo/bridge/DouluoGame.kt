@@ -5,12 +5,12 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 
-class DouluoGame : Game() {
+class DouluoGame(private val delegate: com.douluo.bridge.ui.GameScreenDelegate) : Game() {
     lateinit var batch: SpriteBatch
 
     override fun create() {
         batch = SpriteBatch()
-        // We will set screen to GameScene equivalent later
+        setScreen(DouluoGameScreen(this, delegate))
     }
 
     override fun render() {
