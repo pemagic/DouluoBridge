@@ -209,6 +209,24 @@ class DouluoGameScreen(
         tex
     }
 
+    private val groundWaveTex: Texture by lazy {
+        val w = 1500
+        val h = 12
+        val pix = Pixmap(w, h, Pixmap.Format.RGBA8888)
+        pix.setColor(Color(0.54f, 0.48f, 0.38f, 1f).mul(0.58f, 0.58f, 0.58f, 1f))
+        val amplitude = 4f
+        val frequency = 0.08f
+        for (x in 0 until w) {
+            val y = (Math.sin(x * frequency.toDouble()) * amplitude + amplitude).toInt()
+            for(fillY in (h - y - 4) until h) {
+                 if (fillY >= 0) pix.drawPixel(x, fillY)
+            }
+        }
+        val tex = Texture(pix)
+        pix.dispose()
+        tex
+    }
+
     private fun generatePlatforms() {
         platformLayer.clear()
         platforms.clear()
@@ -299,15 +317,12 @@ class DouluoGameScreen(
             edge.setPosition(0f, platH - 2f)
             platGroup.addActor(edge)
         } else {
-            // Ground: draw only the wavy top edge (a thin strip), no body — matches iOS
-            val edgeH = 4f
-            val edgeColor = Color(0.54f, 0.48f, 0.38f, 1f).mul(0.58f, 0.58f, 0.58f, 1f)
+            // Ground: draw wavy top edge (a thin wavy strip) — matches iOS
             val eW = plat.width
-            
-            val edge = Image(whiteTex)
-            edge.color = edgeColor
-            edge.setSize(eW, edgeH)
-            edge.setPosition(0f, plat.height - edgeH)
+            val region = com.badlogic.gdx.graphics.g2d.TextureRegion(groundWaveTex, 0, 0, eW.toInt(), groundWaveTex.height)
+            val edge = Image(region)
+            edge.setSize(eW, 12f)
+            edge.setPosition(0f, plat.height - 12f)
             platGroup.addActor(edge)
         }
         platformLayer.addActor(platGroup)
@@ -624,10 +639,6 @@ class DouluoGameScreen(
                         // NOTE: do NOT call enemies.remove() here — we are currently
                         // iterating over projectiles (inner loop over enemies).
                         // handleEnemyDeath marks hp<=0; updateEnemies' iterator removes them.
-                        if (enemy.hp <= 0) {
-                            handleEnemyDeath(enemy)
-                            // enemy will be cleaned up in the next updateEnemies pass
-                        }
 
                         if (proj.hitEnemies.size >= proj.pierceCount) {
                             proj.remove()
@@ -1018,10 +1029,10 @@ class DouluoGameScreen(
         }
         if (dropTextureCache.containsKey(key)) return dropTextureCache[key]!!
 
-        val dropSize = 64
+        val dropSize = 45
         val pix = Pixmap(dropSize, dropSize, Pixmap.Format.RGBA8888)
         
-        fun drawLineThick(p: Pixmap, x1: Int, y1: Int, x2: Int, y2: Int, thick: Int) {
+        fun drawThickLine(p: Pixmap, x1: Int, y1: Int, x2: Int, y2: Int, thick: Int) {
             val half = thick / 2    
             val dx = Math.abs(x2 - x1); val dy = Math.abs(y2 - y1)
             for (off in -half..half) {
@@ -1030,38 +1041,32 @@ class DouluoGameScreen(
             }
         }
 
-        val sc = 2 
         when (type) {
             is DropData.DropType.Health -> {
-                pix.setColor(0.82f, 0.08f, 0.08f, 1f)
-                pix.fillCircle(10*sc, 10*sc, 8*sc)
-                pix.fillCircle(22*sc, 10*sc, 8*sc)
-                pix.fillTriangle(2*sc, 10*sc, 30*sc, 10*sc, 16*sc, 26*sc)
                 pix.setColor(Color.WHITE)
-                pix.drawCircle(10*sc, 10*sc, 8*sc)
-                pix.drawCircle(22*sc, 10*sc, 8*sc)
-                pix.drawLine(2*sc, 10*sc, 16*sc, 26*sc)
-                pix.drawLine(30*sc, 10*sc, 16*sc, 26*sc)
+                pix.fillCircle(22, 22, 18)
+                pix.setColor(0.82f, 0.08f, 0.08f, 1f)
+                pix.fillRectangle(18, 11, 9, 23)
+                pix.fillRectangle(11, 18, 23, 9)
             }
             is DropData.DropType.Weapon -> {
                 pix.setColor(1.0f, 0.8f, 0.0f, 1f)
-                drawLineThick(pix, 6*sc, 26*sc, 26*sc, 6*sc, 4*sc)
-                drawLineThick(pix, 12*sc, 28*sc, 20*sc, 20*sc, 3*sc)
+                drawThickLine(pix, 8, 36, 36, 8, 5) // main blade
+                drawThickLine(pix, 12, 40, 24, 28, 4) // guard
                 pix.setColor(Color.WHITE)
-                pix.drawLine(6*sc, 26*sc, 26*sc, 6*sc)
+                pix.drawLine(8, 36, 36, 8) // highlight
             }
             is DropData.DropType.Skill -> {
                 val scDef = GameConfig.skillDefs.find { it.id == type.id }?.color ?: Color.GRAY
-                pix.setColor(scDef.r, scDef.g, scDef.b, 0.8f)
-                pix.fillRectangle(2*sc, 2*sc, 28*sc, 28*sc)
+                pix.setColor(scDef.r, scDef.g, scDef.b, 0.9f)
+                pix.fillRectangle(4, 4, 37, 37)
                 pix.setColor(Color.WHITE)
-                drawLineThick(pix, 2*sc, 2*sc, 30*sc, 2*sc, 2*sc)
-                drawLineThick(pix, 2*sc, 2*sc, 2*sc, 30*sc, 2*sc)
-                drawLineThick(pix, 2*sc, 30*sc, 30*sc, 30*sc, 2*sc)
-                drawLineThick(pix, 30*sc, 2*sc, 30*sc, 30*sc, 2*sc)
-                drawLineThick(pix, 8*sc, 8*sc, 24*sc, 8*sc, 2*sc)
-                drawLineThick(pix, 8*sc, 14*sc, 24*sc, 14*sc, 2*sc)
-                drawLineThick(pix, 8*sc, 20*sc, 24*sc, 20*sc, 2*sc)
+                drawThickLine(pix, 4, 4, 41, 4, 2)
+                drawThickLine(pix, 4, 4, 4, 41, 2)
+                drawThickLine(pix, 4, 41, 41, 41, 2)
+                drawThickLine(pix, 41, 4, 41, 41, 2)
+                pix.fillTriangle(22, 10, 14, 30, 30, 30)
+                pix.fillTriangle(22, 34, 14, 14, 30, 14)
             }
         }
         val tex = Texture(pix)
@@ -1106,7 +1111,7 @@ class DouluoGameScreen(
     }
 
     private fun spawnDropIcon(x: Float, y: Float, type: DropData.DropType) {
-        val dropSize = 64f
+        val dropSize = 45f
         val img = Image(getDropTexture(type))
         img.setSize(dropSize, dropSize)
         img.setPosition(x, y)
@@ -1135,5 +1140,6 @@ class DouluoGameScreen(
         bgTextureCache.values.forEach { it.dispose() }
         bgTextureCache.clear()
         whiteTex.dispose()
+        groundWaveTex.dispose()
     }
 }

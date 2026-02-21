@@ -88,6 +88,7 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         val config = AndroidApplicationConfiguration()
         config.useAccelerometer = false
         config.useCompass = false
+        config.useImmersiveMode = true
 
         douluoGame = DouluoGame(this)
         val gameView = initializeForView(douluoGame, config)
