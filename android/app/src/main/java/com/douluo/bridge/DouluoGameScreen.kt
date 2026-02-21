@@ -952,7 +952,9 @@ class DouluoGameScreen(
 
         if (wasBoss) {
             bossActive = false
-            if (currentLevel < 10) completeLevel() else endGame(true)
+            Gdx.app.postRunnable {
+                if (currentLevel < 10) completeLevel() else endGame(true)
+            }
         }
     }
 
@@ -982,8 +984,17 @@ class DouluoGameScreen(
         }
     }
 
-    private fun spawnDropIcon(x: Float, y: Float, type: DropData.DropType) {
-        val dropSize = 32
+    private val dropTextureCache = mutableMapOf<String, Texture>()
+
+    private fun getDropTexture(type: DropData.DropType): Texture {
+        val key = when (type) {
+            is DropData.DropType.Health -> "health"
+            is DropData.DropType.Weapon -> "weapon"
+            is DropData.DropType.Skill -> "skill_${type.id}"
+        }
+        if (dropTextureCache.containsKey(key)) return dropTextureCache[key]!!
+
+        val dropSize = 64
         val pix = Pixmap(dropSize, dropSize, Pixmap.Format.RGBA8888)
         
         fun drawLineThick(p: Pixmap, x1: Int, y1: Int, x2: Int, y2: Int, thick: Int) {
@@ -995,58 +1006,72 @@ class DouluoGameScreen(
             }
         }
 
+        val sc = 2 
         when (type) {
             is DropData.DropType.Health -> {
                 pix.setColor(0.82f, 0.08f, 0.08f, 1f)
-                pix.fillCircle(10, 10, 8)
-                pix.fillCircle(22, 10, 8)
-                pix.fillTriangle(2, 10, 30, 10, 16, 26)
+                pix.fillCircle(10*sc, 10*sc, 8*sc)
+                pix.fillCircle(22*sc, 10*sc, 8*sc)
+                pix.fillTriangle(2*sc, 10*sc, 30*sc, 10*sc, 16*sc, 26*sc)
                 pix.setColor(Color.WHITE)
-                pix.drawCircle(10, 10, 8)
-                pix.drawCircle(22, 10, 8)
-                pix.drawLine(2, 10, 16, 26)
-                pix.drawLine(30, 10, 16, 26)
+                pix.drawCircle(10*sc, 10*sc, 8*sc)
+                pix.drawCircle(22*sc, 10*sc, 8*sc)
+                pix.drawLine(2*sc, 10*sc, 16*sc, 26*sc)
+                pix.drawLine(30*sc, 10*sc, 16*sc, 26*sc)
             }
             is DropData.DropType.Weapon -> {
                 pix.setColor(1.0f, 0.8f, 0.0f, 1f)
-                drawLineThick(pix, 6, 26, 26, 6, 4)
-                drawLineThick(pix, 12, 28, 20, 20, 3)
+                drawLineThick(pix, 6*sc, 26*sc, 26*sc, 6*sc, 4*sc)
+                drawLineThick(pix, 12*sc, 28*sc, 20*sc, 20*sc, 3*sc)
                 pix.setColor(Color.WHITE)
-                pix.drawLine(6, 26, 26, 6)
+                pix.drawLine(6*sc, 26*sc, 26*sc, 6*sc)
             }
             is DropData.DropType.Skill -> {
-                val sc = GameConfig.skillDefs.find { it.id == type.id }?.color ?: Color.GRAY
-                pix.setColor(sc.r, sc.g, sc.b, 0.8f)
-                pix.fillRectangle(2, 2, 28, 28)
+                val scDef = GameConfig.skillDefs.find { it.id == type.id }?.color ?: Color.GRAY
+                pix.setColor(scDef.r, scDef.g, scDef.b, 0.8f)
+                pix.fillRectangle(2*sc, 2*sc, 28*sc, 28*sc)
                 pix.setColor(Color.WHITE)
-                drawLineThick(pix, 2, 2, 30, 2, 2)
-                drawLineThick(pix, 2, 2, 2, 30, 2)
-                drawLineThick(pix, 2, 30, 30, 30, 2)
-                drawLineThick(pix, 30, 2, 30, 30, 2)
-                drawLineThick(pix, 8, 8, 24, 8, 2)
-                drawLineThick(pix, 8, 14, 24, 14, 2)
-                drawLineThick(pix, 8, 20, 24, 20, 2)
+                drawLineThick(pix, 2*sc, 2*sc, 30*sc, 2*sc, 2*sc)
+                drawLineThick(pix, 2*sc, 2*sc, 2*sc, 30*sc, 2*sc)
+                drawLineThick(pix, 2*sc, 30*sc, 30*sc, 30*sc, 2*sc)
+                drawLineThick(pix, 30*sc, 2*sc, 30*sc, 30*sc, 2*sc)
+                drawLineThick(pix, 8*sc, 8*sc, 24*sc, 8*sc, 2*sc)
+                drawLineThick(pix, 8*sc, 14*sc, 24*sc, 14*sc, 2*sc)
+                drawLineThick(pix, 8*sc, 20*sc, 24*sc, 20*sc, 2*sc)
             }
         }
-        
-        val img = Image(Texture(pix))
-        img.setSize(dropSize.toFloat(), dropSize.toFloat())
+        val tex = Texture(pix)
+        pix.dispose()
+        dropTextureCache[key] = tex
+        return tex
+    }
+
+    private fun spawnDropIcon(x: Float, y: Float, type: DropData.DropType) {
+        val dropSize = 64f
+        val img = Image(getDropTexture(type))
+        img.setSize(dropSize, dropSize)
         img.setPosition(x, y)
         img.zIndex = 5
         if (type is DropData.DropType.Weapon) {
             val rotate = com.badlogic.gdx.scenes.scene2d.actions.Actions.rotateBy(-360f, 2f)
-            img.setOrigin(16f, 16f)
+            img.setOrigin(dropSize/2f, dropSize/2f)
             img.addAction(com.badlogic.gdx.scenes.scene2d.actions.Actions.forever(rotate))
         }
 
         entityLayer.addActor(img)
         drops.add(DropData(x, y, MathUtils.random(-3f, 3f), 12f, type, 800, img))
-        pix.dispose()
     }
 
     private fun levelUpRandomSkill() {
         val id = GameConfig.skillDefs.randomOrNull()?.id ?: return
         val sk = playerNode.skills[id]
         if (sk != null && sk.level < 10) sk.level++
+    }
+
+    override fun dispose() {
+        super.dispose()
+        stage.dispose()
+        dropTextureCache.values.forEach { it.dispose() }
+        dropTextureCache.clear()
     }
 }
