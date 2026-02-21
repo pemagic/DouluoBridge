@@ -15,6 +15,7 @@ import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.douluo.bridge.ui.GameScreenDelegate
+import com.douluo.bridge.ui.HapticType
 
 enum class GameState {
     MENU, PLAYING, PAUSED, GAME_OVER, LEVEL_TRANSITION
@@ -632,7 +633,7 @@ class DouluoGameScreen(
 
             val type = lvl.enemies.random()
             val color = Color(lvl.colors.enemyColors.random()).mul(0.58f)
-            val e = EnemyNode(type, playerNode.weaponLevel, color = color, enemyTier = lvl.enemyTier, hpMultiplier = hpMultiplier)
+            val e = EnemyNode(type, playerNode.weaponLevel, baseColor = color, enemyTier = lvl.enemyTier, hpMultiplier = hpMultiplier)
             
             val spawnX = playerNode.x + (if (MathUtils.randomBoolean()) 1 else -1) * (900f + MathUtils.random(400f))
             val spawnY = Physics.gameHeight + 200f
@@ -661,7 +662,7 @@ class DouluoGameScreen(
 
     private fun updateHUD() {
         delegate.updateHUD(
-            playerNode.hp, 100, playerNode.energy, totalKills, combo, playerNode.weaponLevel, currentLevel
+            playerNode.hp.toFloat(), 100, playerNode.energy, totalKills, combo, playerNode.weaponLevel, currentLevel
         )
     }
 

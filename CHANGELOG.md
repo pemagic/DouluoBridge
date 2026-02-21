@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0] - 2026-02-21
+
+### Platform Support
+- **Android Port**: The game has been successfully ported to Android using Kotlin and LibGDX (`gdx-backend-android`). The core logic (`GameScene.swift`) has been faithfully translated to `DouluoGameScreen.kt` using Object-Oriented Scene2D actors, achieving identical gameplay without WebView dependencies.
+- **Automated CI/CD**: Dual-platform GitHub Actions pipeline (`release.yml`) configured to automatically build `.ipa` (macOS) and `.apk` (Ubuntu) upon release tags.
+
+### Build Toolchain & Android Fixes
+- **Modernized Environment**: Upgraded Android project to Gradle 8.11.1, Android Gradle Plugin (AGP) 8.7.3, and Kotlin 2.1.0 to ensure compatibility with modern JDK versions (JDK 17 / JDK 25).
+- **Gradle Stability**: Refactored `build.gradle.kts` to eliminate configuration cache mutation exceptions during native asset copying.
+- **Resource Integrity**: Added necessary `proguard-rules.pro`, `strings.xml`, and dummy `ic_launcher` resources to guarantee successful APK packaging.
+
 ## [1.7.0] - 2026-02-20
 
 ### Gameplay Balance & New Features

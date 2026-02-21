@@ -3,6 +3,10 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Custom configuration for libGDX native libraries.
+// This MUST be declared before the dependencies block but never resolved at configuration time.
+val natives: Configuration by configurations.creating
+
 android {
     namespace = "com.douluo.bridge"
     compileSdk = 34
@@ -11,8 +15,8 @@ android {
         applicationId = "com.douluo.bridge"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.7.0"
+        versionCode = 2
+        versionName = "1.8.0"
     }
 
     buildTypes {
@@ -28,47 +32,64 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-    
+
+    // Single unified sourceSets block — never open a second android {} block
     sourceSets {
         getByName("main") {
-            // Include shared_assets into Android assets when building
             assets.srcDirs("src/main/assets", "../../shared_assets")
+            jniLibs.srcDirs("src/main/jniLibs", layout.buildDirectory.dir("libs/jni"))
         }
     }
 }
-
-val natives by configurations.creating
 
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
-    
-    // libGDX
+
+    // libGDX core + Android backend
     api("com.badlogicgames.gdx:gdx:1.12.1")
     api("com.badlogicgames.gdx:gdx-backend-android:1.12.1")
+
+    // libGDX native .so libraries — placed into the custom "natives" configuration,
+    // NOT into implementation/api so they don't pollute the compile classpath.
     natives("com.badlogicgames.gdx:gdx-platform:1.12.1:natives-armeabi-v7a")
     natives("com.badlogicgames.gdx:gdx-platform:1.12.1:natives-arm64-v8a")
     natives("com.badlogicgames.gdx:gdx-platform:1.12.1:natives-x86")
     natives("com.badlogicgames.gdx:gdx-platform:1.12.1:natives-x86_64")
 }
 
-// Remove custom copy task and rely on standard JNI packaging
-android {
-    sourceSets {
-        getByName("main") {
-            jniLibs.srcDirs("src/main/jniLibs", layout.buildDirectory.dir("libs"))
+// Extract native .so files from the libGDX platform JARs into ABI-specific subdirectories.
+// This task runs ONLY at execution time (inside doLast), never during configuration.
+// The "natives" configuration is resolved only when this task actually executes.
+val copyAndroidNatives by tasks.registering {
+    description = "Extract libGDX native .so files into ABI-specific jniLibs directories"
+    doLast {
+        val jniDir = layout.buildDirectory.dir("libs/jni").get().asFile
+        natives.files.forEach { jar ->
+            // Determine target ABI directory from the jar classifier name
+            val abi = when {
+                jar.name.contains("natives-arm64-v8a") -> "arm64-v8a"
+                jar.name.contains("natives-armeabi-v7a") -> "armeabi-v7a"
+                jar.name.contains("natives-x86_64") -> "x86_64"
+                jar.name.contains("natives-x86") -> "x86"
+                else -> return@forEach
+            }
+            val outputDir = File(jniDir, abi)
+            outputDir.mkdirs()
+            copy {
+                from(zipTree(jar))
+                into(outputDir)
+                include("*.so")
+            }
         }
     }
 }
-tasks.register<Copy>("copyAndroidNatives") {
-    from(configurations.getByName("natives").map { zipTree(it) })
-    into(layout.buildDirectory.dir("libs"))
-    include("**/*.so")
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-}
-tasks.whenTaskAdded {
-    if (name.contains("package")) {
-        dependsOn("copyAndroidNatives")
+
+// Wire up: ensure native .so extraction runs before JNI libs are merged into the APK.
+// Using configureEach to lazily add the dependency without triggering configuration resolution.
+tasks.configureEach {
+    if (name.contains("merge") && name.contains("JniLibFolders")) {
+        dependsOn(copyAndroidNatives)
     }
 }

@@ -25,7 +25,7 @@ class EnemyNode(
     val isBoss: Boolean = false,
     bossHp: Int = 0,
     bossSpeed: Float = 0f,
-    val color: Color,
+    val baseColor: Color,
     val enemyTier: Int = 1,
     val bossType: BossType? = null,
     hpMultiplier: Float = 1.0f
@@ -204,7 +204,7 @@ class EnemyNode(
     // LibGDX `Pixmap` doesn't support anti-aliased stroked paths nicely out-of-the-box like CoreGraphics.
     // We will do approximate blocky rendering to keep it functional and visually identical to the original "neon stick-figure" style.
     private fun renderFrame(phase: Float, flash: Boolean, combo: Int): Texture {
-        val drawColor = if (flash) Color.WHITE else color
+        val drawColor = if (flash) Color.WHITE else baseColor
         val lineW = if (isBoss) 6 else if (enemyType == EnemyType.HEAVY) 8 else 4
         val w = texW.toInt()
         val h = texH.toInt()

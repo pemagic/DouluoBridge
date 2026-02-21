@@ -50,8 +50,16 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
 
     private var audioManager: AndroidAudioManager? = null
 
+    private lateinit var prefs: android.content.SharedPreferences
+    private var bestKills = 0
+    private var bestLevel = 1
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        prefs = getSharedPreferences("DouluoGameData", android.content.Context.MODE_PRIVATE)
+        bestKills = prefs.getInt("best_kills", 0)
+        bestLevel = prefs.getInt("best_level", 1)
         
         audioManager = AndroidAudioManager(this)
 
@@ -171,7 +179,7 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         mainMenuView.addView(title)
 
         val sub = TextView(this)
-        sub.text = "万剑归宗 | Ten Thousand Swords"
+        sub.text = "最高层数: 第 $bestLevel 关  |  累计击杀: $bestKills"
         sub.setTextColor(Color.argb(255, 240, 69, 69))
         mainMenuView.addView(sub)
 
@@ -524,6 +532,23 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
     override fun gameEnded(kills: Int, time: Int, level: Int, victory: Boolean) {
         runOnUiThread {
             audioManager?.stopBGM()
+            
+            var newRecord = false
+            if (kills > bestKills) {
+                bestKills = kills
+                prefs.edit().putInt("best_kills", bestKills).apply()
+                newRecord = true
+            }
+            if (level > bestLevel) {
+                bestLevel = level
+                prefs.edit().putInt("best_level", bestLevel).apply()
+                newRecord = true
+            }
+
+            // Update main menu text for next run dynamically
+            if (mainMenuView.childCount > 1) {
+                (mainMenuView.getChildAt(1) as? TextView)?.text = "最高层数: 第 $bestLevel 关  |  累计击杀: $bestKills"
+            }
             
             val title = gameOverView.findViewById<TextView>(100)
             title?.text = if (victory) "剑神归位" else "气尽人亡"

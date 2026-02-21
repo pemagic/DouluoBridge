@@ -52,7 +52,7 @@ class ProjectileNode(
     var vy: Float,
     var damage: Int,
     val owner: ProjectileOwner,
-    val color: Color,
+    val baseColor: Color,
     var life: Int,
     val size: Int = 10,
     val homing: Boolean = false,
@@ -66,7 +66,7 @@ class ProjectileNode(
     }
 
     private fun setupVisual() {
-        val texture = ProjectileTextureCache.texture(owner, size, color)
+        val texture = ProjectileTextureCache.texture(owner, size, baseColor)
         val w = if (owner == ProjectileOwner.PLAYER) 70f else 25f
         val h = size.toFloat()
         val padding = 30f

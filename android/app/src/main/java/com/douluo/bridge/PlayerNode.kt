@@ -12,6 +12,12 @@ class PlayerNode : Group() {
     var vx: Float = 0f
     var vy: Float = 0f
     
+    val skills = mutableMapOf<String, SkillState>()
+    private lateinit var bodyGroup: Group
+    private var orbitNode: Group? = null
+    private var shieldNode: Image? = null
+    private var ultGlowNode: Image? = null
+
     // Size defined in iOS is 40x64
     init {
         setSize(40f, 64f)
@@ -36,13 +42,6 @@ class PlayerNode : Group() {
     var iframe: Int = 0
     var animTime: Float = 0f
     var ultActive: Int = 0
-
-    val skills = mutableMapOf<String, SkillState>()
-
-    private val bodyGroup: Group
-    private var orbitNode: Group? = null
-    private var shieldNode: Image? = null
-    private var ultGlowNode: Image? = null
 
     companion object {
         val neonColors = listOf(
