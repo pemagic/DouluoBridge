@@ -18,6 +18,9 @@ class PlayerNode : Group() {
     private var shieldNode: Image? = null
     private var ultGlowNode: Image? = null
 
+    // INITIALIZE BEFORE `init` BLOCK to prevent NullPointerException
+    private val createdTextures = mutableListOf<Texture>()
+
     // Size defined in iOS is 40x64
     init {
         setSize(40f, 64f)
@@ -87,16 +90,6 @@ class PlayerNode : Group() {
         gPix.setColor(1f, 1f, 1f, 0.15f)
         gPix.fillCircle(glowSize / 2, glowSize / 2, glowSize / 2 - 5)
         
-        val glowImg = Image(Texture(gPix))
-        glowImg.setSize(glowSize.toFloat(), glowSize.toFloat())
-        glowImg.setPosition(-glowSize / 2f + width / 2f, -glowSize / 2f + height / 2f)
-        glowImg.zIndex = 0
-        glowImg.isVisible = false
-        addActor(glowImg)
-        ultGlowNode = glowImg
-        gPix.dispose()
-    }
-
     fun reset() {
         vx = 0f; vy = 0f; hp = 100; energy = 0; weaponLevel = 1
         facing = 1; grounded = false; jumpCount = 0
@@ -109,10 +102,6 @@ class PlayerNode : Group() {
         }
         rebuildVisual()
     }
-
-    // Save references to created textures so we can dispose them properly
-    // to avoid Memory Leak/OOM when rebuildVisual is called (e.g. on weapon pickup)
-    private val createdTextures = mutableListOf<Texture>()
 
     private fun disposeVisual() {
         bodyGroup.clear()
