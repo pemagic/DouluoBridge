@@ -19,7 +19,17 @@ class DouluoGame(private val delegate: com.douluo.bridge.ui.GameScreenDelegate) 
         super.render()
     }
 
+    override fun resume() {
+        // GL context may have been rebuilt — invalidate all Texture caches
+        // so they are re-created fresh in the next frame.
+        ProjectileTextureCache.invalidate()
+        EnemyFrameCache.invalidate()
+        super.resume()
+    }
+
     override fun dispose() {
+        ProjectileTextureCache.dispose()
+        EnemyFrameCache.dispose()
         batch.dispose()
         super.dispose()
     }

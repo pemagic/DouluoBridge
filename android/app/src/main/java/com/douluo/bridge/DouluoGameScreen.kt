@@ -10,7 +10,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.scenes.scene2d.Group
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Image
-import com.badlogic.gdx.utils.viewport.FitViewport
+import com.badlogic.gdx.utils.viewport.ExtendViewport
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.scenes.scene2d.Actor
@@ -83,9 +83,10 @@ class DouluoGameScreen(
         }
 
     init {
-        // iOS size 1600x900
+        // Use ExtendViewport so the game fills the screen on wide-screen phones
+        // (FitViewport would leave letterbox black bars on 20:9 devices)
         camera = OrthographicCamera()
-        val viewport = FitViewport(Physics.gameWidth, Physics.gameHeight, camera)
+        val viewport = ExtendViewport(Physics.gameWidth, Physics.gameHeight, camera)
         stage = Stage(viewport, batch)
 
         stage.addActor(backgroundNode)
@@ -191,6 +192,18 @@ class DouluoGameScreen(
 
         val colors = currentLevelDef.colors
 
+        // Rainbow colours for sky/high platforms (matches iOS)
+        val rainbowColors = listOf(
+            Color(1f, 0.3f, 0.3f, 1f),   // Red
+            Color(1f, 0.6f, 0.2f, 1f),   // Orange
+            Color(1f, 0.9f, 0.2f, 1f),   // Yellow
+            Color(0.3f, 0.9f, 0.4f, 1f), // Green
+            Color(0.2f, 0.8f, 1f, 1f),   // Cyan
+            Color(0.3f, 0.4f, 1f, 1f),   // Blue
+            Color(0.7f, 0.3f, 1f, 1f),   // Purple
+            Color(1f, 0.4f, 0.8f, 1f)    // Magenta
+        )
+
         for (i in 0 until 500) {
             val surfaceY = 50f + MathUtils.random(0f, 50f)
             val groundHeight = 600f
@@ -200,8 +213,9 @@ class DouluoGameScreen(
                 i * 600f, groundBottom, 650f, groundHeight, groundColor, true
             )
             platforms.add(groundPlat)
-            drawPlatform(groundPlat)
+            drawPlatform(groundPlat)  // ground: only draws wavy top edge
 
+            // Mid-level floating platforms (65% chance)
             if (MathUtils.random() > 0.35f) {
                 val floatColor = colors.platformFloat.randomOrNull() ?: Color(0.2f, 0.2f, 0.2f, 1f)
                 val midPlat = PlatformData(
@@ -212,57 +226,116 @@ class DouluoGameScreen(
                 drawPlatform(midPlat)
             }
 
+            // Sky platforms — rainbow colours (50% chance)
             if (MathUtils.random() > 0.5f) {
-                // Simplified sky plat gen ...
+                val skyColor = rainbowColors[i % rainbowColors.size]
                 val skyPlat = PlatformData(
                     i * 600f + MathUtils.random(0f, 400f),
                     260f + MathUtils.random(0f, 90f),
                     180f + MathUtils.random(0f, 120f), 18f,
-                    Color.CYAN, false
+                    skyColor, false
                 )
                 platforms.add(skyPlat)
                 drawPlatform(skyPlat)
+            }
+
+            // High platforms — rainbow colours (30% chance) — matches iOS
+            if (MathUtils.random() > 0.7f) {
+                val highColor = rainbowColors[(i + 3) % rainbowColors.size]
+                val highPlat = PlatformData(
+                    i * 600f + MathUtils.random(0f, 300f),
+                    350f + MathUtils.random(0f, 50f),
+                    140f + MathUtils.random(0f, 80f), 15f,
+                    highColor, false
+                )
+                platforms.add(highPlat)
+                drawPlatform(highPlat)
             }
         }
     }
 
     private fun drawPlatform(plat: PlatformData) {
-        val pix = Pixmap(plat.width.toInt(), plat.height.toInt(), Pixmap.Format.RGBA8888)
-        pix.setColor(Color(plat.color).mul(0.58f)) // darkened
-        pix.fill()
-
-        // Draw top wavy edge as simple line for perf in libGDX Pixmap
-        val edgeColor = if (plat.isGround) Color.BROWN else Color.DARK_GRAY
-        pix.setColor(edgeColor)
-        pix.fillRectangle(0, 0, plat.width.toInt(), 4)
-        
-        val pImg = Image(Texture(pix))
-        pImg.setPosition(plat.x, plat.y)
-        platformLayer.addActor(pImg)
-        pix.dispose()
+        if (!plat.isGround) {
+            // Floating platforms: draw coloured block + top edge (same as iOS)
+            val darkColor = Color(plat.color).mul(0.58f)
+            val platW = plat.width.toInt().coerceAtLeast(1)
+            val platH = plat.height.toInt().coerceAtLeast(1)
+            val pix = Pixmap(platW, platH, Pixmap.Format.RGBA8888)
+            pix.setColor(darkColor)
+            pix.fill()
+            // Top edge highlight
+            pix.setColor(Color(plat.color))
+            pix.fillRectangle(0, platH - 2, platW, 2)
+            val pImg = Image(Texture(pix))
+            pImg.setPosition(plat.x, plat.y)
+            platformLayer.addActor(pImg)
+            pix.dispose()
+        }
+        // Ground: draw only the wavy top edge (a thin strip), no body — matches iOS
+        val edgeH = if (plat.isGround) 4 else 2
+        val edgeColor = if (plat.isGround)
+            Color(0.54f, 0.48f, 0.38f, 1f).mul(0.58f)
+        else
+            Color(0.44f, 0.38f, 0.31f, 1f).mul(0.58f)
+        val eW = plat.width.toInt().coerceAtLeast(1)
+        val ePix = Pixmap(eW, edgeH, Pixmap.Format.RGBA8888)
+        ePix.setColor(edgeColor)
+        ePix.fill()
+        val eImg = Image(Texture(ePix))
+        eImg.setPosition(plat.x, plat.y + plat.height - edgeH)
+        platformLayer.addActor(eImg)
+        ePix.dispose()
     }
 
     private fun drawBackground() {
         backgroundNode.clear()
 
         val bgName = "images/bg_level_$currentLevel.png"
+        var bgLoaded = false
         try {
-            val tex = Texture(Gdx.files.internal(bgName))
-            val bgImg = Image(tex)
-            // Scaling logic equivalent to aspect-fill
-            val imgAspect = tex.width.toFloat() / tex.height.toFloat()
-            val screenAspect = Physics.gameWidth / Physics.gameHeight
-
-            if (imgAspect > screenAspect) {
-                bgImg.setSize(Physics.gameHeight * imgAspect, Physics.gameHeight)
-            } else {
-                bgImg.setSize(Physics.gameWidth, Physics.gameWidth / imgAspect)
+            if (Gdx.files.internal(bgName).exists()) {
+                val tex = Texture(Gdx.files.internal(bgName))
+                val bgImg = Image(tex)
+                val imgAspect = tex.width.toFloat() / tex.height.toFloat()
+                val screenAspect = Physics.gameWidth / Physics.gameHeight
+                if (imgAspect > screenAspect) {
+                    bgImg.setSize(Physics.gameHeight * imgAspect, Physics.gameHeight)
+                } else {
+                    bgImg.setSize(Physics.gameWidth, Physics.gameWidth / imgAspect)
+                }
+                bgImg.setPosition(camera.position.x - Physics.gameWidth/2, camera.position.y - Physics.gameHeight/2)
+                bgImg.color.a = 1.0f
+                backgroundNode.addActor(bgImg)
+                bgLoaded = true
             }
-            bgImg.setPosition(camera.position.x - Physics.gameWidth/2, camera.position.y - Physics.gameHeight/2)
-            bgImg.color.a = 1.0f
-            backgroundNode.addActor(bgImg)
         } catch (e: Exception) {
-            // Fallback clear color if missing
+            bgLoaded = false
+        }
+
+        // Fallback: draw gradient background using level colours (matches iOS behaviour)
+        if (!bgLoaded) {
+            val levelColors = currentLevelDef.colors
+            val topColor = levelColors.bgColors.getOrElse(0) { Color(0.6f, 0.8f, 1f, 1f) }.cpy().mul(1.3f).apply { clamp() }
+            val botColor = levelColors.bgColors.getOrElse(1) { Color(0.9f, 0.95f, 1f, 1f) }
+
+            // Wide background covering the full scrollable world (camera-relative fixed)
+            val bgW = (Physics.gameWidth * 3).toInt().coerceAtLeast(1)
+            val bgH = Physics.gameHeight.toInt().coerceAtLeast(1)
+            val pix = Pixmap(bgW, bgH, Pixmap.Format.RGBA8888)
+            for (row in 0 until bgH) {
+                val t = row.toFloat() / bgH
+                val r = botColor.r + (topColor.r - botColor.r) * t
+                val g = botColor.g + (topColor.g - botColor.g) * t
+                val b = botColor.b + (topColor.b - botColor.b) * t
+                pix.setColor(r.coerceIn(0f,1f), g.coerceIn(0f,1f), b.coerceIn(0f,1f), 1f)
+                pix.fillRectangle(0, row, bgW, 1)
+            }
+            val bgTex = Texture(pix)
+            pix.dispose()
+            val bgImg = Image(bgTex)
+            bgImg.setSize(bgW.toFloat(), bgH.toFloat())
+            bgImg.setPosition(-bgW / 3f, 0f)
+            backgroundNode.addActor(bgImg)
         }
     }
 
@@ -489,9 +562,12 @@ class DouluoGameScreen(
                         enemy.damageFlash = 6
                         proj.hitEnemies.add(eid)
 
+                        // NOTE: do NOT call enemies.remove() here — we are currently
+                        // iterating over projectiles (inner loop over enemies).
+                        // handleEnemyDeath marks hp<=0; updateEnemies' iterator removes them.
                         if (enemy.hp <= 0) {
                             handleEnemyDeath(enemy)
-                            enemies.remove(enemy)
+                            // enemy will be cleaned up in the next updateEnemies pass
                         }
 
                         if (proj.hitEnemies.size >= proj.pierceCount) {

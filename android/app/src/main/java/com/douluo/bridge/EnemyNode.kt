@@ -12,6 +12,19 @@ import com.badlogic.gdx.scenes.scene2d.Actor
 object EnemyFrameCache {
     val frames = mutableMapOf<String, Array<Texture>>()
     const val frameCount = 6
+
+    /** Call on GL context loss so stale GPU textures are not reused */
+    fun invalidate() {
+        frames.clear()
+    }
+
+    /** Dispose all textures and clear cache */
+    fun dispose() {
+        frames.values.forEach { arr ->
+            arr.forEach { runCatching { it.dispose() } }
+        }
+        frames.clear()
+    }
 }
 
 data class PlatformData(

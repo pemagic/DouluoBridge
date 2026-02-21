@@ -16,17 +16,22 @@ object ProjectileTextureCache {
         val cb = (color.b * 10).toInt()
         val key = "${if (owner == ProjectileOwner.PLAYER) "p" else "e"}_${size}_${cr}_${cg}_${cb}"
 
-        cache[key]?.let { return it }
+        // Check if cached texture is still valid (not disposed)
+        cache[key]?.let { tex ->
+            if (tex.textureObjectHandle != 0) return tex
+            // Handle is 0 means GL context was lost - remove stale entry
+            cache.remove(key)
+        }
 
         val w = if (owner == ProjectileOwner.PLAYER) 70 else 25
-        val h = size
+        val h = size.coerceAtLeast(1)
         val padding = 30
         val texW = w + padding * 2
         val texH = h + padding * 2
 
         val pix = Pixmap(texW, texH, Pixmap.Format.RGBA8888)
         
-        // Glow effect (simplified for Pixmap)
+        // Glow effect
         pix.setColor(Color(color).apply { a = 0.3f })
         pix.fillRectangle(padding - 5, padding - 5, w + 10, h + 10)
         
@@ -40,6 +45,18 @@ object ProjectileTextureCache {
         pix.dispose()
 
         return texture
+    }
+
+    /** Call when GL context is lost (e.g. app resume / orientation change) */
+    fun invalidate() {
+        // Textures are already invalid after GL context loss; just clear references
+        cache.clear()
+    }
+
+    /** Fully dispose all textures and clear cache */
+    fun dispose() {
+        cache.values.forEach { runCatching { it.dispose() } }
+        cache.clear()
     }
 }
 
@@ -59,7 +76,7 @@ class ProjectileNode(
     val pierceCount: Int = 1
 ) : Group() {
 
-    val hitEnemies = mutableSetOf<Int>() // Using System.identityHashCode or similar if needed, or just keep track by Enemy object ref. We'll use object ref hashcode.
+    val hitEnemies = mutableSetOf<Int>()
 
     init {
         setupVisual()
@@ -73,10 +90,9 @@ class ProjectileNode(
 
         val sprite = Image(texture)
         sprite.setSize(w + padding * 2, h + padding * 2)
-        sprite.setPosition(-padding - w / 2, -padding - h / 2) // Center the actual core at 0,0
+        sprite.setPosition(-padding - w / 2, -padding - h / 2)
         addActor(sprite)
         
-        // Setting Group size to the core size for easier reasoning
         setSize(w, h)
         setOrigin(w/2, h/2)
     }
@@ -90,7 +106,6 @@ class ProjectileNode(
             var minDist = Float.MAX_VALUE
 
             for (enemy in enemies) {
-                // Avoid homing onto dead enemies if hp <= 0
                 if (enemy.hp <= 0) continue
                 
                 val dx = enemy.x - x
