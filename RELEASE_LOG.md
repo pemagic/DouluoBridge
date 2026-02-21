@@ -1,5 +1,5 @@
 
-### Release Automation
-- **Summarized Release Logs**: Implemented automatic extraction of version-specific notes from `CHANGELOG.md`.
-- **Direct Body Pasting**: Configured GitHub Actions to use `RELEASE_LOG.md` as the source for the Release body, ensuring logs are explicitly "pasted" rather than automatically generated.
+### 文档与国际化 (Localization)
+- **全面中文化**：将 `CHANGELOG.md` 及 GitHub Release 日志全面转换为中文，确保国内开发者与用户阅读更友好。
+- **记忆锁定**：在项目知识库中锁定了“使用中文记录日志”的规则，确保未来所有自动生成的发布说明均使用中文。
 

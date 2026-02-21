@@ -1,28 +1,34 @@
-# Changelog
+# 更新日志 (Changelog)
 
-All notable changes to this project will be documented in this file.
+本项目的所有重大变更都将记录在此文件中。
+
+## [1.8.3] - 2026-02-21
+
+### 文档与国际化 (Localization)
+- **全面中文化**：将 `CHANGELOG.md` 及 GitHub Release 日志全面转换为中文，确保国内开发者与用户阅读更友好。
+- **记忆锁定**：在项目知识库中锁定了“使用中文记录日志”的规则，确保未来所有自动生成的发布说明均使用中文。
 
 ## [1.8.2] - 2026-02-21
 
-### Release Automation
-- **Summarized Release Logs**: Implemented automatic extraction of version-specific notes from `CHANGELOG.md`.
-- **Direct Body Pasting**: Configured GitHub Actions to use `RELEASE_LOG.md` as the source for the Release body, ensuring logs are explicitly "pasted" rather than automatically generated.
+### 发布自动化
+- **全自动描述提取**：实现了从 `CHANGELOG.md` 中自动提取当前版本说明的功能，生成的 `RELEASE_LOG.md` 会被推送到远程。
+- **直接正文填充**：配置了 GitHub Actions 直接读取 `RELEASE_LOG.md` 并将其“贴入” GitHub Release 正文，不再使用自动引用的方式，确保中文日志完美展现。
 
 ## [1.8.1] - 2026-02-21
 
-### CI/CD Fixes
-- **GitHub Actions Compatibility**: Removed hardcoded local JDK path from `gradle.properties` to allow the CI environment to use its native `JAVA_HOME`.
+### CI/CD 修复
+- **GitHub Actions 兼容性优化**：移除了 `gradle.properties` 中硬编码的本地 JDK 路径，解决了云端 Linux 环境下找不到 Java Home 导致的编译失败问题。
 
 ## [1.8.0] - 2026-02-21
 
-### Platform Support
-- **Android Port**: The game has been successfully ported to Android using Kotlin and LibGDX (`gdx-backend-android`). The core logic (`GameScene.swift`) has been faithfully translated to `DouluoGameScreen.kt` using Object-Oriented Scene2D actors, achieving identical gameplay without WebView dependencies.
-- **Automated CI/CD**: Dual-platform GitHub Actions pipeline (`release.yml`) configured to automatically build `.ipa` (macOS) and `.apk` (Ubuntu) upon release tags.
+### 平台支持
+- **安卓端移植**：使用 Kotlin 和 LibGDX (`gdx-backend-android`) 成功将游戏移植到安卓平台。核心逻辑（由 `GameScene.swift` 翻译至 `DouluoGameScreen.kt`）采用了 Scene2D Actor 架构，实现了 1:1 的原生还原，不依赖任何 WebView。
+- **自动化 CI/CD**：配置了双端 GitHub Actions 流水线 (`release.yml`)，在推送版本标签时自动在 macOS 编译 `.ipa`、在 Ubuntu 编译 `.apk`。
 
-### Build Toolchain & Android Fixes
-- **Modernized Environment**: Upgraded Android project to Gradle 8.11.1, Android Gradle Plugin (AGP) 8.7.3, and Kotlin 2.1.0 to ensure compatibility with modern JDK versions (JDK 17 / JDK 25).
-- **Gradle Stability**: Refactored `build.gradle.kts` to eliminate configuration cache mutation exceptions during native asset copying.
-- **Resource Integrity**: Added necessary `proguard-rules.pro`, `strings.xml`, and dummy `ic_launcher` resources to guarantee successful APK packaging.
+### 构建工具链与安卓修复
+- **环境现代化**：将安卓项目升级至 Gradle 8.11.1、AGP 8.7.3 和 Kotlin 2.1.0，确保与最新 JDK (17/25) 的完美兼容。
+- **构建稳定性**：重构了 `build.gradle.kts`，解决了原生资源复制过程中的配置缓存变动异常。
+- **资源完整性**：添加了必要的 `proguard-rules.pro`、`strings.xml` 以及图标资源，确保 APK 打包万无一无。
 
 ## [1.7.0] - 2026-02-20
 
