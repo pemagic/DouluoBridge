@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.1] - 2026-02-21
+
+### CI/CD Fixes
+- **GitHub Actions Compatibility**: Removed hardcoded local JDK path from `gradle.properties` to allow the CI environment to use its native `JAVA_HOME`.
+
 ## [1.8.0] - 2026-02-21
 
 ### Platform Support
