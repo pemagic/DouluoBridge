@@ -44,7 +44,13 @@ echo "📝 Updating CHANGELOG..."
 DATE=$(date +%Y-%m-%d)
 sed -i '' "s/## \[$VERSION\] - TBD/## \[$VERSION\] - $DATE/" "$ROOT_DIR/CHANGELOG.md"
 
-# 4. Git Operations
+# 4. Extract Release Notes for GitHub Release
+echo "📄 Extracting release notes..."
+# Extract from current version until the next second-level header (##) or end of file
+VERSION_ESCAPED=$(echo $VERSION | sed 's/\./\\./g')
+awk "/## \[$VERSION_ESCAPED\]/{flag=1;next} /^## \[/{flag=0} flag" "$ROOT_DIR/CHANGELOG.md" > "$ROOT_DIR/RELEASE_LOG.md"
+
+# 5. Git Operations
 echo "📦 Committing and Tagging..."
 git add .
 git commit -m "Release v$VERSION"
@@ -54,4 +60,4 @@ echo "✅ Local steps complete."
 echo "➡️ To finish the release, run:"
 echo "   git push origin main && git push origin v$VERSION"
 echo ""
-echo "This will trigger GitHub Actions to build and upload the .ipa and .apk to the Release page."
+echo "This will trigger GitHub Actions to build and upload artifacts with the summary in RELEASE_LOG.md."

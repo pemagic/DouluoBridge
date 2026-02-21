@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.2] - 2026-02-21
+
+### Release Automation
+- **Summarized Release Logs**: Implemented automatic extraction of version-specific notes from `CHANGELOG.md`.
+- **Direct Body Pasting**: Configured GitHub Actions to use `RELEASE_LOG.md` as the source for the Release body, ensuring logs are explicitly "pasted" rather than automatically generated.
+
 ## [1.8.1] - 2026-02-21
 
 ### CI/CD Fixes
