@@ -1,0 +1,18 @@
+# AI 助手沟通规范
+- **简练回复，不要说大话**：禁止使用浮夸、夸张的技术赞美词汇（如“完美通关”、“史诗级修复”、“真·大一统”等）。
+- 回复内容必须克制、简明扼要，直接说明故障点、修复动作和当前状态即可。
+
+# 代码发版与版本变更流程 (Release Workflow)
+每次完成需求或 Bug 修复，需要推进版本并发布时，必须严格遵守以下自动发版准则：
+
+## 第一步：双端版本号对齐同步
+1. **Android**: 进入 `android/app/build.gradle.kts`，递增 `versionCode` 并更新 `versionName`。
+2. **iOS**: 进入 `ios/DouluoBridge.xcodeproj/project.pbxproj`，精确搜索并递增 `CURRENT_PROJECT_VERSION` 与 `MARKETING_VERSION`。（注意：严格只修改对应行，不要破坏 JSON 或数组括号结构，且不要再误加 `DEVELOPMENT_ASSET_PATHS` 的校验项导致报错）。
+
+## 第二步：代码自动化发版
+1. 提交(Commit) 本次更新的代码（Message 将被自动摄取为更新日志）。
+2. 在项目根目录执行 `python3 scripts/publish_release.py` 开始跨端发版流程。
+
+## ⚠️ 绝对强红线禁区项
+- **禁止手动修改 `README.md`**：其中的版本号声明和更新特性列表现已全部由 `publish_release.py` 内部正则脚本接管，随 Git Commit 动态覆盖。
+- **禁止操作 `RELEASE_LOG.md`**：此静态依赖文件早已被删除，GitHub Actions `.github/workflows/release.yml` 也已断开对其的文件寻址硬校验，全部日志已动态化。
