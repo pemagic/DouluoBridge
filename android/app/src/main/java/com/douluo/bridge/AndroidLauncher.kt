@@ -58,6 +58,14 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
 
     private lateinit var prefs: android.content.SharedPreferences
     private var bestKills = 0
+
+    // Banner Animation Handler
+    private val bannerHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val hideBannerRunnable = Runnable {
+        levelBanner.animate().alpha(0f).translationY(-dpToPx(50f).toFloat()).setDuration(400).withEndAction {
+            levelBanner.visibility = View.GONE
+        }.start()
+    }
     private var bestLevel = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -597,17 +605,22 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
                 }
             }
 
+            bannerHandler.removeCallbacks(hideBannerRunnable)
             levelBanner.animate().cancel()
+            
             levelBannerTitle.text = name
             levelBanner.visibility = View.VISIBLE
             levelBanner.alpha = 0f
             levelBanner.translationY = -dpToPx(50f).toFloat()
 
-            levelBanner.animate().alpha(1f).translationY(0f).setDuration(300).withEndAction {
-                levelBanner.animate().alpha(0f).translationY(-dpToPx(50f).toFloat()).setDuration(400).setStartDelay(1500).withEndAction {
-                    levelBanner.visibility = View.GONE
-                }.start()
-            }.start()
+            levelBanner.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(300)
+                .withEndAction {
+                    bannerHandler.postDelayed(hideBannerRunnable, 1500)
+                }
+                .start()
         }
     }
 
