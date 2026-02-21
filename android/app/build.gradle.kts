@@ -15,8 +15,8 @@ android {
         applicationId = "com.douluo.bridge"
         minSdk = 24
         targetSdk = 34
-        versionCode = 9
-        versionName = "1.8.7"
+        versionCode = 10
+        versionName = "1.8.8"
     }
 
     buildTypes {
@@ -40,6 +40,14 @@ android {
         getByName("main") {
             assets.srcDirs("src/main/assets", "../../shared_assets")
             jniLibs.srcDirs("src/main/jniLibs", layout.buildDirectory.dir("libs/jni"))
+        }
+    }
+
+    applicationVariants.all {
+        outputs.all {
+            if (this is com.android.build.gradle.internal.api.ApkVariantOutputImpl) {
+                this.outputFileName = "DouluoBridge-Android-v${defaultConfig.versionName}.apk"
+            }
         }
     }
 }

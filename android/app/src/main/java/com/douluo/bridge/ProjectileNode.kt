@@ -31,11 +31,14 @@ object ProjectileTextureCache {
 
         val pix = Pixmap(texW, texH, Pixmap.Format.RGBA8888)
         
-        // Glow effect
-        pix.setColor(Color(color).apply { a = 0.3f })
-        pix.fillRectangle(padding - 5, padding - 5, w + 10, h + 10)
+        // Multi-layer simulated blur glow effect
+        for (i in 8 downTo 1) {
+            val alpha = 0.02f + (8 - i) * 0.03f
+            pix.setColor(color.r, color.g, color.b, alpha)
+            pix.fillRectangle(padding - i * 2, padding - i * 2, w + i * 4, h + i * 4)
+        }
         
-        // Core
+        // Solid Core
         pix.setColor(color)
         pix.fillRectangle(padding, padding, w, h)
 

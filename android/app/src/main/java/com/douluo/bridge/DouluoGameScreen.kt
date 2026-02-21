@@ -429,13 +429,18 @@ class DouluoGameScreen(
         }
 
         p.grounded = false
-        for (plat in platforms) {
-            val platTop = plat.y + plat.height
-            val playerBottom = p.y - p.height / 2
+        val playerLeft = p.x
+        val playerRight = p.x + p.width
+        val playerBottom = p.y
 
-            if (p.x + p.width / 2 > plat.x && p.x - p.width / 2 < plat.x + plat.width &&
-                playerBottom < platTop && playerBottom > plat.y - 20 && p.vy < 0) {
-                p.y = platTop + p.height / 2
+        for (plat in platforms) {
+            val platLeft = plat.x
+            val platRight = plat.x + plat.width
+            val platTop = plat.y + plat.height
+
+            if (playerRight > platLeft && playerLeft < platRight &&
+                playerBottom <= platTop && playerBottom > plat.y - 20 && p.vy < 0) {
+                p.y = platTop
                 p.vy = 0f
                 p.grounded = true
                 p.jumpCount = 0
@@ -470,10 +475,15 @@ class DouluoGameScreen(
                 continue
             }
 
-            val dx = Math.abs(enemy.x - playerNode.x)
-            val dy = Math.abs(enemy.y - playerNode.y)
+            val playerCx = playerNode.x + playerNode.width / 2f
+            val playerCy = playerNode.y + playerNode.height / 2f
+            val enemyCx = enemy.x + enemy.enemyWidth / 2f
+            val enemyCy = enemy.y + enemy.enemyHeight / 2f
 
-            if (enemy.enemyType == EnemyType.CHASER && dx < 60 && dy < 70) {
+            val dx = Math.abs(enemyCx - playerCx)
+            val dy = Math.abs(enemyCy - playerCy)
+
+            if (!enemy.isBoss && enemy.enemyType == EnemyType.CHASER && dx < 60 && dy < 70) {
                 val shield = playerNode.skills["shield"]
                 if (shield != null && shield.active > 0) {
                     shield.active = Math.max(0, shield.active - 10)
@@ -488,6 +498,7 @@ class DouluoGameScreen(
 
             if (enemy.hp <= 0) {
                 handleEnemyDeath(enemy)
+                enemy.remove()
                 iter.remove()
                 continue
             }
@@ -962,23 +973,62 @@ class DouluoGameScreen(
     }
 
     private fun spawnDropIcon(x: Float, y: Float, type: DropData.DropType) {
-        val pix = Pixmap(32, 32, Pixmap.Format.RGBA8888)
-        when (type) {
-            is DropData.DropType.Health -> {
-                pix.setColor(Color.RED)
-                pix.fillRectangle(8, 8, 16, 16)
-            }
-            is DropData.DropType.Weapon -> {
-                pix.setColor(Color.YELLOW)
-                pix.fillRectangle(8, 8, 16, 16)
-            }
-            is DropData.DropType.Skill -> {
-                pix.setColor(Color.CYAN)
-                pix.fillRectangle(8, 8, 16, 16)
+        val dropSize = 32
+        val pix = Pixmap(dropSize, dropSize, Pixmap.Format.RGBA8888)
+        
+        fun drawLineThick(p: Pixmap, x1: Int, y1: Int, x2: Int, y2: Int, thick: Int) {
+            val half = thick / 2    
+            val dx = Math.abs(x2 - x1); val dy = Math.abs(y2 - y1)
+            for (off in -half..half) {
+                if (dx >= dy) p.drawLine(x1, y1 + off, x2, y2 + off)
+                else p.drawLine(x1 + off, y1, x2 + off, y2)
             }
         }
+
+        when (type) {
+            is DropData.DropType.Health -> {
+                pix.setColor(0.82f, 0.08f, 0.08f, 1f)
+                pix.fillCircle(10, 10, 8)
+                pix.fillCircle(22, 10, 8)
+                pix.fillTriangle(2, 10, 30, 10, 16, 26)
+                pix.setColor(Color.WHITE)
+                pix.drawCircle(10, 10, 8)
+                pix.drawCircle(22, 10, 8)
+                pix.drawLine(2, 10, 16, 26)
+                pix.drawLine(30, 10, 16, 26)
+            }
+            is DropData.DropType.Weapon -> {
+                pix.setColor(1.0f, 0.8f, 0.0f, 1f)
+                drawLineThick(pix, 6, 26, 26, 6, 4)
+                drawLineThick(pix, 12, 28, 20, 20, 3)
+                pix.setColor(Color.WHITE)
+                pix.drawLine(6, 26, 26, 6)
+            }
+            is DropData.DropType.Skill -> {
+                val sc = GameConfig.skillDefs.find { it.id == type.id }?.color ?: Color.GRAY
+                pix.setColor(sc.r, sc.g, sc.b, 0.8f)
+                pix.fillRectangle(2, 2, 28, 28)
+                pix.setColor(Color.WHITE)
+                drawLineThick(pix, 2, 2, 30, 2, 2)
+                drawLineThick(pix, 2, 2, 2, 30, 2)
+                drawLineThick(pix, 2, 30, 30, 30, 2)
+                drawLineThick(pix, 30, 2, 30, 30, 2)
+                drawLineThick(pix, 8, 8, 24, 8, 2)
+                drawLineThick(pix, 8, 14, 24, 14, 2)
+                drawLineThick(pix, 8, 20, 24, 20, 2)
+            }
+        }
+        
         val img = Image(Texture(pix))
+        img.setSize(dropSize.toFloat(), dropSize.toFloat())
         img.setPosition(x, y)
+        img.zIndex = 5
+        if (type is DropData.DropType.Weapon) {
+            val rotate = com.badlogic.gdx.scenes.scene2d.actions.Actions.rotateBy(-360f, 2f)
+            img.setOrigin(16f, 16f)
+            img.addAction(com.badlogic.gdx.scenes.scene2d.actions.Actions.forever(rotate))
+        }
+
         entityLayer.addActor(img)
         drops.add(DropData(x, y, MathUtils.random(-3f, 3f), 12f, type, 800, img))
         pix.dispose()

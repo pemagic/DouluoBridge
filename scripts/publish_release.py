@@ -5,7 +5,6 @@ import json, subprocess, urllib.request, urllib.error, os, sys
 
 REPO = "pemagic/DouluoBridge"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-APK_PATH = os.path.join(ROOT, "android/app/build/outputs/apk/release/app-release.apk")
 RELEASE_LOG = os.path.join(ROOT, "RELEASE_LOG.md")
 GRADLE = os.path.join(ROOT, "android/app/build.gradle.kts")
 
@@ -19,6 +18,8 @@ with open(GRADLE) as f:
 if not version:
     print("❌ 无法读取 versionName"); sys.exit(1)
 print(f"📦 版本: {version}")
+
+APK_PATH = os.path.join(ROOT, f"android/app/build/outputs/apk/release/DouluoBridge-Android-v{version}.apk")
 
 # 获取 GitHub Token
 result = subprocess.run(
