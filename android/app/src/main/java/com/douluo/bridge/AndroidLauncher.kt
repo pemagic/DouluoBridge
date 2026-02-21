@@ -17,6 +17,7 @@ import android.widget.TextView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.android.AndroidApplication
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration
 import com.douluo.bridge.ui.ActionButton
@@ -329,12 +330,15 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         allControls.add(joystick)
 
         joystick.onDirectionChange = { dir ->
-            val screen = douluoGame.screen as? DouluoGameScreen
-            if (screen != null) {
-                when (dir) {
-                    VirtualJoystick.Direction.LEFT -> { screen.inputLeft = true; screen.inputRight = false }
-                    VirtualJoystick.Direction.RIGHT -> { screen.inputLeft = false; screen.inputRight = true }
-                    VirtualJoystick.Direction.NONE -> { screen.inputLeft = false; screen.inputRight = false }
+            // Input state is read on the GL thread — post to avoid race conditions
+            Gdx.app.postRunnable {
+                val screen = douluoGame.screen as? DouluoGameScreen
+                if (screen != null) {
+                    when (dir) {
+                        VirtualJoystick.Direction.LEFT -> { screen.inputLeft = true; screen.inputRight = false }
+                        VirtualJoystick.Direction.RIGHT -> { screen.inputLeft = false; screen.inputRight = true }
+                        VirtualJoystick.Direction.NONE -> { screen.inputLeft = false; screen.inputRight = false }
+                    }
                 }
             }
         }
@@ -349,7 +353,10 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         allControls.add(attackButton)
 
         attackButton.onKeyEvent = { _, pressed ->
-            if (pressed) (douluoGame.screen as? DouluoGameScreen)?.handleAttack()
+            // MUST run on GL thread: handleAttack() creates GL Textures via ProjectileTextureCache
+            if (pressed) Gdx.app.postRunnable {
+                (douluoGame.screen as? DouluoGameScreen)?.handleAttack()
+            }
         }
 
         jumpButton = ActionButton(this)
@@ -362,7 +369,9 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         allControls.add(jumpButton)
 
         jumpButton.onKeyEvent = { _, pressed ->
-            if (pressed) (douluoGame.screen as? DouluoGameScreen)?.handleJump()
+            if (pressed) Gdx.app.postRunnable {
+                (douluoGame.screen as? DouluoGameScreen)?.handleJump()
+            }
         }
 
         dashButton = ActionButton(this)
@@ -375,7 +384,9 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         allControls.add(dashButton)
 
         dashButton.onKeyEvent = { _, pressed ->
-            if (pressed) (douluoGame.screen as? DouluoGameScreen)?.handleDash()
+            if (pressed) Gdx.app.postRunnable {
+                (douluoGame.screen as? DouluoGameScreen)?.handleDash()
+            }
         }
 
         fun makeSkillBtn(emoji: String, name: String, color: Int, id: String, rightMarginPx: Int, bottomMarginPx: Int): ActionButton {
@@ -389,7 +400,9 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
             uiContainer.addView(btn, p)
             allControls.add(btn)
             btn.onKeyEvent = { code, pressed ->
-                if (pressed) (douluoGame.screen as? DouluoGameScreen)?.handleSkill(code)
+                if (pressed) Gdx.app.postRunnable {
+                    (douluoGame.screen as? DouluoGameScreen)?.handleSkill(code)
+                }
             }
             return btn
         }
