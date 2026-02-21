@@ -63,15 +63,52 @@ except urllib.error.HTTPError as e:
 
 # 动态读取最新的 Git Commit 作为当前版本的 Release 说明
 body_text = f"## 🚀 DouluoBridge v{version} 正式发布\n\n"
+commits_text = ""
 try:
     # 仅获取最近一次的 commit（即发版 commit）作为本次版本内容
     commits = subprocess.check_output(["git", "log", "-1", "--pretty=format:%s%n%b"]).decode().strip()
     if commits:
-        body_text += "### ✨ 更新内容\n- " + commits.replace('\n', '\n- ')
+        commits_text = "- " + commits.replace('\n', '\n- ')
+        body_text += "### ✨ 更新内容\n" + commits_text
     else:
         body_text += "常规稳定性维护与性能优化。"
 except Exception:
     body_text += f"v{version} release"
+
+# ---- NEW: 自动同步到 README.md ----
+README_PATH = os.path.join(ROOT, "README.md")
+if os.path.exists(README_PATH):
+    import re
+    with open(README_PATH, "r", encoding="utf-8") as f:
+        readme_content = f.read()
+    
+    # 1. 更新顶部标语的版本号
+    # 比如: > **Cross-Platform Edition** v1.8.15 — 中国水墨风武侠横版动作游戏 (iOS & Android)
+    readme_content = re.sub(
+        r'(> \*\*Cross-Platform Edition\*\* v)[\d\.]+ (—)',
+        f'\\g<1>{version} \\g<2>',
+        readme_content
+    )
+    
+    # 2. 更新发布特性的段落
+    # 匹配从 ### 💥 v... 开始到下一个 ### 开始之间的内容
+    feature_pattern = re.compile(
+        r'(### 💥 v[\d\.]+.*?)\n+(?=### 🏯)', 
+        re.DOTALL
+    )
+    
+    new_feature_section = f"### 💥 v{version} 最新特性与变更\n{commits_text}\n"
+    readme_content = feature_pattern.sub(new_feature_section, readme_content)
+    
+    with open(README_PATH, "w", encoding="utf-8") as f:
+        f.write(readme_content)
+    print("✅ 已同步更新 README.md 中的版本号和最新特性汇总")
+    
+    # 因为 README 被改了，我们顺便提交它以免工作区不干净
+    subprocess.run(["git", "add", README_PATH])
+    subprocess.run(["git", "commit", "--amend", "--no-edit"])
+    subprocess.run(["git", "push", "-f", "origin", "HEAD"])
+# ---------------------------------
 
 # 创建 Release
 payload = json.dumps({
