@@ -1,93 +1,115 @@
 #!/bin/bash
+# Douluo Bridge - 本地构建验证 + 直接发布 GitHub Release
+# 用法: ./scripts/release.sh 1.8.5
+# 不依赖 GitHub Actions，本地 assembleRelease 成功后直接通过 API 发布。
 
-# Douluo Bridge - Unified Release Script
-# Usage: ./scripts/release.sh [version]
-# Example: ./scripts/release.sh 1.8.0
+set -e
 
 VERSION=$1
+REPO="pemagic/DouluoBridge"
 
 if [ -z "$VERSION" ]; then
-    echo "Usage: $0 [version]"
-    echo "Example: $0 1.8.0"
+    echo "用法: $0 <version>  例如: $0 1.8.5"
     exit 1
 fi
 
-# Ensure we are in the root directory
-ROOT_DIR=$(pwd)
-if [ ! -d "$ROOT_DIR/ios" ] || [ ! -d "$ROOT_DIR/android" ]; then
-    echo "Error: Must run from project root."
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+if [ ! -d "$ROOT_DIR/android" ]; then
+    echo "❌ 必须在项目根目录运行"
     exit 1
 fi
 
-echo "🚀 启动 v$VERSION 发布流程..."
+# ── Step 0: 获取 GitHub Token ──────────────────────────────────────────────
+echo "🔑 获取 GitHub 凭证..."
+GH_TOKEN=$(printf "protocol=https\nhost=github.com\n" | git credential fill 2>/dev/null | grep "^password=" | cut -d= -f2-)
+if [ -z "$GH_TOKEN" ]; then
+    echo "❌ 无法获取 GitHub Token，请确认已通过 git credential 登录 GitHub。"
+    exit 1
+fi
+echo "✅ Token 获取成功"
 
-# 0. 本地环境校验 (Local Verification)
-echo "🔍 正在进行本地构建与安装校验..."
+# ── Step 1: 更新版本号 ────────────────────────────────────────────────────
+echo "📝 更新版本号 → $VERSION ..."
+GRADLE="$ROOT_DIR/android/app/build.gradle.kts"
+CURRENT_VC=$(grep "versionCode =" "$GRADLE" | sed 's/[^0-9]//g')
+NEW_VC=$((CURRENT_VC + 1))
+sed -i '' "s/versionCode = .*/versionCode = $NEW_VC/" "$GRADLE"
+sed -i '' "s/versionName = \".*\"/versionName = \"$VERSION\"/" "$GRADLE"
+echo "   versionCode: $CURRENT_VC → $NEW_VC, versionName → $VERSION"
+
+# ── Step 2: 更新 CHANGELOG 日期 ───────────────────────────────────────────
+echo "📄 更新 CHANGELOG 日期..."
+DATE=$(date +%Y-%m-%d)
+sed -i '' "s/## \[$VERSION\] - TBD/## [$VERSION] - $DATE/" "$ROOT_DIR/CHANGELOG.md"
+
+# ── Step 3: 更新 RELEASE_LOG (提取当前版本说明) ────────────────────────────
+echo "📄 生成 RELEASE_LOG.md..."
+VERSION_ESCAPED=$(echo "$VERSION" | sed 's/\./\\./g')
+awk "/## \[$VERSION_ESCAPED\]/{flag=1;next} /^## \[/{flag=0} flag" \
+    "$ROOT_DIR/CHANGELOG.md" > "$ROOT_DIR/RELEASE_LOG.md"
+
+# ── Step 4: 本地 release 构建 ────────────────────────────────────────────
+echo "🔨 本地 assembleRelease 构建..."
 cd "$ROOT_DIR/android"
-./gradlew assembleDebug > /dev/null 2>&1
+./gradlew clean assembleRelease 2>&1 | tail -5
 if [ $? -ne 0 ]; then
-    echo "❌ 错误: 本地 Android 构建失败，请先修复代码再发布。"
+    echo "❌ 本地 Release 构建失败，终止发布！"
     exit 1
 fi
-
-ADB="/Users/mac/android-sdk/platform-tools/adb"
-DEVICE=$($ADB devices | grep -w "device" | head -n 1 | cut -f1)
-
-if [ -z "$DEVICE" ]; then
-    echo "⚠️ 警告: 未检测到连接的安卓设备/模拟器。根据您的要求，必须在本地安装测试通过后才能执行 Git 同步。"
-    echo "请连接设备并确保其处于 'device' 状态后再重试。"
+APK_PATH="$ROOT_DIR/android/app/build/outputs/apk/release/app-release.apk"
+if [ ! -f "$APK_PATH" ]; then
+    echo "❌ APK 不存在: $APK_PATH"
     exit 1
 fi
-
-echo "📲 正在安装到设备 ($DEVICE) 进行最后验证..."
-$ADB -s $DEVICE install -r app/build/outputs/apk/debug/app-debug.apk > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-    echo "❌ 错误: APK 安装到设备失败。请检查设备连接或存储空间。"
-    exit 1
-fi
-
-echo "✅ 本地安装成功！请在手机上确认运行正常。确认无误后按任意键继续执行 Git 同步（或 Ctrl+C 退出）..."
-read -n 1 -s
+echo "✅ 构建成功: $APK_PATH"
 
 cd "$ROOT_DIR"
 
-# 1. Update Android Version
-echo "🤖 Updating Android version..."
-ANDROID_GRADLE="$ROOT_DIR/android/app/build.gradle.kts"
-sed -i '' "s/versionName = \".*\"/versionName = \"$VERSION\"/" "$ANDROID_GRADLE"
-# Increment versionCode (simple integer increment)
-CURRENT_VC=$(grep "versionCode =" "$ANDROID_GRADLE" | sed 's/[^0-9]//g')
-NEW_VC=$((CURRENT_VC + 1))
-sed -i '' "s/versionCode = .*/versionCode = $NEW_VC/" "$ANDROID_GRADLE"
+# ── Step 5: Commit + Tag + Push ──────────────────────────────────────────
+echo "📦 Commit 并推送..."
+git add android/app/build.gradle.kts CHANGELOG.md RELEASE_LOG.md
+git commit -m "chore: 发布 v$VERSION"
+git tag "v$VERSION" 2>/dev/null || (git tag -d "v$VERSION" && git tag "v$VERSION")
+git push origin main
+git push origin "v$VERSION" --force
 
-# 2. Update iOS Version
-echo "🍎 Updating iOS version..."
-IOS_PROJ="$ROOT_DIR/ios/DouluoBridge.xcodeproj/project.pbxproj"
-sed -i '' "s/MARKETING_VERSION = .*;/MARKETING_VERSION = $VERSION;/" "$IOS_PROJ"
-# Increment CURRENT_PROJECT_VERSION (build number)
-CURRENT_CV=$(grep "CURRENT_PROJECT_VERSION =" "$IOS_PROJ" | head -n 1 | sed 's/[^0-9]//g')
-NEW_CV=$((CURRENT_CV + 1))
-sed -i '' "s/CURRENT_PROJECT_VERSION = .*;/CURRENT_PROJECT_VERSION = $NEW_CV;/g" "$IOS_PROJ"
+# ── Step 6: 通过 API 创建 GitHub Release ────────────────────────────────
+echo "🚀 创建 GitHub Release v$VERSION ..."
+RELEASE_BODY=$(cat "$ROOT_DIR/RELEASE_LOG.md")
 
-# 3. Update CHANGELOG date
-echo "📝 Updating CHANGELOG..."
-DATE=$(date +%Y-%m-%d)
-sed -i '' "s/## \[$VERSION\] - TBD/## \[$VERSION\] - $DATE/" "$ROOT_DIR/CHANGELOG.md"
+RESPONSE=$(curl -s -X POST \
+    -H "Authorization: token $GH_TOKEN" \
+    -H "Accept: application/vnd.github.v3+json" \
+    "https://api.github.com/repos/$REPO/releases" \
+    -d "$(python3 -c "
+import json, sys
+body = open('$ROOT_DIR/RELEASE_LOG.md').read()
+print(json.dumps({'tag_name': 'v$VERSION', 'name': 'v$VERSION', 'body': body, 'draft': False, 'prerelease': False}))
+")")
 
-# 4. Extract Release Notes for GitHub Release
-echo "📄 Extracting release notes..."
-# Extract from current version until the next second-level header (##) or end of file
-VERSION_ESCAPED=$(echo $VERSION | sed 's/\./\\./g')
-awk "/## \[$VERSION_ESCAPED\]/{flag=1;next} /^## \[/{flag=0} flag" "$ROOT_DIR/CHANGELOG.md" > "$ROOT_DIR/RELEASE_LOG.md"
+RELEASE_ID=$(echo "$RESPONSE" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('id',''))")
+RELEASE_URL=$(echo "$RESPONSE" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('html_url',''))")
 
-# 5. Git Operations
-echo "📦 Committing and Tagging..."
-git add .
-git commit -m "Release v$VERSION"
-git tag "v$VERSION"
+if [ -z "$RELEASE_ID" ]; then
+    echo "⚠️  Release 已存在或创建失败，尝试更新..."
+    # 获取已有 release id
+    RELEASE_ID=$(curl -s -H "Authorization: token $GH_TOKEN" \
+        "https://api.github.com/repos/$REPO/releases/tags/v$VERSION" | \
+        python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('id',''))")
+fi
 
-echo "✅ Local steps complete."
-echo "➡️ To finish the release, run:"
-echo "   git push origin main && git push origin v$VERSION"
+# ── Step 7: 上传 APK 到 Release ─────────────────────────────────────────
+echo "📤 上传 APK..."
+APK_NAME="DouluoBridge-Android-v$VERSION.apk"
+UPLOAD_URL="https://uploads.github.com/repos/$REPO/releases/$RELEASE_ID/assets?name=$APK_NAME"
+
+curl -s -X POST \
+    -H "Authorization: token $GH_TOKEN" \
+    -H "Content-Type: application/vnd.android.package-archive" \
+    --data-binary @"$APK_PATH" \
+    "$UPLOAD_URL" | python3 -c "import json,sys; d=json.load(sys.stdin); print('✅ APK 上传成功:', d.get('browser_download_url',''))"
+
 echo ""
-echo "This will trigger GitHub Actions to build and upload artifacts with the summary in RELEASE_LOG.md."
+echo "🎉 发布完成！"
+echo "   Release 页面: $RELEASE_URL"
+echo "   本地 APK: $APK_PATH"
