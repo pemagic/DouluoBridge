@@ -162,8 +162,8 @@ class PlayerNode : Group() {
         val capeImg = Image(texCape)
         capeImg.setSize(capeW * 2f, capeH)
         capeImg.setPosition(width / 2f - capeW, 0f)
-        capeImg.zIndex = -1
         bodyGroup.addActor(capeImg)
+        capeImg.toBack()
         pixCape.dispose()
 
         // 2. Torso (Rectangle)
@@ -194,7 +194,6 @@ class PlayerNode : Group() {
         hatImg.setSize(hatW * 2f, hatH)
         // iOS hat base is at y=25 relative to center. In Android, that is y=32+25=57.
         hatImg.setPosition(width / 2f - hatW, 57f)
-        hatImg.zIndex = 2
         bodyGroup.addActor(hatImg)
         pixHat.dispose()
 
@@ -217,7 +216,6 @@ class PlayerNode : Group() {
         // 30 - 5 = 25, 32 - 20 (inverted pixmap, so y represents top-down).
         // Let's just place the image such that the start aligns: 
         swordImg.setPosition(width / 2f + 5f, 32f - 20f)
-        swordImg.zIndex = 3
         bodyGroup.addActor(swordImg)
         pixSword.dispose()
 
@@ -225,7 +223,6 @@ class PlayerNode : Group() {
         if (lvl >= 10) {
             val orbit = Group()
             orbit.setPosition(width / 2f, 32f)
-            orbit.zIndex = -2
             
             for (i in 0 until 8) {
                 val ang = i / 8f * MathUtils.PI2
@@ -242,6 +239,7 @@ class PlayerNode : Group() {
                 pixOSword.dispose()
             }
             bodyGroup.addActor(orbit)
+            orbit.toBack()
             orbitNode = orbit
             orbit.addAction(com.badlogic.gdx.scenes.scene2d.actions.Actions.forever(com.badlogic.gdx.scenes.scene2d.actions.Actions.rotateBy(360f, 1.05f)))
         }
