@@ -1059,7 +1059,8 @@ class DouluoGameScreen(
                 pix.drawLine(8, 36, 36, 8) // highlight
             }
             is DropData.DropType.Skill -> {
-                val scDef = GameConfig.skillDefs.find { it.id == type.id }?.color ?: Color.GRAY
+                val skillDef = GameConfig.skillDefs.find { it.id == type.id }
+                val scDef = skillDef?.color ?: Color.GRAY
                 pix.setColor(scDef.r, scDef.g, scDef.b, 0.9f)
                 pix.fillRectangle(4, 4, 37, 37)
                 pix.setColor(Color.WHITE)
@@ -1067,8 +1068,34 @@ class DouluoGameScreen(
                 drawThickLine(pix, 4, 4, 4, 41, 2)
                 drawThickLine(pix, 4, 41, 41, 41, 2)
                 drawThickLine(pix, 41, 4, 41, 41, 2)
-                pix.fillTriangle(22, 10, 14, 30, 30, 30)
-                pix.fillTriangle(22, 34, 14, 14, 30, 14)
+
+                val emoji = skillDef?.emoji ?: "❓"
+                val bW = 45
+                val bH = 45
+                val bitmap = android.graphics.Bitmap.createBitmap(bW, bH, android.graphics.Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(bitmap)
+                val paint = android.graphics.Paint()
+                paint.textSize = 28f
+                paint.textAlign = android.graphics.Paint.Align.CENTER
+                val fm = paint.fontMetrics
+                val textY = bH / 2f - (fm.ascent + fm.descent) / 2f
+                canvas.drawText(emoji, bW / 2f, textY, paint)
+
+                pix.blending = Pixmap.Blending.SourceOver
+                for (x in 0 until bW) {
+                    for (y in 0 until bH) {
+                        val color = bitmap.getPixel(x, y)
+                        val a = android.graphics.Color.alpha(color)
+                        if (a > 0) {
+                            val r = android.graphics.Color.red(color) / 255f
+                            val g = android.graphics.Color.green(color) / 255f
+                            val b = android.graphics.Color.blue(color) / 255f
+                            pix.setColor(r, g, b, a / 255f)
+                            pix.drawPixel(x, y)
+                        }
+                    }
+                }
+                bitmap.recycle()
             }
         }
         val tex = Texture(pix)
