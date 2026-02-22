@@ -1,6 +1,6 @@
 # 🗡 斗罗大桥：像素剑影 (Douluo Bridge: Pixel Wuxia)
 
-> **Cross-Platform Edition** v1.8.30 — 中国水墨风武侠横版动作游戏 (iOS & Android)
+> **Cross-Platform Edition** v1.8.31 — 中国水墨风武侠横版动作游戏 (iOS & Android)
 
 ![Launch Screen](ios/DouluoBridge/LaunchImage.png)
 
@@ -23,8 +23,8 @@
 - 🎵 **古典 BGM** — 程序生成的中国五声音阶古筝旋律
 - 📳 **触觉反馈** — iOS 原生震动：命中、击杀、冲锋、必杀技
 
-### 💥 v1.8.30 最新特性与变更
-- fix(branding): 尊从反馈，摒弃空格分隔形式，统一所有端内外的应用题称为浑然一体的“斗罗大桥”
+### 💥 v1.8.31 最新特性与变更
+- fix(build): 彻底修复 iOS 无法跨版本同步展示迭代版本号的遗留大坑，将 Info.plist 中的 CFBundleShortVersionString 和 CFBundleVersion 由写死的 1.8.23 迁移绑定为统一的环境变量  和
 ### 🏯 十关境界
 
 | 关卡 | 名称 | Boss | 敌人种类 |
