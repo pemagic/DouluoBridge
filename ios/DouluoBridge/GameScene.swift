@@ -685,6 +685,7 @@ class GameScene: SKScene {
                         let pierceDmg = Int(Double(proj.damage) * decayFactor)
                         enemy.hp -= CGFloat(pierceDmg)
                         enemy.damageFlash = 6
+                        gameDelegate?.triggerHaptic(.light)
                         proj.hitEnemies.insert(eid)
                         
                         if enemy.hp <= 0 {
