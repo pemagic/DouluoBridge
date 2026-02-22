@@ -230,7 +230,7 @@ class GameViewController: UIViewController, GameSceneDelegate {
         
         // Title
         let titleLabel = UILabel()
-        titleLabel.text = "斗罗大桥"
+        titleLabel.text = "斗罗 大桥"
         titleLabel.font = UIFont(name: "PingFangSC-Heavy", size: 64) ?? .boldSystemFont(ofSize: 64)
         titleLabel.textColor = .white
         titleLabel.layer.shadowColor = UIColor(red: 0.86, green: 0.15, blue: 0.15, alpha: 0.9).cgColor
