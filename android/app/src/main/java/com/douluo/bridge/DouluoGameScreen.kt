@@ -860,7 +860,7 @@ class DouluoGameScreen(
                     bColor, 50, (10 * sizeMult).toInt(), false, lvl
                 )
                 val spawnX = if (playerNode.facing == 1) playerNode.x + playerNode.width/2 else playerNode.x - playerNode.width/2 - 80f
-                proj.setPosition(spawnX, playerNode.y + playerNode.height/2 - 20f)
+                proj.setPosition(spawnX, playerNode.y + playerNode.height * 0.7f)
                 entityLayer.addActor(proj)
                 projectiles.add(proj)
             }
@@ -898,7 +898,7 @@ class DouluoGameScreen(
                         dmg, ProjectileOwner.PLAYER, Color(1f, 0.27f, 0f, 1f),
                         50 + lvl * 4, 14 + lvl, true, 1
                     )
-                    proj.setPosition(playerNode.x, playerNode.y + spread)
+                    proj.setPosition(playerNode.x, playerNode.y + playerNode.height * 0.7f + spread)
                     entityLayer.addActor(proj)
                     projectiles.add(proj)
                 }
@@ -913,7 +913,7 @@ class DouluoGameScreen(
                         MathUtils.cos(ang) * 20f, MathUtils.sin(ang) * 20f, dmg, ProjectileOwner.PLAYER,
                         Color(0f, 0.8f, 1f, 1f), 25 + lvl * 2, 12 + lvl, true, 1
                     )
-                    proj.setPosition(playerNode.x, playerNode.y)
+                    proj.setPosition(playerNode.x, playerNode.y + playerNode.height * 0.5f)
                     entityLayer.addActor(proj)
                     projectiles.add(proj)
                 }
@@ -943,7 +943,7 @@ class DouluoGameScreen(
                         dmg, ProjectileOwner.PLAYER, Color(0.2f, 1f, 0.53f, 1f),
                         90 + lvl * 5, 14, true, 1
                     )
-                    proj.setPosition(playerNode.x, playerNode.y + (i - count/2) * 10f)
+                    proj.setPosition(playerNode.x, playerNode.y + playerNode.height * 0.7f + (i - count/2) * 10f)
                     entityLayer.addActor(proj)
                     projectiles.add(proj)
                 }
