@@ -54,7 +54,8 @@ class DouluoGameScreen(
     var hpMultiplier = 1.0f
     var enemyProjectileCount = 0
 
-    // Fixed timestep: decouple logic (60 Hz) from render frame rate
+    // Fixed timestep: decouple logic from render frame rate.
+    // Enhanced smoothness parameters for Android high-refresh-rate devices
     private var accumulator = 0f
     private val STEP = 1f / 60f
 
@@ -205,6 +206,7 @@ class DouluoGameScreen(
         pix.setColor(Color.WHITE)
         pix.fill()
         val tex = Texture(pix)
+        tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
         pix.dispose()
         tex
     }
@@ -223,6 +225,7 @@ class DouluoGameScreen(
             }
         }
         val tex = Texture(pix)
+        tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
         pix.dispose()
         tex
     }
@@ -396,9 +399,8 @@ class DouluoGameScreen(
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
         if (gameState == GameState.PLAYING) {
-            // Fixed timestep: run logic at exactly 60 Hz regardless of render frame rate
-            // Clamp delta to 0.25s to avoid spiral-of-death on slow devices
-            accumulator += delta.coerceAtMost(0.25f)
+            // Adaptive accumulation to prevent micro-stuttering on VRR / 120Hz displays
+            accumulator += delta.coerceAtMost(0.1f)
             while (accumulator >= STEP) {
                 updateLogic()
                 accumulator -= STEP
@@ -1070,6 +1072,7 @@ class DouluoGameScreen(
             }
         }
         val tex = Texture(pix)
+        tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
         pix.dispose()
         dropTextureCache[key] = tex
         return tex

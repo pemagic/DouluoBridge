@@ -97,6 +97,7 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         config.useAccelerometer = false
         config.useCompass = false
         config.useImmersiveMode = true
+        config.numSamples = 2 // Enable MSAA (Multi-Sample Anti-Aliasing) for smooth vectors
 
         douluoGame = DouluoGame(this)
         val gameView = initializeForView(douluoGame, config)

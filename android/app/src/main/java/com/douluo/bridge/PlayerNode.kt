@@ -160,6 +160,7 @@ class PlayerNode : Group() {
             pixCape.drawLine(capeW.toInt(), i, bx.toInt(), i)
         }
         val texCape = Texture(pixCape)
+        texCape.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
         createdTextures.add(texCape)
         val capeImg = Image(texCape)
         capeImg.setSize(capeW * 2f, capeH)
@@ -174,6 +175,7 @@ class PlayerNode : Group() {
         pixTorso.setColor(torsoColor)
         pixTorso.fillRectangle(0, 0, 20, 40)
         val texTorso = Texture(pixTorso)
+        texTorso.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
         createdTextures.add(texTorso)
         val torsoImg = Image(texTorso)
         torsoImg.setSize(20f, 40f)
@@ -191,6 +193,7 @@ class PlayerNode : Group() {
         // Pixmap y is inverted: 0 is top. So base is at bottom (hatH), tip is at top (0).
         pixHat.fillTriangle(hatW.toInt(), 0, 0, hatH.toInt(), (hatW * 2).toInt(), hatH.toInt())
         val texHat = Texture(pixHat)
+        texHat.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
         createdTextures.add(texHat)
         val hatImg = Image(texHat)
         hatImg.setSize(hatW * 2f, hatH)
@@ -212,6 +215,7 @@ class PlayerNode : Group() {
         // Translated to pixmap coordinates: start at (0, 20), drop to (L, 30)
         L(pixSword, 0f, 0f, 5f, 20f, 5f + swordL, 30f, swordColor, swordW.toInt())
         val texSword = Texture(pixSword)
+        texSword.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
         createdTextures.add(texSword)
         val swordImg = Image(texSword)
         // LibGDX start position is (20+10, 32+0) = (30, 32). Pixmap start is (5, 20). 
@@ -232,6 +236,7 @@ class PlayerNode : Group() {
                 pixOSword.setColor(darkened(neonColors[i % neonColors.size]))
                 pixOSword.fill()
                 val texOSword = Texture(pixOSword)
+                texOSword.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
                 createdTextures.add(texOSword)
                 val oSword = Image(texOSword)
                 oSword.setPosition(MathUtils.cos(ang) * 55f - 18f, MathUtils.sin(ang) * 55f - 2f)

@@ -43,7 +43,7 @@ object ProjectileTextureCache {
         pix.fillRectangle(padding, padding, w, h)
 
         val texture = Texture(pix)
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest)
+        texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
         cache[key] = texture
         pix.dispose()
 

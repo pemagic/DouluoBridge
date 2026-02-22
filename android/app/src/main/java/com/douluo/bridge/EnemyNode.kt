@@ -370,6 +370,7 @@ class EnemyNode(
         }
 
         val tex = Texture(pix)
+        tex.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear)
         pix.dispose()
         return tex
     }
