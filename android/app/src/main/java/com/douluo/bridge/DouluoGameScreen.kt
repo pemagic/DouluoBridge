@@ -345,11 +345,13 @@ class DouluoGameScreen(
                 val imgAspect = tex.width.toFloat() / tex.height.toFloat()
                 val screenAspect = Physics.gameWidth / Physics.gameHeight
                 if (imgAspect > screenAspect) {
-                    bgImg.setSize(Physics.gameHeight * imgAspect, Physics.gameHeight)
+                    val targetH = Physics.gameHeight * 1.5f
+                    bgImg.setSize(targetH * imgAspect, targetH)
                 } else {
-                    bgImg.setSize(Physics.gameWidth, Physics.gameWidth / imgAspect)
+                    val targetW = Physics.gameWidth * 1.5f
+                    bgImg.setSize(targetW, targetW / imgAspect)
                 }
-                bgImg.setPosition(camera.position.x - Physics.gameWidth/2, camera.position.y - Physics.gameHeight/2)
+                bgImg.setPosition(camera.position.x - bgImg.width / 2, camera.position.y - bgImg.height / 2)
                 bgImg.color.a = 1.0f
                 backgroundNode.addActor(bgImg)
                 bgTextureCache[currentLevel]?.dispose()
@@ -387,8 +389,8 @@ class DouluoGameScreen(
             }
             
             val bgImg = Image(bgTex)
-            bgImg.setSize(bgW.toFloat(), bgH.toFloat())
-            bgImg.setPosition(-bgW / 3f, 0f)
+            bgImg.setSize(bgW.toFloat(), bgH * 1.5f)
+            bgImg.setPosition(-bgW / 3f, -bgH * 0.25f)
             backgroundNode.addActor(bgImg)
         }
     }
