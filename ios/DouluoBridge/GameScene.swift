@@ -1049,7 +1049,6 @@ class GameScene: SKScene {
         }
         
         playerNode.shootTimer = interval
-        gameDelegate?.triggerHaptic(.light)
     }
     
     func handleSkill(_ skillId: String, ignoreCooldown: Bool = false) {

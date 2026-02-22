@@ -875,7 +875,6 @@ class DouluoGameScreen(
                 fire(-8f, 1f); fire(-4f, 1f); fire(0f, 1.4f); fire(4f, 1f); fire(8f, 1f)
             }
             playerNode.shootTimer = interval
-            delegate.triggerHaptic(HapticType.LIGHT)
         }
     }
 
