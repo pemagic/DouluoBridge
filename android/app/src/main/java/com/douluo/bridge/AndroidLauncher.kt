@@ -707,43 +707,44 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
     override fun showBossWarning(name: String) {
         runOnUiThread {
             val warningView = android.widget.FrameLayout(this).apply {
-                setBackgroundColor(android.graphics.Color.argb(178, 0, 0, 0))
+                setBackgroundColor(android.graphics.Color.argb(216, 0, 0, 0))
                 alpha = 0f
             }
 
             val warningLabel = android.widget.TextView(this).apply {
                 text = "WARNING"
-                setTextColor(android.graphics.Color.argb(204, 230, 51, 51))
-                textSize = 18f
+                setTextColor(android.graphics.Color.argb(230, 230, 51, 51))
+                textSize = 16f
                 typeface = android.graphics.Typeface.create(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
                 gravity = android.view.Gravity.CENTER
             }
             val wlp = android.widget.FrameLayout.LayoutParams(
                 android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
                 android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                android.view.Gravity.CENTER
-            ).apply { topMargin = -60 }
+                android.view.Gravity.CENTER_HORIZONTAL or android.view.Gravity.TOP
+            ).apply { topMargin = 50 }
             warningView.addView(warningLabel, wlp)
 
             val nameLabel = android.widget.TextView(this).apply {
                 text = name
                 setTextColor(android.graphics.Color.WHITE)
-                textSize = 42f
+                textSize = 38f
                 typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD)
                 gravity = android.view.Gravity.CENTER
-                setShadowLayer(20f, 0f, 0f, android.graphics.Color.RED)
+                setShadowLayer(15f, 0f, 0f, android.graphics.Color.RED)
             }
             val nlp = android.widget.FrameLayout.LayoutParams(
                 android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
                 android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                android.view.Gravity.CENTER
-            ).apply { topMargin = 30 }
+                android.view.Gravity.CENTER_HORIZONTAL or android.view.Gravity.TOP
+            ).apply { topMargin = 100 }
             warningView.addView(nameLabel, nlp)
 
             val rootView = window.decorView as android.view.ViewGroup
+            // 改为只占上方区域，高度300像素
             rootView.addView(warningView, android.widget.FrameLayout.LayoutParams(
                 android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+                300
             ))
 
             warningView.animate().alpha(1f).setDuration(300).start()

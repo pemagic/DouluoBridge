@@ -748,43 +748,44 @@ class GameViewController: UIViewController, GameSceneDelegate {
     func showBossWarning(_ name: String) {
         DispatchQueue.main.async {
             let warningView = UIView()
-            warningView.backgroundColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.7)
+            warningView.backgroundColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.85)
             warningView.alpha = 0
             self.view.addSubview(warningView)
             warningView.translatesAutoresizingMaskIntoConstraints = false
+            // 改为只占上方区域，高度 120 点
             NSLayoutConstraint.activate([
                 warningView.topAnchor.constraint(equalTo: self.view.topAnchor),
-                warningView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+                warningView.heightAnchor.constraint(equalToConstant: 120),
                 warningView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
                 warningView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor)
             ])
 
             let warningLabel = UILabel()
             warningLabel.text = "WARNING"
-            warningLabel.font = .monospacedSystemFont(ofSize: 18, weight: .bold)
-            warningLabel.textColor = UIColor(red: 0.9, green: 0.2, blue: 0.2, alpha: 0.8)
+            warningLabel.font = .monospacedSystemFont(ofSize: 16, weight: .bold)
+            warningLabel.textColor = UIColor(red: 0.9, green: 0.2, blue: 0.2, alpha: 0.9)
             warningLabel.textAlignment = .center
             warningView.addSubview(warningLabel)
             warningLabel.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
                 warningLabel.centerXAnchor.constraint(equalTo: warningView.centerXAnchor),
-                warningLabel.centerYAnchor.constraint(equalTo: warningView.centerYAnchor, constant: -30)
+                warningLabel.topAnchor.constraint(equalTo: warningView.topAnchor, constant: 25)
             ])
 
             let nameLabel = UILabel()
             nameLabel.text = name
-            nameLabel.font = UIFont(name: "PingFangSC-Heavy", size: 48) ?? .boldSystemFont(ofSize: 48)
+            nameLabel.font = UIFont(name: "PingFangSC-Heavy", size: 42) ?? .boldSystemFont(ofSize: 42)
             nameLabel.textColor = .white
             nameLabel.textAlignment = .center
             nameLabel.layer.shadowColor = UIColor.red.cgColor
-            nameLabel.layer.shadowRadius = 20
+            nameLabel.layer.shadowRadius = 15
             nameLabel.layer.shadowOpacity = 1
             nameLabel.layer.shadowOffset = .zero
             warningView.addSubview(nameLabel)
             nameLabel.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
                 nameLabel.centerXAnchor.constraint(equalTo: warningView.centerXAnchor),
-                nameLabel.centerYAnchor.constraint(equalTo: warningView.centerYAnchor, constant: 15)
+                nameLabel.topAnchor.constraint(equalTo: warningLabel.bottomAnchor, constant: 10)
             ])
 
             UIView.animate(withDuration: 0.3) { warningView.alpha = 1 }

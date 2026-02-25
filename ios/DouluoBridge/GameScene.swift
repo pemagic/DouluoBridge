@@ -702,7 +702,8 @@ class GameScene: SKScene {
                         enemy.vx += knockDir * 5
                         enemy.vy += 3
                         hitstop = max(hitstop, 2)
-                        screenShakeIntensity = max(screenShakeIntensity, enemy.isBoss ? 5 : 3)
+                        // 移除命中普通怪物的屏幕晃动，Boss命中也不晃
+                        // screenShakeIntensity = max(screenShakeIntensity, enemy.isBoss ? 5 : 3)
                         createParticles(x: enemy.position.x, y: enemy.position.y,
                                        color: enemy.color, count: 4, speedScale: 0.8)
                         gameDelegate?.triggerHaptic(.light)
