@@ -460,27 +460,22 @@ class EnemyNode: SKNode {
             }
         }
         
-        // Smart jump AI — chase player onto platforms
-        let heightDiff = playerPosition.y - position.y
-        if grounded {
+        // Performance: Simple jump AI without height calculations every frame
+        if grounded && CGFloat.random(in: 0...1) < 0.05 {  // 5% chance per frame
+            // Only calculate height when actually considering a jump
+            let heightDiff = playerPosition.y - position.y
             switch enemyType {
             case .chaser:
-                if heightDiff > 40 {
-                    vy = min(28, 15 + heightDiff * 0.05)
-                } else if CGFloat.random(in: 0...1) < 0.02 {
-                    vy = CGFloat.random(in: 12...16)
+                if heightDiff > 40 || CGFloat.random(in: 0...1) < 0.3 {
+                    vy = CGFloat.random(in: 14...20)
                 }
             case .martial:
-                if heightDiff > 60 {
-                    vy = min(25, 14 + heightDiff * 0.04)
-                } else if CGFloat.random(in: 0...1) < 0.015 {
-                    vy = CGFloat.random(in: 12...16)
+                if heightDiff > 60 || CGFloat.random(in: 0...1) < 0.2 {
+                    vy = CGFloat.random(in: 12...18)
                 }
             default:
-                if heightDiff > 100 && CGFloat.random(in: 0...1) < 0.03 {
-                    vy = CGFloat.random(in: 14...20)
-                } else if CGFloat.random(in: 0...1) < 0.01 {
-                    vy = CGFloat.random(in: 12...18)
+                if heightDiff > 80 || CGFloat.random(in: 0...1) < 0.1 {
+                    vy = CGFloat.random(in: 12...16)
                 }
             }
         }

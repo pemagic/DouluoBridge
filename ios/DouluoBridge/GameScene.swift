@@ -697,17 +697,12 @@ class GameScene: SKScene {
                         enemy.damageFlash = 6
                         proj.hitEnemies.insert(eid)
 
-                        // Combat feel: knockback, hitstop, particles, shake
+                        // Performance optimization: minimal hit feedback
                         let knockDir: CGFloat = proj.vx > 0 ? 1 : -1
                         enemy.vx += knockDir * 5
                         enemy.vy += 3
-                        // hitstop = max(hitstop, 2)  // 移除命中冻帧
-                        // 移除命中普通怪物的屏幕晃动，Boss命中也不晃
-                        // screenShakeIntensity = max(screenShakeIntensity, enemy.isBoss ? 5 : 3)
-                        createParticles(x: enemy.position.x, y: enemy.position.y,
-                                       color: enemy.color, count: 4, speedScale: 0.8)
-                        gameDelegate?.triggerHaptic(.light)
-                        gameDelegate?.playSFX(.hit)
+                        // Removed: particles, haptics, sound on normal hits (performance)
+                        // Only keep visual flash (damageFlash) for feedback
 
                         if enemy.hp <= 0 {
                             handleEnemyDeath(at: ei)
@@ -1279,9 +1274,9 @@ class GameScene: SKScene {
         let enemy = enemies[index]
         let wasBoss = enemy.isBoss
         
-        // Particles on death (original: createParticles(e.x+e.w/2, e.y+e.h/2, e.color, 12, 1.2, 2))
+        // Reduced particles for performance (12 -> 6)
         createParticles(x: enemy.position.x, y: enemy.position.y,
-                       color: enemy.color, count: 12, speedScale: 1.2, sizeScale: 2)
+                       color: enemy.color, count: wasBoss ? 12 : 6, speedScale: 1.2, sizeScale: 2)
         
         enemy.removeFromParent()
         enemies.remove(at: index)

@@ -648,7 +648,8 @@ class DouluoGameScreen(
                         
                         enemy.hp -= pierceDmg
                         enemy.damageFlash = 6
-                        delegate.triggerHaptic(HapticType.LIGHT)
+                        // Performance: removed haptic on normal hits
+                        // delegate.triggerHaptic(HapticType.LIGHT)
                         proj.hitEnemies.add(eid)
 
                         // NOTE: do NOT call enemies.remove() here — we are currently

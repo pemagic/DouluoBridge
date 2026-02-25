@@ -15,8 +15,8 @@ android {
         applicationId = "com.douluo.bridge"
         minSdk = 24
         targetSdk = 34
-        versionCode = 36
-        versionName = "1.9.2"
+        versionCode = 37
+        versionName = "1.9.3"
     }
 
     buildTypes {

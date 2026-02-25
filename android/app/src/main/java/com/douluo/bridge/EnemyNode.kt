@@ -415,29 +415,24 @@ class EnemyNode(
             }
         }
 
-        // Smart jump AI — chase player onto platforms
-        val heightDiff = playerY - y
-        if (grounded) {
+        // Performance: Simple jump AI without height calculations every frame
+        if (grounded && MathUtils.randomBoolean(0.05f)) {  // 5% chance per frame
+            // Only calculate height when actually considering a jump
+            val heightDiff = playerY - y
             when (enemyType) {
                 EnemyType.CHASER -> {
-                    if (heightDiff > 40f) {
-                        vy = Math.min(28f, 15f + heightDiff * 0.05f)
-                    } else if (MathUtils.randomBoolean(0.02f)) {
-                        vy = MathUtils.random(12f, 16f)
+                    if (heightDiff > 40f || MathUtils.randomBoolean(0.3f)) {
+                        vy = MathUtils.random(14f, 20f)
                     }
                 }
                 EnemyType.MARTIAL -> {
-                    if (heightDiff > 60f) {
-                        vy = Math.min(25f, 14f + heightDiff * 0.04f)
-                    } else if (MathUtils.randomBoolean(0.015f)) {
-                        vy = MathUtils.random(12f, 16f)
+                    if (heightDiff > 60f || MathUtils.randomBoolean(0.2f)) {
+                        vy = MathUtils.random(12f, 18f)
                     }
                 }
                 else -> {
-                    if (heightDiff > 100f && MathUtils.randomBoolean(0.03f)) {
-                        vy = MathUtils.random(14f, 20f)
-                    } else if (MathUtils.randomBoolean(0.01f)) {
-                        vy = MathUtils.random(12f, 18f)
+                    if (heightDiff > 80f || MathUtils.randomBoolean(0.1f)) {
+                        vy = MathUtils.random(12f, 16f)
                     }
                 }
             }
