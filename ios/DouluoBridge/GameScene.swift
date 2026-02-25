@@ -435,7 +435,10 @@ class GameScene: SKScene {
         
         // 10. Camera Follow (HTML L376)
         updateCamera()
-        
+
+        // Performance: Viewport culling
+        cullOffscreenObjects()
+
         // 11. UI/HUD (HTML L379)
         updateHUD()
         
@@ -982,7 +985,7 @@ class GameScene: SKScene {
         // This puts ground at ~75% down the screen (bottom 25%).
         let targetX = playerNode.position.x - Physics.gameWidth / 3.5
         let targetY = playerNode.position.y - Physics.gameHeight / 2 + 200
-        
+
         camX += (targetX - camX) * 0.12
         camY += (targetY - camY) * 0.1
 
@@ -1001,6 +1004,28 @@ class GameScene: SKScene {
             x: camX + Physics.gameWidth / 2 + shakeX,
             y: camY + Physics.gameHeight / 2 + shakeY
         )
+    }
+
+    // Performance: Viewport culling to reduce rendering load
+    func cullOffscreenObjects() {
+        let viewBounds = CGRect(
+            x: camX - 100,
+            y: camY - 100,
+            width: Physics.gameWidth + 200,
+            height: Physics.gameHeight + 200
+        )
+
+        // Hide off-screen enemies (they still update logic)
+        for enemy in enemies {
+            enemy.isHidden = !viewBounds.contains(enemy.position)
+        }
+
+        // Hide off-screen projectiles
+        for projectile in projectiles {
+            projectile.isHidden = !viewBounds.contains(projectile.position)
+        }
+
+        // Drops auto-remove when off-screen already
     }
     
     // MARK: - HUD Update
@@ -1455,11 +1480,15 @@ class GameScene: SKScene {
     }
     
     // MARK: - Particle System (v1.6: Cached SKSpriteNode textures)
-    
+
     // v1.6: Static texture cache for particles to avoid re-rendering
     private static var particleTextureCache: [String: SKTexture] = [:]
     private var activeParticleCount: Int = 0
-    private static let maxParticles = 100
+    private static let maxParticles = 1000  // Performance: 10x particle limit
+
+    // Performance: Particle pool for object reuse
+    private var particlePool: [SKSpriteNode] = []
+    private let particlePoolSize = 500
     
     private func particleTexture(size: CGFloat, color: UIColor) -> SKTexture {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
@@ -1488,31 +1517,47 @@ class GameScene: SKScene {
         // v1.6: Cap total concurrent particles
         let actualCount = min(count, GameScene.maxParticles - activeParticleCount)
         guard actualCount > 0 else { return }
-        
+
         for _ in 0..<actualCount {
+            // Performance: Try to reuse from pool
+            let particle: SKSpriteNode
+            if let pooled = particlePool.popLast() {
+                particle = pooled
+                particle.isHidden = false
+                particle.alpha = 1.0
+            } else {
+                particle = SKSpriteNode()
+            }
+
             let size = (2 + CGFloat.random(in: 0...4)) * sizeScale
             let texture = particleTexture(size: size, color: color)
             let pad: CGFloat = 6
-            let particle = SKSpriteNode(texture: texture)
+            particle.texture = texture
             particle.size = CGSize(width: size + pad * 2, height: size + pad * 2)
             particle.position = CGPoint(x: x, y: y)
             particle.zPosition = 40
-            
+
             let vx = (CGFloat.random(in: 0...1) - 0.5) * 25 * speedScale
             let vy = (CGFloat.random(in: 0...1) - 0.5) * 25 * speedScale
             let life = 1.0
             let decay = 0.02 + CGFloat.random(in: 0...0.02)
             let duration = life / decay / 60.0
-            
+
             let move = SKAction.moveBy(x: vx * CGFloat(duration) * 30, y: vy * CGFloat(duration) * 30, duration: duration)
             let fade = SKAction.fadeOut(withDuration: duration)
             let group = SKAction.group([move, fade])
-            let remove = SKAction.run { [weak self] in
+            let recycle = SKAction.run { [weak self] in
                 self?.activeParticleCount -= 1
+                // Performance: Return to pool
+                particle.removeFromParent()
+                particle.removeAllActions()
+                particle.isHidden = true
+                if self?.particlePool.count ?? 0 < self?.particlePoolSize ?? 0 {
+                    self?.particlePool.append(particle)
+                }
             }
-            let removeNode = SKAction.removeFromParent()
-            particle.run(SKAction.sequence([group, remove, removeNode]))
-            
+            particle.run(SKAction.sequence([group, recycle]))
+
             entityLayer.addChild(particle)
             activeParticleCount += 1
         }

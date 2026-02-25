@@ -444,6 +444,7 @@ class DouluoGameScreen(
         updateProjectiles()
         updateEffects()
         updateCamera()
+        cullOffscreenObjects()  // Performance: Hide off-screen objects
         updateHUD()
 
         if (playerNode.hp <= 0 || playerNode.y < -1600) {
@@ -849,6 +850,31 @@ class DouluoGameScreen(
 
         camera.position.set(newCx + Physics.gameWidth/2, newCy + Physics.gameHeight/2, 0f)
         camera.update()
+    }
+
+    // Performance: Viewport culling to reduce rendering load
+    private fun cullOffscreenObjects() {
+        val camX = camera.position.x - Physics.gameWidth/2
+        val camY = camera.position.y - Physics.gameHeight/2
+        val buffer = 100f
+
+        // Hide off-screen enemies (they still update logic)
+        for (enemy in enemies) {
+            val inView = enemy.x >= camX - buffer &&
+                        enemy.x <= camX + Physics.gameWidth + buffer &&
+                        enemy.y >= camY - buffer &&
+                        enemy.y <= camY + Physics.gameHeight + buffer
+            enemy.isVisible = inView
+        }
+
+        // Hide off-screen projectiles
+        for (proj in projectiles) {
+            val inView = proj.x >= camX - buffer &&
+                        proj.x <= camX + Physics.gameWidth + buffer &&
+                        proj.y >= camY - buffer &&
+                        proj.y <= camY + Physics.gameHeight + buffer
+            proj.isVisible = inView
+        }
     }
 
     private fun updateHUD() {
