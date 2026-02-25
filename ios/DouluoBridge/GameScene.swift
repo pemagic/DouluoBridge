@@ -886,7 +886,7 @@ class GameScene: SKScene {
 
             // Boss entry effects
             screenFlash = 20
-            screenShakeIntensity = 15
+            // screenShakeIntensity = 15  // 移除Boss入场晃动
             hitstop = 20  // Dramatic freeze on entry
             gameDelegate?.triggerHaptic(.heavy)
             return
@@ -1290,7 +1290,7 @@ class GameScene: SKScene {
         combo += 1
         comboTimer = 150
         hitstop = wasBoss ? 12 : 4
-        screenShakeIntensity = max(screenShakeIntensity, wasBoss ? 12 : 6)
+        // screenShakeIntensity = max(screenShakeIntensity, wasBoss ? 12 : 6)  // 移除击杀晃动
         // Original: player.energy = Math.min(100, player.energy + 4) — always 4
         playerNode.energy = min(100, playerNode.energy + 4)
 
@@ -1303,7 +1303,7 @@ class GameScene: SKScene {
         if wasBoss {
             bossActive = false
             hitstop = 30  // Extended freeze for boss kill
-            screenShakeIntensity = 20
+            // screenShakeIntensity = 20  // 移除Boss击杀晃动
             gameDelegate?.restoreLevelBGM()
             if currentLevel < 10 {
                 completeLevel()
