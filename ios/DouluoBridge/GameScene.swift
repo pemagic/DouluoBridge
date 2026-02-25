@@ -1038,12 +1038,12 @@ class GameScene: SKScene {
         switch frameGroup {
         case 0:
             // Update enemy visuals
-            for (index, enemy in enemies.enumerated()) where index % 3 == 0 {
+            for (index, enemy) in enemies.enumerated() where index % 3 == 0 {
                 enemy.updateVisual()
             }
         case 1:
             // Update projectile glows
-            for (index, proj in projectiles.enumerated()) where index % 3 == 1 {
+            for (index, proj) in projectiles.enumerated() where index % 3 == 1 {
                 proj.updateGlow()
             }
         case 2:
@@ -1095,7 +1095,7 @@ class GameScene: SKScene {
             }
 
             // Add enemies to grid cells
-            for (index, enemy in enemies.enumerated()) {
+            for (index, enemy) in enemies.enumerated() {
                 let gridX = Int((enemy.position.x + 1000) / cellSize)
                 let gridY = Int((enemy.position.y + 1000) / cellSize)
 

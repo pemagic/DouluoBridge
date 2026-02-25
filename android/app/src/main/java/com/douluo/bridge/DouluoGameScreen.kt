@@ -895,7 +895,7 @@ class DouluoGameScreen(
                 // Update enemy animations for 1/3 of enemies
                 enemies.forEachIndexed { index, enemy ->
                     if (index % 3 == 0) {
-                        enemy.updateAnimation()
+                        // enemy.updateAnimation() // TODO: Implement when method is added to EnemyNode
                     }
                 }
             }
@@ -903,7 +903,7 @@ class DouluoGameScreen(
                 // Update projectile effects
                 projectiles.forEachIndexed { index, proj ->
                     if (index % 3 == 1) {
-                        proj.updateEffect()
+                        // proj.updateEffect() // TODO: Implement when method is added to ProjectileNode
                     }
                 }
             }
@@ -922,18 +922,18 @@ class DouluoGameScreen(
         when {
             distance < 200 -> {
                 // Full detail
-                enemy.updateFrequency = 1
-                enemy.setGlowVisible(true)
+                // enemy.updateFrequency = 1
+                // enemy.setGlowVisible(true)
             }
             distance < 400 -> {
                 // Medium detail
-                enemy.updateFrequency = 2
-                enemy.setGlowVisible(false)
+                // enemy.updateFrequency = 2
+                // enemy.setGlowVisible(false)
             }
             else -> {
                 // Low detail
-                enemy.updateFrequency = 3
-                enemy.setGlowVisible(false)
+                // enemy.updateFrequency = 3
+                // enemy.setGlowVisible(false)
             }
         }
     }
