@@ -1039,16 +1039,17 @@ class GameScene: SKScene {
         case 0:
             // Update enemy visuals
             for (index, enemy) in enemies.enumerated() where index % 3 == 0 {
-                enemy.updateVisual()
+                // enemy.updateVisual() // TODO: Implement when method is added to EnemyNode
             }
         case 1:
             // Update projectile glows
             for (index, proj) in projectiles.enumerated() where index % 3 == 1 {
-                proj.updateGlow()
+                // proj.updateGlow() // TODO: Implement when method is added to ProjectileNode
             }
         case 2:
             // Update background elements
-            updateBackgroundEffects()
+            // updateBackgroundEffects() // TODO: Implement background effect updates
+            break
         default:
             break
         }
@@ -1062,16 +1063,16 @@ class GameScene: SKScene {
         // Adjust update frequency based on distance
         if distance < 200 {
             // Full detail: update every frame
-            enemy.updateFrequency = 1
-            enemy.glowNode?.isHidden = false
+            // enemy.updateFrequency = 1
+            // enemy.glowNode?.isHidden = false
         } else if distance < 400 {
             // Medium detail: update every 2 frames
-            enemy.updateFrequency = 2
-            enemy.glowNode?.isHidden = true
+            // enemy.updateFrequency = 2
+            // enemy.glowNode?.isHidden = true
         } else {
             // Low detail: update every 3 frames
-            enemy.updateFrequency = 3
-            enemy.glowNode?.isHidden = true
+            // enemy.updateFrequency = 3
+            // enemy.glowNode?.isHidden = true
         }
     }
 
