@@ -62,8 +62,8 @@ class EnemyNode: SKNode {
             self.maxHp = CGFloat(bossHp) * hpMultiplier
             self.baseSpeed = bossSpeed * 3
             self.damage = 15
-            self.enemyWidth = 80
-            self.enemyHeight = 100
+            self.enemyWidth = 120   // v1.9: Boss bigger
+            self.enemyHeight = 150  // v1.9: Boss bigger
         } else {
             let lvlBonus = CGFloat(playerWeaponLevel - 1) * 0.15
             let baseHp: CGFloat = (type == .heavy) ? 450 : 120

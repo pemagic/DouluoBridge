@@ -677,4 +677,16 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
             }
         }
     }
+
+    // v1.9: Skill click sound effect
+    override fun playSkillSfx() {
+        audioManager?.playTone(880f, "sine", 0.08f, 0.15f)
+    }
+
+    // v1.9: Boss warning sound effect
+    override fun playBossWarningSfx() {
+        audioManager?.playTone(220f, "square", 0.3f, 0.2f)
+        bannerHandler.postDelayed({ audioManager?.playTone(330f, "square", 0.3f, 0.2f) }, 300)
+        bannerHandler.postDelayed({ audioManager?.playTone(440f, "square", 0.4f, 0.25f) }, 600)
+    }
 }

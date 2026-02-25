@@ -169,6 +169,12 @@ class DouluoGameScreen(
         delegate.gameEnded(totalKills, gameTime, currentLevel, victory)
     }
 
+    // v1.9: Boss entrance warning
+    private fun showBossWarning() {
+        delegate.showLevelBanner("⚠ BOSS 来袭 ⚠", updateBGM = false)
+        delegate.playBossWarningSfx()
+    }
+
     fun completeLevel() {
         if (currentLevel < 10) {
             gameState = GameState.LEVEL_TRANSITION
@@ -760,6 +766,8 @@ class DouluoGameScreen(
             b.setPosition(playerNode.x + (if (playerNode.facing > 0) 500f else -500f), Physics.gameHeight + 100f)
             entityLayer.addActor(b)
             enemies.add(b)
+            // v1.9: Boss entrance warning
+            showBossWarning()
             delegate.triggerHaptic(HapticType.HEAVY)
             return
         }
@@ -884,6 +892,9 @@ class DouluoGameScreen(
         val def = GameConfig.skillDefs.find { it.id == skillId } ?: return
         val sk = playerNode.skills[skillId] ?: return
         if (sk.level <= 0 || (sk.cooldown > 0 && !ignoreCooldown)) return
+
+        // v1.9: Skill click sound effect
+        delegate.playSkillSfx()
 
         val lvl = sk.level
 

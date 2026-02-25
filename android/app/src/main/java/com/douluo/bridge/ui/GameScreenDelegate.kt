@@ -12,4 +12,6 @@ interface GameScreenDelegate {
     fun showLevelBanner(name: String, updateBGM: Boolean)
     fun gameEnded(kills: Int, time: Int, level: Int, victory: Boolean)
     fun triggerHaptic(type: HapticType)
+    fun playSkillSfx()       // v1.9
+    fun playBossWarningSfx() // v1.9
 }

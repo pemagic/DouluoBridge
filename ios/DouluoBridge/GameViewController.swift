@@ -92,6 +92,7 @@ class GameViewController: UIViewController, GameSceneDelegate {
         gameScene = GameScene(size: CGSize(width: Physics.gameWidth, height: Physics.gameHeight))
         gameScene.scaleMode = .resizeFill  // Fill entire screen, no black bars
         gameScene.gameDelegate = self
+        gameScene.audioManager = audioManager
         skView.presentScene(gameScene)
     }
     

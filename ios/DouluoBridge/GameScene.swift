@@ -59,6 +59,7 @@ class GameScene: SKScene {
     
     // MARK: - Delegates
     weak var gameDelegate: GameSceneDelegate?
+    var audioManager: AudioManager?
     
     // MARK: - Computed
     var currentLevelDef: LevelDef {
@@ -173,6 +174,61 @@ class GameScene: SKScene {
         gameDelegate?.gameEnded(kills: totalKills, time: gameTime, level: currentLevel, victory: victory)
     }
     
+    // v1.9: Boss entrance warning animation (top of screen, doesn't block controls)
+    func showBossWarning() {
+        let warningLabel = SKLabelNode(fontNamed: "Helvetica-Bold")
+        warningLabel.text = "⚠ BOSS 来袭 ⚠"
+        warningLabel.fontSize = 42
+        warningLabel.fontColor = .red
+        warningLabel.position = CGPoint(x: cameraNode.position.x, y: cameraNode.position.y + size.height * cameraNode.xScale * 0.35)
+        warningLabel.zPosition = 200
+        warningLabel.alpha = 0
+        warningLabel.setScale(0.3)
+        addChild(warningLabel)
+
+        // Flash red overlay at top
+        let flashBg = SKSpriteNode(color: UIColor(red: 1, green: 0, blue: 0, alpha: 0.3),
+                                    size: CGSize(width: size.width * cameraNode.xScale * 2, height: 80))
+        flashBg.position = warningLabel.position
+        flashBg.zPosition = 199
+        flashBg.alpha = 0
+        addChild(flashBg)
+
+        // Animate warning
+        let fadeIn = SKAction.fadeIn(withDuration: 0.2)
+        let scaleUp = SKAction.scale(to: 1.0, duration: 0.3)
+        let appear = SKAction.group([fadeIn, scaleUp])
+        let pulse = SKAction.sequence([
+            SKAction.scale(to: 1.15, duration: 0.15),
+            SKAction.scale(to: 1.0, duration: 0.15)
+        ])
+        let holdAndPulse = SKAction.repeat(pulse, count: 3)
+        let fadeOut = SKAction.fadeOut(withDuration: 0.4)
+        let remove = SKAction.removeFromParent()
+        warningLabel.run(SKAction.sequence([appear, holdAndPulse, fadeOut, remove]))
+
+        // Flash background animation
+        let bgFlash = SKAction.sequence([
+            SKAction.fadeAlpha(to: 0.4, duration: 0.1),
+            SKAction.fadeAlpha(to: 0.1, duration: 0.1)
+        ])
+        flashBg.run(SKAction.sequence([
+            SKAction.fadeIn(withDuration: 0.1),
+            SKAction.repeat(bgFlash, count: 5),
+            SKAction.fadeOut(withDuration: 0.3),
+            SKAction.removeFromParent()
+        ]))
+
+        // Boss warning sound: dramatic low tone rising
+        audioManager?.playTone(frequency: 220, type: "square", duration: 0.3, volume: 0.2)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.audioManager?.playTone(frequency: 330, type: "square", duration: 0.3, volume: 0.2)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+            self?.audioManager?.playTone(frequency: 440, type: "square", duration: 0.4, volume: 0.25)
+        }
+    }
+
     func completeLevel() {
         if currentLevel < 10 {
             gameState = .levelTransition
@@ -842,7 +898,10 @@ class GameScene: SKScene {
             )
             entityLayer.addChild(boss)
             enemies.append(boss)
-            
+
+            // v1.9: Boss entrance warning animation
+            showBossWarning()
+
             gameDelegate?.triggerHaptic(.heavy)
             return
         }
@@ -1056,7 +1115,10 @@ class GameScene: SKScene {
         guard gameState == .playing else { return }
         guard let def = GameConfig.skillDefs.first(where: { $0.id == skillId }) else { return }
         guard let sk = playerNode.skills[skillId], sk.level > 0, (sk.cooldown <= 0 || ignoreCooldown) else { return }
-        
+
+        // v1.9: Skill click sound effect
+        audioManager?.playTone(frequency: 880, type: "sine", duration: 0.08, volume: 0.15)
+
         // Skill implementations — Phase 4
         let lvl = sk.level
         

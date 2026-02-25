@@ -285,6 +285,65 @@ class AndroidAudioManager(private val context: Context) {
         }.start()
     }
     
+    // v1.9: Generic tone playback for SFX
+    fun playTone(frequency: Float, type: String = "sine", duration: Float, volume: Float) {
+        Thread {
+            try {
+                val numSamples = (sampleRate * duration).toInt()
+                val buffer = ByteBuffer.allocateDirect(numSamples * 2 * 2)
+                buffer.order(ByteOrder.nativeOrder())
+
+                var phase = 0f
+                val increment = frequency / sampleRate
+
+                for (i in 0 until numSamples) {
+                    val t = i.toFloat() / numSamples.toFloat()
+                    val envelope = volume * (1.0f - t)
+
+                    val sample = when (type) {
+                        "square" -> if (phase < 0.5f) 1.0f else -1.0f
+                        "sawtooth" -> 2.0f * phase - 1.0f
+                        "triangle" -> 4.0f * Math.abs(phase - 0.5f) - 1.0f
+                        else -> Math.sin(phase * 2.0 * Math.PI).toFloat()
+                    }
+
+                    val sampleShort = (sample * envelope * Short.MAX_VALUE).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                    buffer.putShort(sampleShort)
+                    buffer.putShort(sampleShort)
+
+                    phase += increment
+                    if (phase >= 1f) phase -= 1f
+                }
+
+                val track = AudioTrack.Builder()
+                    .setAudioAttributes(AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_GAME)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build())
+                    .setAudioFormat(AudioFormat.Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(sampleRate)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
+                        .build())
+                    .setBufferSizeInBytes(numSamples * 2 * 2)
+                    .setTransferMode(AudioTrack.MODE_STATIC)
+                    .build()
+
+                buffer.flip()
+                val array = ByteArray(buffer.remaining())
+                buffer.get(array)
+
+                track.write(array, 0, array.size)
+                track.play()
+
+                Thread.sleep((duration * 1000).toLong() + 100)
+                track.release()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }.start()
+    }
+
     fun release() {
         stopBGM()
     }

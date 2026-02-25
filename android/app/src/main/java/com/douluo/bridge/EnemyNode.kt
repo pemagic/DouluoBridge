@@ -80,8 +80,8 @@ class EnemyNode(
             this.maxHp = this.hp
             this.baseSpeed = bossSpeed * 3
             this.damage = 15
-            this.enemyWidth = 80f
-            this.enemyHeight = 100f
+            this.enemyWidth = 120f   // v1.9: Boss bigger
+            this.enemyHeight = 150f  // v1.9: Boss bigger
         } else {
             val lvlBonus = (playerWeaponLevel - 1) * 0.15f
             val baseHp = if (enemyType == EnemyType.HEAVY) 450f else 120f
