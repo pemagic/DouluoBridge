@@ -852,6 +852,10 @@ class DouluoGameScreen(
     fun handleAttack() {
         if (gameState != GameState.PLAYING || playerNode.shootTimer > 0) return
         if (projectiles.size < 80) {
+            // v1.9: Attack sound effect + haptic
+            delegate.playAttackSfx()
+            delegate.triggerHaptic(HapticType.LIGHT)
+
             val lvl = playerNode.weaponLevel
             val bDmg = (40 + lvl * 12) * (if (playerNode.ultActive > 0) 2 else 1)
             val bSpeed = 45f + lvl * 1.5f

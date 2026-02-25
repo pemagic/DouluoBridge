@@ -1047,6 +1047,11 @@ class GameScene: SKScene {
         guard gameState == .playing, playerNode.shootTimer <= 0 else { return }
         // v1.6: Cap projectiles to prevent GPU overload
         guard projectiles.count < 80 else { return }
+
+        // v1.9: Attack sound effect + haptic
+        audioManager?.playTone(frequency: 600, type: "square", duration: 0.04, volume: 0.08)
+        gameDelegate?.triggerHaptic(.light)
+
         let lvl = playerNode.weaponLevel
         
         // Damage scales with level, doubled during ult

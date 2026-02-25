@@ -683,6 +683,11 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         audioManager?.playTone(880f, "sine", 0.08f, 0.15f)
     }
 
+    // v1.9: Attack sound effect
+    override fun playAttackSfx() {
+        audioManager?.playTone(600f, "square", 0.04f, 0.08f)
+    }
+
     // v1.9: Boss warning sound effect
     override fun playBossWarningSfx() {
         audioManager?.playTone(220f, "square", 0.3f, 0.2f)
