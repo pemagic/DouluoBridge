@@ -443,6 +443,7 @@ class DouluoGameScreen(
         updateDrops()
         updateProjectiles()
         updateEffects()
+        updateVisualsFrameBased()  // Performance: Frame-based visual updates
         updateCamera()
         cullOffscreenObjects()  // Performance: Hide off-screen objects
         updateHUD()
@@ -618,10 +619,15 @@ class DouluoGameScreen(
     }
 
     private fun updateProjectiles() {
+        // Performance: Update spatial grid once per frame
+        spatialGrid.update(enemies)
+
         val iter = projectiles.iterator()
         while(iter.hasNext()) {
             val proj = iter.next()
-            proj.update(enemies)
+            // Performance: Only check nearby enemies
+            val nearbyEnemies = spatialGrid.getNearbyEnemies(proj.x, proj.y, enemies)
+            proj.update(nearbyEnemies)
 
             if (proj.life <= 0 || !isOnScreen(proj)) {
                 if (proj.owner == ProjectileOwner.ENEMY) enemyProjectileCount--
@@ -865,6 +871,9 @@ class DouluoGameScreen(
                         enemy.y >= camY - buffer &&
                         enemy.y <= camY + Physics.gameHeight + buffer
             enemy.isVisible = inView
+
+            // Apply LOD based on distance
+            applyLOD(enemy)
         }
 
         // Hide off-screen projectiles
@@ -875,6 +884,143 @@ class DouluoGameScreen(
                         proj.y <= camY + Physics.gameHeight + buffer
             proj.isVisible = inView
         }
+    }
+
+    // Performance: Frame-based visual updates
+    private fun updateVisualsFrameBased() {
+        val frameGroup = gameTime % 3
+
+        when (frameGroup) {
+            0 -> {
+                // Update enemy animations for 1/3 of enemies
+                enemies.forEachIndexed { index, enemy ->
+                    if (index % 3 == 0) {
+                        enemy.updateAnimation()
+                    }
+                }
+            }
+            1 -> {
+                // Update projectile effects
+                projectiles.forEachIndexed { index, proj ->
+                    if (index % 3 == 1) {
+                        proj.updateEffect()
+                    }
+                }
+            }
+            2 -> {
+                // Update background parallax
+                updateBackgroundParallax()
+            }
+        }
+    }
+
+    // Performance: LOD system
+    private fun applyLOD(enemy: EnemyNode) {
+        val distance = Math.hypot((enemy.x - playerNode.x).toDouble(),
+                                  (enemy.y - playerNode.y).toDouble())
+
+        when {
+            distance < 200 -> {
+                // Full detail
+                enemy.updateFrequency = 1
+                enemy.setGlowVisible(true)
+            }
+            distance < 400 -> {
+                // Medium detail
+                enemy.updateFrequency = 2
+                enemy.setGlowVisible(false)
+            }
+            else -> {
+                // Low detail
+                enemy.updateFrequency = 3
+                enemy.setGlowVisible(false)
+            }
+        }
+    }
+
+    // Performance: Spatial grid for collision optimization
+    class SpatialGrid {
+        private val grid = Array(20) { Array(20) { mutableSetOf<Int>() } }
+        private val cellSize = 150f
+        private val gridWidth = 20
+        private val gridHeight = 20
+
+        fun update(enemies: List<EnemyNode>) {
+            // Clear grid
+            for (x in 0 until gridWidth) {
+                for (y in 0 until gridHeight) {
+                    grid[x][y].clear()
+                }
+            }
+
+            // Add enemies to grid cells
+            enemies.forEachIndexed { index, enemy ->
+                val gridX = ((enemy.x + 1000f) / cellSize).toInt()
+                val gridY = ((enemy.y + 1000f) / cellSize).toInt()
+
+                if (gridX in 0 until gridWidth && gridY in 0 until gridHeight) {
+                    grid[gridX][gridY].add(index)
+                }
+            }
+        }
+
+        fun getNearbyEnemies(x: Float, y: Float, allEnemies: List<EnemyNode>): List<EnemyNode> {
+            val gridX = ((x + 1000f) / cellSize).toInt()
+            val gridY = ((y + 1000f) / cellSize).toInt()
+            val nearby = mutableListOf<EnemyNode>()
+
+            // Check 9-cell area
+            for (dx in -1..1) {
+                for (dy in -1..1) {
+                    val checkX = gridX + dx
+                    val checkY = gridY + dy
+
+                    if (checkX in 0 until gridWidth && checkY in 0 until gridHeight) {
+                        for (index in grid[checkX][checkY]) {
+                            if (index < allEnemies.size) {
+                                nearby.add(allEnemies[index])
+                            }
+                        }
+                    }
+                }
+            }
+
+            return nearby
+        }
+    }
+
+    private val spatialGrid = SpatialGrid()
+
+    // Performance: Smart quality manager
+    class QualityManager {
+        var currentQuality = 1.0f
+        private val fpsHistory = mutableListOf<Int>()
+
+        fun update(fps: Int) {
+            fpsHistory.add(fps)
+            if (fpsHistory.size > 30) {
+                fpsHistory.removeAt(0)
+            }
+
+            val avgFPS = fpsHistory.average().toInt()
+
+            when {
+                avgFPS < 30 && currentQuality > 0.5f -> {
+                    // Reduce quality
+                    currentQuality = Math.max(0.5f, currentQuality - 0.1f)
+                }
+                avgFPS > 55 && currentQuality < 1.0f -> {
+                    // Increase quality
+                    currentQuality = Math.min(1.0f, currentQuality + 0.05f)
+                }
+            }
+        }
+    }
+
+    private val qualityManager = QualityManager()
+
+    private fun updateBackgroundParallax() {
+        // Placeholder for background parallax update
     }
 
     private fun updateHUD() {

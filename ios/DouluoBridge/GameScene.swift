@@ -432,7 +432,10 @@ class GameScene: SKScene {
         
         // 9. Effects Update (HTML L368-374: particles, trails)
         updateEffects()
-        
+
+        // Performance: Frame-based visual updates
+        updateVisualsFrameBased()
+
         // 10. Camera Follow (HTML L376)
         updateCamera()
 
@@ -1027,6 +1030,133 @@ class GameScene: SKScene {
 
         // Drops auto-remove when off-screen already
     }
+
+    // Performance: Frame-based visual updates (spread across 3 frames)
+    func updateVisualsFrameBased() {
+        let frameGroup = gameTime % 3
+
+        switch frameGroup {
+        case 0:
+            // Update enemy visuals
+            for (index, enemy in enemies.enumerated()) where index % 3 == 0 {
+                enemy.updateVisual()
+            }
+        case 1:
+            // Update projectile glows
+            for (index, proj in projectiles.enumerated()) where index % 3 == 1 {
+                proj.updateGlow()
+            }
+        case 2:
+            // Update background elements
+            updateBackgroundEffects()
+        default:
+            break
+        }
+    }
+
+    // Performance: LOD system for enemies
+    func applyLOD(to enemy: EnemyNode) {
+        let distance = hypot(enemy.position.x - playerNode.position.x,
+                           enemy.position.y - playerNode.position.y)
+
+        // Adjust update frequency based on distance
+        if distance < 200 {
+            // Full detail: update every frame
+            enemy.updateFrequency = 1
+            enemy.glowNode?.isHidden = false
+        } else if distance < 400 {
+            // Medium detail: update every 2 frames
+            enemy.updateFrequency = 2
+            enemy.glowNode?.isHidden = true
+        } else {
+            // Low detail: update every 3 frames
+            enemy.updateFrequency = 3
+            enemy.glowNode?.isHidden = true
+        }
+    }
+
+    // Performance: Spatial grid for collision optimization
+    class SpatialGrid {
+        private var grid: [[Set<Int>]] = []
+        private let cellSize: CGFloat = 150
+        private let gridWidth = 20
+        private let gridHeight = 20
+
+        init() {
+            grid = Array(repeating: Array(repeating: Set<Int>(), count: gridHeight), count: gridWidth)
+        }
+
+        func update(enemies: [EnemyNode]) {
+            // Clear grid
+            for x in 0..<gridWidth {
+                for y in 0..<gridHeight {
+                    grid[x][y].removeAll()
+                }
+            }
+
+            // Add enemies to grid cells
+            for (index, enemy in enemies.enumerated()) {
+                let gridX = Int((enemy.position.x + 1000) / cellSize)
+                let gridY = Int((enemy.position.y + 1000) / cellSize)
+
+                if gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight {
+                    grid[gridX][gridY].insert(index)
+                }
+            }
+        }
+
+        func getNearbyEnemies(at pos: CGPoint, enemies: [EnemyNode]) -> [EnemyNode] {
+            let gridX = Int((pos.x + 1000) / cellSize)
+            let gridY = Int((pos.y + 1000) / cellSize)
+
+            var nearby: [EnemyNode] = []
+
+            // Check 9-cell area
+            for dx in -1...1 {
+                for dy in -1...1 {
+                    let x = gridX + dx
+                    let y = gridY + dy
+
+                    if x >= 0 && x < gridWidth && y >= 0 && y < gridHeight {
+                        for index in grid[x][y] {
+                            if index < enemies.count {
+                                nearby.append(enemies[index])
+                            }
+                        }
+                    }
+                }
+            }
+
+            return nearby
+        }
+    }
+
+    private let spatialGrid = SpatialGrid()
+
+    // Performance: Smart quality manager
+    class QualityManager {
+        var currentQuality = 1.0
+        private var fpsHistory: [Int] = []
+
+        func update(fps: Int) {
+            fpsHistory.append(fps)
+            if fpsHistory.count > 30 {
+                fpsHistory.removeFirst()
+            }
+
+            let avgFPS = fpsHistory.reduce(0, +) / max(1, fpsHistory.count)
+
+            if avgFPS < 30 && currentQuality > 0.5 {
+                // Reduce quality
+                currentQuality = max(0.5, currentQuality - 0.1)
+            } else if avgFPS > 55 && currentQuality < 1.0 {
+                // Increase quality
+                currentQuality = min(1.0, currentQuality + 0.05)
+            }
+        }
+    }
+
+    private let qualityManager = QualityManager()
     
     // MARK: - HUD Update
     
@@ -1489,6 +1619,14 @@ class GameScene: SKScene {
     // Performance: Particle pool for object reuse
     private var particlePool: [SKSpriteNode] = []
     private let particlePoolSize = 500
+
+    // Performance: Texture atlas for batch rendering
+    private static let gameAtlas = SKTextureAtlas(named: "Game")
+    private static var atlasTextures: [String: SKTexture] = [:]
+
+    // Performance: Batch nodes for rendering optimization
+    private lazy var enemyBatchNode = SKSpriteNode()
+    private lazy var projectileBatchNode = SKSpriteNode()
     
     private func particleTexture(size: CGFloat, color: UIColor) -> SKTexture {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
