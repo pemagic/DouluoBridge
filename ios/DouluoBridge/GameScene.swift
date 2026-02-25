@@ -701,7 +701,7 @@ class GameScene: SKScene {
                         let knockDir: CGFloat = proj.vx > 0 ? 1 : -1
                         enemy.vx += knockDir * 5
                         enemy.vy += 3
-                        hitstop = max(hitstop, 2)
+                        // hitstop = max(hitstop, 2)  // 移除命中冻帧
                         // 移除命中普通怪物的屏幕晃动，Boss命中也不晃
                         // screenShakeIntensity = max(screenShakeIntensity, enemy.isBoss ? 5 : 3)
                         createParticles(x: enemy.position.x, y: enemy.position.y,
@@ -887,7 +887,7 @@ class GameScene: SKScene {
             // Boss entry effects
             screenFlash = 20
             // screenShakeIntensity = 15  // 移除Boss入场晃动
-            hitstop = 20  // Dramatic freeze on entry
+            // hitstop = 20  // 移除Boss入场冻帧
             gameDelegate?.triggerHaptic(.heavy)
             return
         }
@@ -1289,7 +1289,7 @@ class GameScene: SKScene {
         levelKills += 1
         combo += 1
         comboTimer = 150
-        hitstop = wasBoss ? 12 : 4
+        // hitstop = wasBoss ? 12 : 4  // 移除击杀冻帧
         // screenShakeIntensity = max(screenShakeIntensity, wasBoss ? 12 : 6)  // 移除击杀晃动
         // Original: player.energy = Math.min(100, player.energy + 4) — always 4
         playerNode.energy = min(100, playerNode.energy + 4)
@@ -1302,7 +1302,7 @@ class GameScene: SKScene {
 
         if wasBoss {
             bossActive = false
-            hitstop = 30  // Extended freeze for boss kill
+            // hitstop = 30  // 移除Boss击杀冻帧
             // screenShakeIntensity = 20  // 移除Boss击杀晃动
             gameDelegate?.restoreLevelBGM()
             if currentLevel < 10 {

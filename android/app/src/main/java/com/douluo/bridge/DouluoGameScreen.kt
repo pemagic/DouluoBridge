@@ -794,7 +794,7 @@ class DouluoGameScreen(
             entityLayer.addActor(b)
             enemies.add(b)
             screenFlash = 20
-            hitstop = 20
+            // hitstop = 20  // 移除Boss入场冻帧
             delegate.triggerHaptic(HapticType.HEAVY)
             return
         }
@@ -1039,7 +1039,7 @@ class DouluoGameScreen(
         levelKills++
         combo++
         comboTimer = 150
-        hitstop = if (wasBoss) 12 else 4
+        // hitstop = if (wasBoss) 12 else 4  // 移除击杀冻帧
         playerNode.energy = Math.min(100, playerNode.energy + 4)
 
         spawnDrop(enemy.x, enemy.y)
@@ -1049,7 +1049,7 @@ class DouluoGameScreen(
 
         if (wasBoss) {
             bossActive = false
-            hitstop = 30
+            // hitstop = 30  // 移除Boss击杀冻帧
             delegate.restoreLevelBGM()
             Gdx.app.postRunnable {
                 if (currentLevel < 10) completeLevel() else endGame(true)
