@@ -376,8 +376,11 @@ class EnemyNode(
     }
 
 
-    fun update(playerPosition: Float, platforms: List<PlatformData>, playerY: Float = 0f) {
-        animPhase += 0.15f
+    fun update(playerPosition: Float, platforms: List<PlatformData>, playerY: Float = 0f, fullUpdate: Boolean = true) {
+        // v1.9.6: Only do expensive operations when fullUpdate is true
+        if (fullUpdate) {
+            animPhase += 0.15f
+        }
         if (damageFlash > 0) damageFlash -= 1
 
         val dist = playerPosition - x // comparing X coords
@@ -455,8 +458,11 @@ class EnemyNode(
         // Scaling stickSprite for facing dir
         stickSprite.setOrigin(texW/2, texH/2)
         stickSprite.scaleX = if (playerPosition > x) 1f else -1f
-        stickSprite.y = MathUtils.sin(animPhase) * 6f - 30f // Offset bounce
 
-        updateTexture()
+        // v1.9.6: Only update expensive visual effects when in update group
+        if (fullUpdate) {
+            stickSprite.y = MathUtils.sin(animPhase) * 6f - 30f // Offset bounce
+            updateTexture()
+        }
     }
 }

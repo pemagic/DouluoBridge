@@ -418,8 +418,11 @@ class EnemyNode: SKNode {
     
     // MARK: - Update
     
-    func update(playerPosition: CGPoint, platforms: [PlatformData]) {
-        animPhase += 0.15
+    func update(playerPosition: CGPoint, platforms: [PlatformData], fullUpdate: Bool = true) {
+        // v1.9.6: Only do expensive operations when fullUpdate is true
+        if fullUpdate {
+            animPhase += 0.15
+        }
         if damageFlash > 0 { damageFlash -= 1 }
         
         let dist = playerPosition.x - position.x
@@ -441,8 +444,8 @@ class EnemyNode: SKNode {
             auraNode?.fillColor = UIColor(red: 1, green: 0, blue: 0, alpha: 0.2)
             auraNode?.glowWidth = 25
         }
-        // Boss aura breathing pulse
-        if isBoss, let aura = auraNode {
+        // Boss aura breathing pulse - only update visuals when needed
+        if fullUpdate && isBoss, let aura = auraNode {
             let pulse = 0.85 + 0.15 * sin(animPhase * 0.8)
             aura.setScale(CGFloat(pulse))
         }
@@ -492,9 +495,12 @@ class EnemyNode: SKNode {
         if isBoss, let fill = hpFill { fill.xScale = max(0, hp / maxHp) }
         
         xScale = playerPosition.x > position.x ? 1 : -1
-        stickSprite.position.y = sin(animPhase) * 6
-        
-        updateTexture()
+
+        // v1.9.6: Only update expensive visual effects when in update group
+        if fullUpdate {
+            stickSprite.position.y = sin(animPhase) * 6
+            updateTexture()
+        }
     }
     
 }

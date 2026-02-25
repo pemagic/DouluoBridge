@@ -85,6 +85,13 @@ class DouluoGameScreen(
     var platformDropThrough = 0
     var bossWarningTimer = 0
 
+    // Performance optimizations (v1.9.6)
+    private val enemyPool = mutableListOf<EnemyNode>()
+    private val enemyPoolSize = 100
+    private var enemyUpdateGroup = 0
+    private val updateGroupCount = 3
+    private var batchRenderEnabled = false
+
     val currentLevelDef: LevelDef
         get() {
             val idx = MathUtils.clamp(currentLevel - 1, 0, GameConfig.levels.size - 1)
@@ -98,6 +105,10 @@ class DouluoGameScreen(
         val viewport = ExtendViewport(Physics.gameWidth, Physics.gameHeight, camera)
         stage = Stage(viewport, batch)
 
+        // v1.9.6: Initialize performance optimizations
+        initializeEnemyPool()
+        initializeBatchRendering()
+
         stage.addActor(backgroundNode)
         stage.addActor(platformLayer)
         stage.addActor(entityLayer)
@@ -109,6 +120,62 @@ class DouluoGameScreen(
 
         gameState = GameState.MENU
         delegate.gameStateChanged(gameState)
+    }
+
+    // v1.9.6: Performance optimization methods
+    private fun initializeEnemyPool() {
+        // Pre-create enemy objects to avoid allocation during gameplay
+        for (i in 0 until enemyPoolSize) {
+            val enemy = EnemyNode(EnemyType.Scout, 1, false, 0, 0f, Color.WHITE, 1, null, 1.0f)
+            enemy.isVisible = false
+            enemyPool.add(enemy)
+        }
+    }
+
+    private fun initializeBatchRendering() {
+        // LibGDX already batches sprites efficiently, just need to enable it
+        batchRenderEnabled = true
+    }
+
+    private fun getPooledEnemy(type: EnemyType, tier: Int, isBoss: Boolean = false): EnemyNode? {
+        // Try to reuse from pool
+        if (enemyPool.isNotEmpty()) {
+            val pooled = enemyPool.removeAt(enemyPool.size - 1)
+            // Reset and reconfigure
+            pooled.enemyType = type
+            pooled.enemyTier = tier
+            pooled.isBoss = isBoss
+            pooled.isVisible = true
+            pooled.damageFlash = 0
+            pooled.shootTimer = 40 + MathUtils.random(60f)
+            return pooled
+        }
+        return null
+    }
+
+    private fun returnEnemyToPool(enemy: EnemyNode) {
+        // Clean up and return to pool
+        enemy.isVisible = false
+        enemy.clearActions()
+        enemy.clearChildren()
+        if (enemyPool.size < enemyPoolSize) {
+            enemyPool.add(enemy)
+        }
+    }
+
+    private fun optimizeBatchRendering() {
+        // Only batch when there are many enemies
+        if (enemies.size < 8) {
+            return
+        }
+
+        // Group enemies in same layer for batch rendering
+        enemies.forEach { enemy ->
+            if (enemy.parent != entityLayer) {
+                enemy.remove()
+                entityLayer.addActor(enemy)
+            }
+        }
     }
 
     fun startGame() {
@@ -440,6 +507,10 @@ class DouluoGameScreen(
         updateSpawning()
         updatePlayer()
         updateEnemies()
+
+        // v1.9.6: Batch rendering optimization
+        optimizeBatchRendering()
+
         updateDrops()
         updateProjectiles()
         updateEffects()
@@ -517,10 +588,17 @@ class DouluoGameScreen(
     }
 
     private fun updateEnemies() {
+        // v1.9.6: Smart update scheduling - only update subset each frame
+        enemyUpdateGroup = (enemyUpdateGroup + 1) % updateGroupCount
+
         val iter = enemies.iterator()
+        var index = 0
         while (iter.hasNext()) {
             val enemy = iter.next()
-            enemy.update(playerNode.x, platforms, playerNode.y)
+            // v1.9.6: Full physics update for all, but AI/visual updates only for current group
+            val isInUpdateGroup = index % updateGroupCount == enemyUpdateGroup
+            enemy.update(playerNode.x, platforms, playerNode.y, fullUpdate = isInUpdateGroup)
+            index++
 
             val enemyRelX = Math.abs(enemy.x - camera.position.x)
             val enemyRelY = enemy.y

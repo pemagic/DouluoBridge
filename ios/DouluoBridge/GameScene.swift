@@ -107,12 +107,76 @@ class GameScene: SKScene {
         // Initial state
         gameState = .menu
         gameDelegate?.gameStateChanged(.menu)
-        
 
+        // v1.9.6: Initialize performance optimizations
+        initializeEnemyPool()
+        initializeBatchRendering()
     }
-    
 
-    
+    // MARK: - Performance Optimizations (v1.9.6)
+
+    private func initializeEnemyPool() {
+        // Pre-create enemy objects to avoid allocation during gameplay
+        for _ in 0..<enemyPoolSize {
+            let enemy = EnemyNode(type: .scout, playerWeaponLevel: 1, color: .white, enemyTier: 1)
+            enemy.isHidden = true
+            enemyPool.append(enemy)
+        }
+    }
+
+    private func initializeBatchRendering() {
+        // Create batch node for combined enemy rendering
+        enemyBatchNode = SKEffectNode()
+        enemyBatchNode.zPosition = 15
+        enemyBatchNode.shouldRasterize = true  // Cache the entire batch
+        entityLayer.addChild(enemyBatchNode)
+    }
+
+    private func getPooledEnemy(type: EnemyType, tier: Int, isBoss: Bool = false) -> EnemyNode? {
+        // Try to reuse from pool
+        if let pooled = enemyPool.popLast() {
+            // Reset and reconfigure
+            pooled.enemyType = type
+            pooled.enemyTier = tier
+            pooled.isBoss = isBoss
+            pooled.isHidden = false
+            pooled.damageFlash = 0
+            pooled.shootTimer = 40 + CGFloat.random(in: 0...60)
+            return pooled
+        }
+        return nil  // Need to create new one
+    }
+
+    private func returnEnemyToPool(_ enemy: EnemyNode) {
+        // Clean up and return to pool
+        enemy.isHidden = true
+        enemy.removeAllActions()
+        enemy.removeAllChildren()
+        if enemyPool.count < enemyPoolSize {
+            enemyPool.append(enemy)
+        }
+    }
+
+    // v1.9.6: Batch rendering optimization
+    private func optimizeBatchRendering() {
+        // Only batch when there are many enemies
+        if enemies.count < 8 {
+            enemyBatchNode.shouldRasterize = false
+            return
+        }
+
+        // Enable batch rasterization for performance
+        enemyBatchNode.shouldRasterize = true
+
+        // Group similar enemies together to maximize batching efficiency
+        for enemy in enemies {
+            if enemy.parent != enemyBatchNode {
+                enemy.removeFromParent()
+                enemyBatchNode.addChild(enemy)
+            }
+        }
+    }
+
     // MARK: - Game Flow
     
     func startGame() {
@@ -423,7 +487,10 @@ class GameScene: SKScene {
         
         // 6. Enemy Update (HTML L272-319)
         updateEnemies()
-        
+
+        // v1.9.6: Batch rendering optimization
+        optimizeBatchRendering()
+
         // 7. Drop Update (HTML L321-347)
         updateDrops()
         
@@ -532,8 +599,15 @@ class GameScene: SKScene {
     
     // MARK: - Enemy Update (match original exactly)
     func updateEnemies() {
+        // v1.9.6: Smart update scheduling - only update subset each frame
+        enemyUpdateGroup = (enemyUpdateGroup + 1) % updateGroupCount
+
         for (i, enemy) in enemies.enumerated().reversed() {
-            enemy.update(playerPosition: playerNode.position, platforms: platforms)
+            // v1.9.6: Full physics update for all, but AI/visual updates only for current group
+            let isInUpdateGroup = i % updateGroupCount == enemyUpdateGroup
+
+            // Always do critical updates (physics, collision)
+            enemy.update(playerPosition: playerNode.position, platforms: platforms, fullUpdate: isInUpdateGroup)
             
             // Off-screen cleanup — tighter threshold so distant enemies don't clog maxEnemies
             let enemyRelX = abs(enemy.position.x - cameraNode.position.x)
@@ -555,6 +629,8 @@ class GameScene: SKScene {
                 // isn't "leaked" by enemies wandering off
                 levelKills += 1
                 totalKills += 1
+                // v1.9.6: Return to pool instead of destroying
+                returnEnemyToPool(enemy)
                 enemy.removeFromParent()
                 enemies.remove(at: i)
                 continue
@@ -935,14 +1011,26 @@ class GameScene: SKScene {
             let type = lvl.enemies.randomElement() ?? .scout
             let color = lvl.colors.enemyColors.randomElement()?.darkened(0.42) ?? .cyan
 
-            
-            let enemy = EnemyNode(
-                type: type,
-                playerWeaponLevel: playerNode.weaponLevel,
-                color: color,
-                enemyTier: lvl.enemyTier,
-                hpMultiplier: hpMultiplier
-            )
+            // v1.9.6: Try to use pooled enemy first
+            let enemy: EnemyNode
+            if let pooled = getPooledEnemy(type: type, tier: lvl.enemyTier) {
+                // Reconfigure pooled enemy
+                pooled.color = color
+                pooled.hp = pooled.maxHp * hpMultiplier
+                pooled.position = CGPoint(x: 0, y: 0)
+                pooled.vx = 0
+                pooled.vy = 0
+                enemy = pooled
+            } else {
+                // Create new if pool is empty
+                enemy = EnemyNode(
+                    type: type,
+                    playerWeaponLevel: playerNode.weaponLevel,
+                    color: color,
+                    enemyTier: lvl.enemyTier,
+                    hpMultiplier: hpMultiplier
+                )
+            }
             
             // At higher levels, spawn from all directions (left, right, above, diagonal)
             let spawnX: CGFloat
@@ -1620,6 +1708,19 @@ class GameScene: SKScene {
     // Performance: Particle pool for object reuse
     private var particlePool: [SKSpriteNode] = []
     private let particlePoolSize = 500
+
+    // Performance: Enemy batch rendering system (v1.9.6)
+    private var enemyBatchNode: SKEffectNode!
+    private var enemyRenderCache: [ObjectIdentifier: SKTexture] = [:]
+    private var enemyRenderTimer: [ObjectIdentifier: Int] = [:]
+
+    // Performance: Smart update scheduling (v1.9.6)
+    private var enemyUpdateGroup: Int = 0
+    private let updateGroupCount = 3
+
+    // Performance: Enemy object pool (v1.9.6)
+    private var enemyPool: [EnemyNode] = []
+    private let enemyPoolSize = 100
 
     // Performance: Texture atlas for batch rendering
     private static let gameAtlas = SKTextureAtlas(named: "Game")
