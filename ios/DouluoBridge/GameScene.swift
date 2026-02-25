@@ -22,6 +22,7 @@ class GameScene: SKScene {
     var bossActive: Bool = false
     var bossSpawned: Bool = false
     var screenFlash: Int = 0
+    var screenShakeIntensity: CGFloat = 0
     var bossStallTimer: Int = 0
     var hpMultiplier: CGFloat = 1.0
     var enemyProjectileCount: Int = 0  // v1.6: O(1) counter instead of filter()
@@ -56,6 +57,9 @@ class GameScene: SKScene {
     var inputJump: Bool = false
     var inputDash: Bool = false
     var inputAttack: Bool = false
+    var inputDown: Bool = false
+    var platformDropThrough: Int = 0
+    var bossWarningTimer: Int = 0
     
     // MARK: - Delegates
     weak var gameDelegate: GameSceneDelegate?
@@ -121,6 +125,7 @@ class GameScene: SKScene {
         gameTime = 0
         bossActive = false
         bossSpawned = false
+        bossWarningTimer = 0
         spawnGrace = 120
         hpMultiplier = 1.0
         enemyProjectileCount = 0
@@ -180,6 +185,7 @@ class GameScene: SKScene {
             levelKills = 0
             bossActive = false
             bossSpawned = false
+            bossWarningTimer = 0
             spawnGrace = 120
             hpMultiplier *= 1.5  // v1.6: 1.5x enemy HP each level
             playerNode.hp = 100  // v1.6: Full HP on level clear
@@ -486,11 +492,15 @@ class GameScene: SKScene {
         }
         
         // Platform collision
+        if platformDropThrough > 0 { platformDropThrough -= 1 }
         p.grounded = false
         for plat in platforms {
+            // Skip non-ground platforms during drop-through
+            if platformDropThrough > 0 && !plat.isGround { continue }
+
             let platTop = plat.y + plat.height
             let playerBottom = p.position.y - p.height / 2
-            
+
             if p.position.x + p.width / 2 > plat.x &&
                p.position.x - p.width / 2 < plat.x + plat.width &&
                playerBottom < platTop &&
@@ -685,9 +695,19 @@ class GameScene: SKScene {
                         let pierceDmg = Int(Double(proj.damage) * decayFactor)
                         enemy.hp -= CGFloat(pierceDmg)
                         enemy.damageFlash = 6
-                        gameDelegate?.triggerHaptic(.light)
                         proj.hitEnemies.insert(eid)
-                        
+
+                        // Combat feel: knockback, hitstop, particles, shake
+                        let knockDir: CGFloat = proj.vx > 0 ? 1 : -1
+                        enemy.vx += knockDir * 5
+                        enemy.vy += 3
+                        hitstop = max(hitstop, 2)
+                        screenShakeIntensity = max(screenShakeIntensity, enemy.isBoss ? 5 : 3)
+                        createParticles(x: enemy.position.x, y: enemy.position.y,
+                                       color: enemy.color, count: 4, speedScale: 0.8)
+                        gameDelegate?.triggerHaptic(.light)
+                        gameDelegate?.playSFX(.hit)
+
                         if enemy.hp <= 0 {
                             handleEnemyDeath(at: ei)
                         }
@@ -819,11 +839,31 @@ class GameScene: SKScene {
         
         let lvl = currentLevelDef
         
-        // Boss spawn check
+        // Boss spawn: warning phase then dramatic entrance
         if levelKills >= lvl.killTarget && !bossSpawned {
+            if bossWarningTimer == 0 {
+                // Start warning phase
+                bossWarningTimer = 180  // 3 seconds at 60fps
+                let bossNames: [BossType: String] = [
+                    .banditChief: "匪首", .wolfKing: "狼王", .ironFist: "铁拳",
+                    .shieldGeneral: "盾将", .phantomArcher: "幻弓", .twinBlade: "双刃",
+                    .thunderMonk: "雷僧", .bloodDemon: "血魔", .shadowLord: "影主", .swordSaint: "剑圣"
+                ]
+                let name = bossNames[lvl.bossType] ?? "BOSS"
+                gameDelegate?.showBossWarning(name)
+                gameDelegate?.playSFX(.bossWarning)
+                gameDelegate?.switchToBossBGM()
+                return
+            }
+            bossWarningTimer -= 1
+            // Pulse screen flash during warning
+            if bossWarningTimer > 0 && bossWarningTimer % 30 < 3 { screenFlash = 4 }
+            if bossWarningTimer > 0 { return }  // Still waiting
+
+            // Warning phase complete — spawn boss
             bossSpawned = true
             bossActive = true
-            
+
             let bossColor = PlayerNode.neonColors.randomElement() ?? .red
             let boss = EnemyNode(
                 type: lvl.enemies.last ?? .scout,
@@ -838,11 +878,15 @@ class GameScene: SKScene {
             )
             boss.position = CGPoint(
                 x: playerNode.position.x + (playerNode.facing > 0 ? 500 : -500),
-                y: Physics.gameHeight + 100
+                y: Physics.gameHeight + 200
             )
             entityLayer.addChild(boss)
             enemies.append(boss)
-            
+
+            // Boss entry effects
+            screenFlash = 20
+            screenShakeIntensity = 15
+            hitstop = 20  // Dramatic freeze on entry
             gameDelegate?.triggerHaptic(.heavy)
             return
         }
@@ -940,11 +984,21 @@ class GameScene: SKScene {
         
         camX += (targetX - camX) * 0.12
         camY += (targetY - camY) * 0.1
-        
+
+        // Screen shake offset
+        var shakeX: CGFloat = 0, shakeY: CGFloat = 0
+        if screenShakeIntensity > 0.5 {
+            shakeX = CGFloat.random(in: -screenShakeIntensity...screenShakeIntensity)
+            shakeY = CGFloat.random(in: -screenShakeIntensity...screenShakeIntensity)
+            screenShakeIntensity *= 0.85
+        } else {
+            screenShakeIntensity = 0
+        }
+
         // Camera position is center of view
         cameraNode.position = CGPoint(
-            x: camX + Physics.gameWidth / 2,
-            y: camY + Physics.gameHeight / 2
+            x: camX + Physics.gameWidth / 2 + shakeX,
+            y: camY + Physics.gameHeight / 2 + shakeY
         )
     }
     
@@ -966,28 +1020,39 @@ class GameScene: SKScene {
     
     func handleJump() {
         guard gameState == .playing else { return }
+        // Down + Jump = drop through platform
+        if inputDown && playerNode.grounded {
+            platformDropThrough = 12  // ~0.2s window
+            playerNode.vy = -2       // Small downward push
+            playerNode.grounded = false
+            gameDelegate?.triggerHaptic(.light)
+            gameDelegate?.playSFX(.dropThrough)
+            return
+        }
         if playerNode.jumpCount < 2 {
             playerNode.vy = Physics.jumpForce  // positive = up
             playerNode.jumpCount += 1
             gameDelegate?.triggerHaptic(.light)
+            gameDelegate?.playSFX(.jump)
         }
     }
     
     func handleDash() {
         guard gameState == .playing, playerNode.dashCooldown <= 0 else { return }
-        playerNode.dashActive = 15  // Original: player.dashActive = 15
-        playerNode.dashCooldown = 35  // Original: player.dashCooldown = 35
+        playerNode.dashActive = 15
+        playerNode.dashCooldown = 35
         playerNode.vx = CGFloat(playerNode.facing) * Physics.dashForce
-        
-        // Create particles (trail) logic is in updatePlayer
-        
+
         gameDelegate?.triggerHaptic(.heavy)
+        gameDelegate?.playSFX(.dash)
     }
     
     func handleAttack() {
         guard gameState == .playing, playerNode.shootTimer <= 0 else { return }
         // v1.6: Cap projectiles to prevent GPU overload
         guard projectiles.count < 80 else { return }
+        gameDelegate?.triggerHaptic(.light)
+        gameDelegate?.playSFX(.attack)
         let lvl = playerNode.weaponLevel
         
         // Damage scales with level, doubled during ult
@@ -1056,6 +1121,14 @@ class GameScene: SKScene {
         guard gameState == .playing else { return }
         guard let def = GameConfig.skillDefs.first(where: { $0.id == skillId }) else { return }
         guard let sk = playerNode.skills[skillId], sk.level > 0, (sk.cooldown <= 0 || ignoreCooldown) else { return }
+
+        // Skill SFX + haptic
+        let sfxMap: [String: SFXType] = [
+            "fire": .skillFire, "whirlwind": .skillWhirlwind, "shield": .skillShield,
+            "lightning": .skillLightning, "ghost": .skillGhost
+        ]
+        gameDelegate?.triggerHaptic(.medium)
+        if let sfx = sfxMap[skillId] { gameDelegate?.playSFX(sfx) }
         
         // Skill implementations — Phase 4
         let lvl = sk.level
@@ -1216,16 +1289,21 @@ class GameScene: SKScene {
         combo += 1
         comboTimer = 150
         hitstop = wasBoss ? 12 : 4
+        screenShakeIntensity = max(screenShakeIntensity, wasBoss ? 12 : 6)
         // Original: player.energy = Math.min(100, player.energy + 4) — always 4
         playerNode.energy = min(100, playerNode.energy + 4)
-        
+
         // Drop
         spawnDrop(at: enemy.position)
-        
+
         gameDelegate?.triggerHaptic(wasBoss ? .heavy : .medium)
-        
+        gameDelegate?.playSFX(wasBoss ? .bossDeath : .kill)
+
         if wasBoss {
             bossActive = false
+            hitstop = 30  // Extended freeze for boss kill
+            screenShakeIntensity = 20
+            gameDelegate?.restoreLevelBGM()
             if currentLevel < 10 {
                 completeLevel()
             } else {
@@ -1495,6 +1573,10 @@ protocol GameSceneDelegate: AnyObject {
     func showLevelBanner(_ name: String, updateBGM: Bool)
     func gameEnded(kills: Int, time: Int, level: Int, victory: Bool)
     func triggerHaptic(_ type: HapticType)
+    func playSFX(_ type: SFXType)
+    func switchToBossBGM()
+    func restoreLevelBGM()
+    func showBossWarning(_ name: String)
 }
 
 // MARK: - Extensions

@@ -80,8 +80,8 @@ class EnemyNode(
             this.maxHp = this.hp
             this.baseSpeed = bossSpeed * 3
             this.damage = 15
-            this.enemyWidth = 80f
-            this.enemyHeight = 100f
+            this.enemyWidth = 120f
+            this.enemyHeight = 150f
         } else {
             val lvlBonus = (playerWeaponLevel - 1) * 0.15f
             val baseHp = if (enemyType == EnemyType.HEAVY) 450f else 120f
@@ -220,7 +220,7 @@ class EnemyNode(
     // iOS: move(cx + fx, cy - fy) → Pixmap: (cx + fx, cy + fy)
     private fun renderFrame(phase: Float, flash: Boolean, combo: Int): Texture {
         val drawColor = if (flash) Color.WHITE else baseColor
-        val lineW = if (isBoss) 6 else if (enemyType == EnemyType.HEAVY) 8 else 4
+        val lineW = if (isBoss) 10 else if (enemyType == EnemyType.HEAVY) 8 else 4
         val w = texW.toInt()
         val h = texH.toInt()
         val pix = Pixmap(w, h, Pixmap.Format.RGBA8888)
@@ -376,7 +376,7 @@ class EnemyNode(
     }
 
 
-    fun update(playerPosition: Float, platforms: List<PlatformData>) {
+    fun update(playerPosition: Float, platforms: List<PlatformData>, playerY: Float = 0f) {
         animPhase += 0.15f
         if (damageFlash > 0) damageFlash -= 1
 
@@ -415,8 +415,36 @@ class EnemyNode(
             }
         }
 
-        if (grounded && MathUtils.randomBoolean(0.01f)) {
-            vy = MathUtils.random(12f, 18f)
+        // Smart jump AI — chase player onto platforms
+        val heightDiff = playerY - y
+        if (grounded) {
+            when (enemyType) {
+                EnemyType.CHASER -> {
+                    if (heightDiff > 40f) {
+                        vy = Math.min(28f, 15f + heightDiff * 0.05f)
+                    } else if (MathUtils.randomBoolean(0.02f)) {
+                        vy = MathUtils.random(12f, 16f)
+                    }
+                }
+                EnemyType.MARTIAL -> {
+                    if (heightDiff > 60f) {
+                        vy = Math.min(25f, 14f + heightDiff * 0.04f)
+                    } else if (MathUtils.randomBoolean(0.015f)) {
+                        vy = MathUtils.random(12f, 16f)
+                    }
+                }
+                else -> {
+                    if (heightDiff > 100f && MathUtils.randomBoolean(0.03f)) {
+                        vy = MathUtils.random(14f, 20f)
+                    } else if (MathUtils.randomBoolean(0.01f)) {
+                        vy = MathUtils.random(12f, 18f)
+                    }
+                }
+            }
+        }
+        // Air tracking for chasers
+        if (!grounded && enemyType == EnemyType.CHASER) {
+            vx += dir * 0.8f
         }
         if (enemyType != EnemyType.CHASER && enemyType != EnemyType.SNIPER) {
             shootTimer -= 1

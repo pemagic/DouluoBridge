@@ -264,6 +264,8 @@ class GameViewController: UIViewController, GameSceneDelegate {
     }
     
     @objc private func startGameTapped() {
+        audioManager.playSFX(.uiClick)
+        lightImpact.impactOccurred()
         mainMenuView.isHidden = true
         gameScene.startGame()
         audioManager.startBGM(songId: 0, bpm: 100)
@@ -323,6 +325,8 @@ class GameViewController: UIViewController, GameSceneDelegate {
     }
     
     @objc private func restartTapped() {
+        audioManager.playSFX(.uiClick)
+        lightImpact.impactOccurred()
         gameOverView.isHidden = true
         gameScene.startGame()
         audioManager.startBGM(songId: 0, bpm: 100)
@@ -359,6 +363,8 @@ class GameViewController: UIViewController, GameSceneDelegate {
     }
     
     @objc private func resumeTapped() {
+        audioManager.playSFX(.uiClick)
+        lightImpact.impactOccurred()
         gameScene.resumeGame()
     }
     
@@ -407,6 +413,7 @@ class GameViewController: UIViewController, GameSceneDelegate {
         // Virtual Joystick
         joystick = VirtualJoystick(frame: CGRect(x: 0, y: 0, width: 140, height: 140))
         joystick.onDirectionChange = { [weak self] dir in self?.handleJoystickDirection(dir) }
+        joystick.onDownChange = { [weak self] isDown in self?.gameScene.inputDown = isDown }
         view.addSubview(joystick)
         joystick.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -547,6 +554,8 @@ class GameViewController: UIViewController, GameSceneDelegate {
     }
     
     private func returnHome() {
+        audioManager.playSFX(.uiClick)
+        lightImpact.impactOccurred()
         gameScene.gameState = .menu
         audioManager.stopBGM()
         setControlsVisible(false, animated: true)
@@ -721,6 +730,72 @@ class GameViewController: UIViewController, GameSceneDelegate {
         case .light: lightImpact.impactOccurred()
         case .medium: mediumImpact.impactOccurred()
         case .heavy: heavyImpact.impactOccurred()
+        }
+    }
+
+    func playSFX(_ type: SFXType) {
+        audioManager.playSFX(type)
+    }
+
+    func switchToBossBGM() {
+        audioManager.startBossBGM()
+    }
+
+    func restoreLevelBGM() {
+        audioManager.restoreLevelBGM()
+    }
+
+    func showBossWarning(_ name: String) {
+        DispatchQueue.main.async {
+            let warningView = UIView()
+            warningView.backgroundColor = UIColor(red: 0, green: 0, blue: 0, alpha: 0.7)
+            warningView.alpha = 0
+            self.view.addSubview(warningView)
+            warningView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                warningView.topAnchor.constraint(equalTo: self.view.topAnchor),
+                warningView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+                warningView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+                warningView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor)
+            ])
+
+            let warningLabel = UILabel()
+            warningLabel.text = "WARNING"
+            warningLabel.font = .monospacedSystemFont(ofSize: 18, weight: .bold)
+            warningLabel.textColor = UIColor(red: 0.9, green: 0.2, blue: 0.2, alpha: 0.8)
+            warningLabel.textAlignment = .center
+            warningView.addSubview(warningLabel)
+            warningLabel.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                warningLabel.centerXAnchor.constraint(equalTo: warningView.centerXAnchor),
+                warningLabel.centerYAnchor.constraint(equalTo: warningView.centerYAnchor, constant: -30)
+            ])
+
+            let nameLabel = UILabel()
+            nameLabel.text = name
+            nameLabel.font = UIFont(name: "PingFangSC-Heavy", size: 48) ?? .boldSystemFont(ofSize: 48)
+            nameLabel.textColor = .white
+            nameLabel.textAlignment = .center
+            nameLabel.layer.shadowColor = UIColor.red.cgColor
+            nameLabel.layer.shadowRadius = 20
+            nameLabel.layer.shadowOpacity = 1
+            nameLabel.layer.shadowOffset = .zero
+            warningView.addSubview(nameLabel)
+            nameLabel.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                nameLabel.centerXAnchor.constraint(equalTo: warningView.centerXAnchor),
+                nameLabel.centerYAnchor.constraint(equalTo: warningView.centerYAnchor, constant: 15)
+            ])
+
+            UIView.animate(withDuration: 0.3) { warningView.alpha = 1 }
+            UIView.animate(withDuration: 0.4, delay: 0.3, options: [.autoreverse, .repeat]) {
+                warningLabel.alpha = 0.3
+            }
+            UIView.animate(withDuration: 0.5, delay: 2.5, options: []) {
+                warningView.alpha = 0
+            } completion: { _ in
+                warningView.removeFromSuperview()
+            }
         }
     }
 }

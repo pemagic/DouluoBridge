@@ -7,6 +7,7 @@ class VirtualJoystick: UIView {
     }
     
     var onDirectionChange: ((Direction) -> Void)?
+    var onDownChange: ((Bool) -> Void)?
     
     private let outerRadius: CGFloat = 70
     private let thumbRadius: CGFloat = 30
@@ -15,6 +16,7 @@ class VirtualJoystick: UIView {
     private var thumbView: UIView!
     private var centerPoint: CGPoint { CGPoint(x: bounds.midX, y: bounds.midY) }
     private var currentDirection: Direction = .none
+    private var currentDown: Bool = false
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -143,11 +145,11 @@ class VirtualJoystick: UIView {
         } else {
             newDirection = .right
         }
-        
+
         if newDirection != currentDirection {
             currentDirection = newDirection
             onDirectionChange?(newDirection)
-            
+
             // Visual feedback
             UIView.animate(withDuration: 0.1) {
                 self.thumbView.backgroundColor = newDirection == .none
@@ -155,11 +157,22 @@ class VirtualJoystick: UIView {
                     : UIColor(red: 0.55, green: 0.50, blue: 0.40, alpha: 0.6)
             }
         }
+
+        // Vertical down detection (dy > 0 = down in UIKit coords)
+        let isDown = dy > deadZone * 1.5
+        if isDown != currentDown {
+            currentDown = isDown
+            onDownChange?(isDown)
+        }
     }
     
     private func resetThumb() {
         currentDirection = .none
         onDirectionChange?(.none)
+        if currentDown {
+            currentDown = false
+            onDownChange?(false)
+        }
         
         UIView.animate(withDuration: 0.15, delay: 0, options: .curveEaseOut) {
             self.thumbView.center = self.centerPoint

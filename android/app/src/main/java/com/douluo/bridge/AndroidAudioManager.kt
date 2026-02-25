@@ -153,7 +153,20 @@ class AndroidAudioManager(private val context: Context) {
                Pair("E5", 2), Pair("G5", 2), Pair("A5", 2), Pair("B5", 2), Pair("D6", 4), Pair("rest", 2),
                Pair("E6", 2), Pair("D6", 2), Pair("B5", 2), Pair("A5", 2), Pair("G5", 4), Pair("E5", 4),
                Pair("D5", 2), Pair("E5", 2), Pair("G5", 4), Pair("A5", 2), Pair("G5", 2), Pair("E5", 4),
-               Pair("D5", 2), Pair("B4", 2), Pair("A4", 4), Pair("G4", 2), Pair("A4", 2), Pair("B4", 8))
+               Pair("D5", 2), Pair("B4", 2), Pair("A4", 4), Pair("G4", 2), Pair("A4", 2), Pair("B4", 8)),
+
+        // Boss Battle: Intense, fast-paced combat melody (index 10, BPM 160)
+        listOf(Pair("G5", 1), Pair("E5", 1), Pair("G5", 1), Pair("A5", 1), Pair("G5", 2), Pair("E5", 1), Pair("D5", 1),
+               Pair("B4", 2), Pair("D5", 1), Pair("E5", 1), Pair("G5", 2), Pair("rest", 1),
+               Pair("A5", 1), Pair("G5", 1), Pair("E5", 1), Pair("D5", 1), Pair("B4", 1), Pair("A4", 2), Pair("G4", 2),
+               Pair("rest", 1), Pair("B4", 1), Pair("D5", 1), Pair("E5", 1), Pair("G5", 2), Pair("A5", 2),
+               Pair("G5", 1), Pair("E5", 1), Pair("D5", 2), Pair("B4", 1), Pair("A4", 1), Pair("G4", 2),
+               Pair("A4", 1), Pair("B4", 1), Pair("D5", 2), Pair("E5", 2), Pair("G5", 4),
+               Pair("A5", 1), Pair("G5", 1), Pair("E5", 1), Pair("D5", 1), Pair("B4", 2), Pair("A4", 1), Pair("B4", 1),
+               Pair("D5", 2), Pair("E5", 1), Pair("G5", 1), Pair("A5", 2), Pair("G5", 2),
+               Pair("E5", 1), Pair("D5", 1), Pair("B4", 2), Pair("A4", 2), Pair("G4", 4),
+               Pair("D5", 1), Pair("E5", 1), Pair("G5", 1), Pair("A5", 1), Pair("G5", 1), Pair("E5", 1), Pair("D5", 1), Pair("B4", 1),
+               Pair("A4", 2), Pair("B4", 2), Pair("D5", 2), Pair("E5", 2), Pair("G5", 8))
     )
 
     fun startBGM(songId: Int, bpm: Float) {
@@ -285,6 +298,101 @@ class AndroidAudioManager(private val context: Context) {
         }.start()
     }
     
+    private fun playToneThreaded(frequency: Float, waveType: String, duration: Float, volume: Float) {
+        Thread {
+            try {
+                val numSamples = (sampleRate * duration).toInt()
+                val buffer = ByteBuffer.allocateDirect(numSamples * 2 * 2)
+                buffer.order(ByteOrder.nativeOrder())
+
+                var phase = 0f
+                val increment = frequency / sampleRate
+
+                for (i in 0 until numSamples) {
+                    val t = i.toFloat() / numSamples.toFloat()
+                    val envelope = volume * (1.0f - t)
+
+                    val sample = when (waveType) {
+                        "square" -> if (phase < 0.5f) 1.0f else -1.0f
+                        "sawtooth" -> 2.0f * phase - 1.0f
+                        "triangle" -> 4.0f * Math.abs(phase - 0.5f).toFloat() - 1.0f
+                        else -> Math.sin(phase * 2.0 * Math.PI).toFloat()
+                    }
+
+                    val s = (sample * envelope * Short.MAX_VALUE).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                    buffer.putShort(s)
+                    buffer.putShort(s)
+
+                    phase += increment
+                    if (phase >= 1f) phase -= 1f
+                }
+
+                val track = AudioTrack.Builder()
+                    .setAudioAttributes(AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_GAME)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build())
+                    .setAudioFormat(AudioFormat.Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(sampleRate)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
+                        .build())
+                    .setBufferSizeInBytes(numSamples * 2 * 2)
+                    .setTransferMode(AudioTrack.MODE_STATIC)
+                    .build()
+
+                buffer.flip()
+                val array = ByteArray(buffer.remaining())
+                buffer.get(array)
+                track.write(array, 0, array.size)
+                track.play()
+                Thread.sleep((duration * 1000).toLong() + 50)
+                track.release()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }.start()
+    }
+
+    fun playSFX(type: com.douluo.bridge.ui.SFXType) {
+        when (type) {
+            com.douluo.bridge.ui.SFXType.JUMP -> playToneThreaded(880f, "sine", 0.07f, 0.10f)
+            com.douluo.bridge.ui.SFXType.ATTACK -> playToneThreaded(350f, "sawtooth", 0.05f, 0.09f)
+            com.douluo.bridge.ui.SFXType.DASH -> playToneThreaded(200f, "square", 0.10f, 0.12f)
+            com.douluo.bridge.ui.SFXType.HIT -> playToneThreaded(300f, "triangle", 0.04f, 0.07f)
+            com.douluo.bridge.ui.SFXType.KILL -> playToneThreaded(550f, "sine", 0.12f, 0.14f)
+            com.douluo.bridge.ui.SFXType.BOSS_WARNING -> {
+                playToneThreaded(110f, "square", 0.4f, 0.20f)
+                handler.postDelayed({ playToneThreaded(82f, "square", 0.6f, 0.22f) }, 500)
+            }
+            com.douluo.bridge.ui.SFXType.BOSS_DEATH -> {
+                playToneThreaded(440f, "sine", 0.15f, 0.18f)
+                handler.postDelayed({ playToneThreaded(660f, "sine", 0.15f, 0.16f) }, 150)
+                handler.postDelayed({ playToneThreaded(880f, "sine", 0.3f, 0.20f) }, 300)
+            }
+            com.douluo.bridge.ui.SFXType.DROP_THROUGH -> playToneThreaded(440f, "sine", 0.05f, 0.06f)
+            com.douluo.bridge.ui.SFXType.SKILL_FIRE -> playToneThreaded(500f, "sawtooth", 0.10f, 0.11f)
+            com.douluo.bridge.ui.SFXType.SKILL_WHIRLWIND -> playToneThreaded(400f, "sine", 0.12f, 0.09f)
+            com.douluo.bridge.ui.SFXType.SKILL_SHIELD -> playToneThreaded(180f, "triangle", 0.10f, 0.11f)
+            com.douluo.bridge.ui.SFXType.SKILL_LIGHTNING -> playToneThreaded(900f, "square", 0.06f, 0.11f)
+            com.douluo.bridge.ui.SFXType.SKILL_GHOST -> playToneThreaded(150f, "sine", 0.15f, 0.09f)
+            com.douluo.bridge.ui.SFXType.UI_CLICK -> playToneThreaded(600f, "sine", 0.025f, 0.05f)
+        }
+    }
+
+    private var savedSongId = 0
+    private var savedBpm = 100f
+
+    fun startBossBGM() {
+        savedSongId = bgmSongId
+        savedBpm = bgmBpm
+        startBGM(10, 160f)
+    }
+
+    fun restoreLevelBGM() {
+        startBGM(savedSongId, savedBpm)
+    }
+
     fun release() {
         stopBGM()
     }

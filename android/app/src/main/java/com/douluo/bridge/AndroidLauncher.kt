@@ -23,6 +23,7 @@ import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration
 import com.douluo.bridge.ui.ActionButton
 import com.douluo.bridge.ui.GameScreenDelegate
 import com.douluo.bridge.ui.HapticType
+import com.douluo.bridge.ui.SFXType
 import com.douluo.bridge.ui.VirtualJoystick
 
 class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
@@ -271,6 +272,8 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         mainMenuView.addView(startBtn, btnParams)
 
         startBtn.setOnClickListener {
+            audioManager?.playSFX(SFXType.UI_CLICK)
+            triggerHaptic(HapticType.LIGHT)
             mainMenuView.visibility = View.GONE
             Gdx.app.postRunnable {
                 (douluoGame.screen as? DouluoGameScreen)?.startGame()
@@ -323,6 +326,8 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         gameOverView.addView(restartBtn, btnParams)
 
         restartBtn.setOnClickListener {
+            audioManager?.playSFX(SFXType.UI_CLICK)
+            triggerHaptic(HapticType.LIGHT)
             gameOverView.visibility = View.GONE
             Gdx.app.postRunnable {
                 (douluoGame.screen as? DouluoGameScreen)?.startGame()
@@ -348,6 +353,8 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         pauseOverlay.addView(label, params)
 
         pauseOverlay.setOnClickListener {
+            audioManager?.playSFX(SFXType.UI_CLICK)
+            triggerHaptic(HapticType.LIGHT)
             Gdx.app.postRunnable {
                 (douluoGame.screen as? DouluoGameScreen)?.resumeGame()
             }
@@ -406,6 +413,9 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
                     }
                 }
             }
+        }
+        joystick.onDownChange = { isDown ->
+            Gdx.app.postRunnable { (douluoGame.screen as? DouluoGameScreen)?.let { it.inputDown = isDown } }
         }
 
         attackButton = ActionButton(this)
@@ -496,6 +506,8 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         uiContainer.addView(homeBtn, hmParams)
         allControls.add(homeBtn)
         homeBtn.setOnClickListener {
+            audioManager?.playSFX(SFXType.UI_CLICK)
+            triggerHaptic(HapticType.LIGHT)
             (douluoGame.screen as? DouluoGameScreen)?.gameState = GameState.MENU
             audioManager?.stopBGM()
             setControlsVisible(false)
@@ -516,6 +528,8 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
         uiContainer.addView(pauseBtn, psParams)
         allControls.add(pauseBtn)
         pauseBtn.setOnClickListener {
+            audioManager?.playSFX(SFXType.UI_CLICK)
+            triggerHaptic(HapticType.LIGHT)
             (douluoGame.screen as? DouluoGameScreen)?.pauseGame()
         }
     }
@@ -675,6 +689,80 @@ class AndroidLauncher : AndroidApplication(), GameScreenDelegate {
                 @Suppress("DEPRECATION")
                 vibrator.vibrate(millis)
             }
+        }
+    }
+
+    override fun playSFX(type: SFXType) {
+        audioManager?.playSFX(type)
+    }
+
+    override fun switchToBossBGM() {
+        audioManager?.startBossBGM()
+    }
+
+    override fun restoreLevelBGM() {
+        audioManager?.restoreLevelBGM()
+    }
+
+    override fun showBossWarning(name: String) {
+        runOnUiThread {
+            val warningView = android.widget.FrameLayout(this).apply {
+                setBackgroundColor(android.graphics.Color.argb(178, 0, 0, 0))
+                alpha = 0f
+            }
+
+            val warningLabel = android.widget.TextView(this).apply {
+                text = "WARNING"
+                setTextColor(android.graphics.Color.argb(204, 230, 51, 51))
+                textSize = 18f
+                typeface = android.graphics.Typeface.create(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
+                gravity = android.view.Gravity.CENTER
+            }
+            val wlp = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.CENTER
+            ).apply { topMargin = -60 }
+            warningView.addView(warningLabel, wlp)
+
+            val nameLabel = android.widget.TextView(this).apply {
+                text = name
+                setTextColor(android.graphics.Color.WHITE)
+                textSize = 42f
+                typeface = android.graphics.Typeface.create("sans-serif-black", android.graphics.Typeface.BOLD)
+                gravity = android.view.Gravity.CENTER
+                setShadowLayer(20f, 0f, 0f, android.graphics.Color.RED)
+            }
+            val nlp = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.CENTER
+            ).apply { topMargin = 30 }
+            warningView.addView(nameLabel, nlp)
+
+            val rootView = window.decorView as android.view.ViewGroup
+            rootView.addView(warningView, android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT
+            ))
+
+            warningView.animate().alpha(1f).setDuration(300).start()
+
+            // Pulse warning text
+            val pulseAnim = android.animation.ObjectAnimator.ofFloat(warningLabel, "alpha", 1f, 0.3f).apply {
+                duration = 400
+                repeatCount = android.animation.ObjectAnimator.INFINITE
+                repeatMode = android.animation.ObjectAnimator.REVERSE
+            }
+            pulseAnim.start()
+
+            // Dismiss after 2.5 seconds
+            warningView.postDelayed({
+                warningView.animate().alpha(0f).setDuration(500).withEndAction {
+                    pulseAnim.cancel()
+                    rootView.removeView(warningView)
+                }.start()
+            }, 2500)
         }
     }
 }

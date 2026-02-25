@@ -19,8 +19,10 @@ class VirtualJoystick @JvmOverloads constructor(
     enum class Direction { LEFT, RIGHT, NONE }
 
     var onDirectionChange: ((Direction) -> Unit)? = null
+    var onDownChange: ((Boolean) -> Unit)? = null
 
     private var currentDirection = Direction.NONE
+    private var currentDown = false
     private var thumbX = 0f
     private var thumbY = 0f
     private var isDragging = false
@@ -104,6 +106,13 @@ class VirtualJoystick @JvmOverloads constructor(
                     currentDirection = newDir
                     onDirectionChange?.invoke(newDir)
                 }
+
+                // Vertical down detection (dy > 0 = down in screen coords)
+                val isDown = dy > deadZone * 1.5f
+                if (isDown != currentDown) {
+                    currentDown = isDown
+                    onDownChange?.invoke(isDown)
+                }
                 invalidate()
                 return true
             }
@@ -114,6 +123,10 @@ class VirtualJoystick @JvmOverloads constructor(
                 if (currentDirection != Direction.NONE) {
                     currentDirection = Direction.NONE
                     onDirectionChange?.invoke(Direction.NONE)
+                }
+                if (currentDown) {
+                    currentDown = false
+                    onDownChange?.invoke(false)
                 }
                 invalidate()
                 return true

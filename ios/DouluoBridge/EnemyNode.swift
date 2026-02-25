@@ -41,6 +41,7 @@ class EnemyNode: SKNode {
     // v1.6.2: Pre-rendered sprite
     private var stickSprite: SKSpriteNode!
     private var hpFill: SKSpriteNode?
+    private var auraNode: SKShapeNode?
     private var lastFrameIndex: Int = -1
     private var lastFlashState: Bool = false
     private var normalFrames: [SKTexture] = []
@@ -62,8 +63,8 @@ class EnemyNode: SKNode {
             self.maxHp = CGFloat(bossHp) * hpMultiplier
             self.baseSpeed = bossSpeed * 3
             self.damage = 15
-            self.enemyWidth = 80
-            self.enemyHeight = 100
+            self.enemyWidth = 120
+            self.enemyHeight = 150
         } else {
             let lvlBonus = CGFloat(playerWeaponLevel - 1) * 0.15
             let baseHp: CGFloat = (type == .heavy) ? 450 : 120
@@ -89,16 +90,51 @@ class EnemyNode: SKNode {
         addChild(stickSprite)
         
         if isBoss {
-            let barW: CGFloat = enemyWidth + 20
-            let bg = SKSpriteNode(color: UIColor(white: 0.15, alpha: 1), size: CGSize(width: barW, height: 6))
-            bg.position = CGPoint(x: 0, y: enemyHeight / 2 + 10)
+            // Aura glow behind Boss
+            let aura = SKShapeNode(circleOfRadius: enemyWidth * 0.7)
+            aura.fillColor = color.withAlphaComponent(0.15)
+            aura.strokeColor = color.withAlphaComponent(0.4)
+            aura.lineWidth = 3
+            aura.glowWidth = 15
+            aura.zPosition = -1
+            addChild(aura)
+            auraNode = aura
+
+            // HP bar (wider + taller)
+            let barW: CGFloat = enemyWidth + 40
+            let bg = SKSpriteNode(color: UIColor(white: 0.15, alpha: 1), size: CGSize(width: barW, height: 10))
+            bg.position = CGPoint(x: 0, y: enemyHeight / 2 + 18)
             bg.zPosition = 10
             addChild(bg)
-            let fill = SKSpriteNode(color: UIColor(red: 0.8, green: 0.1, blue: 0.1, alpha: 1), size: CGSize(width: barW - 2, height: 4))
-            fill.position = CGPoint(x: 0, y: enemyHeight / 2 + 10)
+            let fill = SKSpriteNode(color: UIColor(red: 0.8, green: 0.1, blue: 0.1, alpha: 1), size: CGSize(width: barW - 2, height: 8))
+            fill.position = CGPoint(x: 0, y: enemyHeight / 2 + 18)
             fill.zPosition = 11
             addChild(fill)
             hpFill = fill
+
+            // Boss name label
+            let bossNames: [BossType: String] = [
+                .banditChief: "匪首", .wolfKing: "狼王", .ironFist: "铁拳",
+                .shieldGeneral: "盾将", .phantomArcher: "幻弓", .twinBlade: "双刃",
+                .thunderMonk: "雷僧", .bloodDemon: "血魔", .shadowLord: "影主", .swordSaint: "剑圣"
+            ]
+            if let bt = bossType, let name = bossNames[bt] {
+                let label = SKLabelNode(text: name)
+                label.fontName = "PingFangSC-Heavy"
+                label.fontSize = 14
+                label.fontColor = color
+                label.position = CGPoint(x: 0, y: enemyHeight / 2 + 28)
+                label.zPosition = 12
+                addChild(label)
+            }
+
+            // Entry animation: scale up + fade in
+            setScale(0.1)
+            alpha = 0
+            let scaleUp = SKAction.scale(to: 1.0, duration: 0.5)
+            scaleUp.timingMode = .easeOut
+            let fadeIn = SKAction.fadeIn(withDuration: 0.3)
+            run(SKAction.group([scaleUp, fadeIn]))
         }
         
         prepareFrames()
@@ -182,11 +218,11 @@ class EnemyNode: SKNode {
     
     private func renderFrame(phase: CGFloat, flash: Bool, combo: Int) -> SKTexture {
         let drawColor = flash ? UIColor.white : color
-        let lineW: CGFloat = isBoss ? 6 : (enemyType == .heavy ? 8 : 4)
+        let lineW: CGFloat = isBoss ? 10 : (enemyType == .heavy ? 8 : 4)
         let h = enemyHeight
         let w = texW
         let th = texH
-        let glowBlur: CGFloat = isBoss ? 12 : 8
+        let glowBlur: CGFloat = isBoss ? 20 : 8
         
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: w, height: th))
         let image = renderer.image { ctx in
@@ -398,7 +434,18 @@ class EnemyNode: SKNode {
         default: vx += (dir * baseSpeed - vx) * 0.1
         }
         
-        if isBoss && !rageMode && hp < maxHp / 2 { rageMode = true; baseSpeed *= 1.5 }
+        if isBoss && !rageMode && hp < maxHp / 2 {
+            rageMode = true; baseSpeed *= 1.5
+            // Rage mode: aura turns red and intensifies
+            auraNode?.strokeColor = UIColor(red: 1, green: 0.1, blue: 0.1, alpha: 0.6)
+            auraNode?.fillColor = UIColor(red: 1, green: 0, blue: 0, alpha: 0.2)
+            auraNode?.glowWidth = 25
+        }
+        // Boss aura breathing pulse
+        if isBoss, let aura = auraNode {
+            let pulse = 0.85 + 0.15 * sin(animPhase * 0.8)
+            aura.setScale(CGFloat(pulse))
+        }
         
         vy -= Physics.gravity
         position.x += vx; position.y += vy
@@ -413,7 +460,34 @@ class EnemyNode: SKNode {
             }
         }
         
-        if grounded && CGFloat.random(in: 0...1) < 0.01 { vy = CGFloat.random(in: 12...18) }
+        // Smart jump AI — chase player onto platforms
+        let heightDiff = playerPosition.y - position.y
+        if grounded {
+            switch enemyType {
+            case .chaser:
+                if heightDiff > 40 {
+                    vy = min(28, 15 + heightDiff * 0.05)
+                } else if CGFloat.random(in: 0...1) < 0.02 {
+                    vy = CGFloat.random(in: 12...16)
+                }
+            case .martial:
+                if heightDiff > 60 {
+                    vy = min(25, 14 + heightDiff * 0.04)
+                } else if CGFloat.random(in: 0...1) < 0.015 {
+                    vy = CGFloat.random(in: 12...16)
+                }
+            default:
+                if heightDiff > 100 && CGFloat.random(in: 0...1) < 0.03 {
+                    vy = CGFloat.random(in: 14...20)
+                } else if CGFloat.random(in: 0...1) < 0.01 {
+                    vy = CGFloat.random(in: 12...18)
+                }
+            }
+        }
+        // Air tracking for chasers — drift toward player X
+        if !grounded && enemyType == .chaser {
+            vx += dir * 0.8
+        }
         if enemyType != .chaser && enemyType != .sniper { shootTimer -= 1 }
         if isBoss, let fill = hpFill { fill.xScale = max(0, hp / maxHp) }
         

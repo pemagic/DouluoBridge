@@ -16,6 +16,7 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.douluo.bridge.ui.GameScreenDelegate
 import com.douluo.bridge.ui.HapticType
+import com.douluo.bridge.ui.SFXType
 
 enum class GameState {
     MENU, PLAYING, PAUSED, GAME_OVER, LEVEL_TRANSITION
@@ -80,6 +81,9 @@ class DouluoGameScreen(
     var inputJump = false
     var inputDash = false
     var inputAttack = false
+    var inputDown = false
+    var platformDropThrough = 0
+    var bossWarningTimer = 0
 
     val currentLevelDef: LevelDef
         get() {
@@ -116,7 +120,8 @@ class DouluoGameScreen(
         gameTime = 0
         bossActive = false
         bossSpawned = false
-        
+        bossWarningTimer = 0
+
         for (e in enemies) e.remove()
         enemies.clear()
         for (p in projectiles) p.remove()
@@ -176,6 +181,7 @@ class DouluoGameScreen(
             levelKills = 0
             bossActive = false
             bossSpawned = false
+            bossWarningTimer = 0
             spawnGrace = 120
             hpMultiplier *= 1.5f
             playerNode.hp = 100
@@ -480,12 +486,16 @@ class DouluoGameScreen(
             if (sk.active > 0) sk.active--
         }
 
+        if (platformDropThrough > 0) platformDropThrough--
         p.grounded = false
         val playerLeft = p.x
         val playerRight = p.x + p.width
         val playerBottom = p.y
 
         for (plat in platforms) {
+            // Skip non-ground platforms during drop-through
+            if (platformDropThrough > 0 && !plat.isGround) continue
+
             val platLeft = plat.x
             val platRight = plat.x + plat.width
             val platTop = plat.y + plat.height
@@ -508,7 +518,7 @@ class DouluoGameScreen(
         val iter = enemies.iterator()
         while (iter.hasNext()) {
             val enemy = iter.next()
-            enemy.update(playerNode.x, platforms)
+            enemy.update(playerNode.x, platforms, playerNode.y)
 
             val enemyRelX = Math.abs(enemy.x - camera.position.x)
             val enemyRelY = enemy.y
@@ -750,16 +760,41 @@ class DouluoGameScreen(
 
         val lvl = currentLevelDef
 
+        // Boss spawn: warning phase then dramatic entrance
         if (levelKills >= lvl.killTarget && !bossSpawned) {
+            if (bossWarningTimer == 0) {
+                // Start warning phase
+                bossWarningTimer = 180  // 3 seconds at 60fps
+                val bossNames = mapOf(
+                    BossType.BANDIT_CHIEF to "\u5320\u9996", BossType.WOLF_KING to "\u72fc\u738b",
+                    BossType.IRON_FIST to "\u94c1\u62f3", BossType.SHIELD_GENERAL to "\u76fe\u5c06",
+                    BossType.PHANTOM_ARCHER to "\u5e7b\u5f13", BossType.TWIN_BLADE to "\u53cc\u5203",
+                    BossType.THUNDER_MONK to "\u96f7\u50e7", BossType.BLOOD_DEMON to "\u8840\u9b54",
+                    BossType.SHADOW_LORD to "\u5f71\u4e3b", BossType.SWORD_SAINT to "\u5251\u5723"
+                )
+                val name = bossNames[lvl.bossType] ?: "BOSS"
+                delegate.showBossWarning(name)
+                delegate.playSFX(SFXType.BOSS_WARNING)
+                delegate.switchToBossBGM()
+                return
+            }
+            bossWarningTimer--
+            // Pulse screen flash during warning
+            if (bossWarningTimer > 0 && bossWarningTimer % 30 < 3) screenFlash = 4
+            if (bossWarningTimer > 0) return
+
+            // Warning phase complete — spawn boss
             bossSpawned = true
             bossActive = true
             val b = EnemyNode(
                 lvl.enemies.last(), playerNode.weaponLevel, true, lvl.bossHp, lvl.bossSpeed,
                 PlayerNode.neonColors.random(), lvl.enemyTier, lvl.bossType, hpMultiplier
             )
-            b.setPosition(playerNode.x + (if (playerNode.facing > 0) 500f else -500f), Physics.gameHeight + 100f)
+            b.setPosition(playerNode.x + (if (playerNode.facing > 0) 500f else -500f), Physics.gameHeight + 200f)
             entityLayer.addActor(b)
             enemies.add(b)
+            screenFlash = 20
+            hitstop = 20
             delegate.triggerHaptic(HapticType.HEAVY)
             return
         }
@@ -826,10 +861,20 @@ class DouluoGameScreen(
 
     fun handleJump() {
         if (gameState != GameState.PLAYING) return
+        // Down + Jump = drop through platform
+        if (inputDown && playerNode.grounded) {
+            platformDropThrough = 12
+            playerNode.vy = -2f
+            playerNode.grounded = false
+            delegate.triggerHaptic(HapticType.LIGHT)
+            delegate.playSFX(SFXType.DROP_THROUGH)
+            return
+        }
         if (playerNode.jumpCount < 2) {
             playerNode.vy = Physics.jumpForce
             playerNode.jumpCount++
             delegate.triggerHaptic(HapticType.LIGHT)
+            delegate.playSFX(SFXType.JUMP)
         }
     }
 
@@ -839,11 +884,14 @@ class DouluoGameScreen(
         playerNode.dashCooldown = 35
         playerNode.vx = playerNode.facing * Physics.dashForce
         delegate.triggerHaptic(HapticType.HEAVY)
+        delegate.playSFX(SFXType.DASH)
     }
 
     fun handleAttack() {
         if (gameState != GameState.PLAYING || playerNode.shootTimer > 0) return
         if (projectiles.size < 80) {
+            delegate.triggerHaptic(HapticType.LIGHT)
+            delegate.playSFX(SFXType.ATTACK)
             val lvl = playerNode.weaponLevel
             val bDmg = (40 + lvl * 12) * (if (playerNode.ultActive > 0) 2 else 1)
             val bSpeed = 45f + lvl * 1.5f
@@ -884,6 +932,15 @@ class DouluoGameScreen(
         val def = GameConfig.skillDefs.find { it.id == skillId } ?: return
         val sk = playerNode.skills[skillId] ?: return
         if (sk.level <= 0 || (sk.cooldown > 0 && !ignoreCooldown)) return
+
+        // Skill SFX + haptic
+        val sfxMap = mapOf(
+            "fire" to SFXType.SKILL_FIRE, "whirlwind" to SFXType.SKILL_WHIRLWIND,
+            "shield" to SFXType.SKILL_SHIELD, "lightning" to SFXType.SKILL_LIGHTNING,
+            "ghost" to SFXType.SKILL_GHOST
+        )
+        delegate.triggerHaptic(HapticType.MEDIUM)
+        sfxMap[skillId]?.let { delegate.playSFX(it) }
 
         val lvl = sk.level
 
@@ -988,9 +1045,12 @@ class DouluoGameScreen(
         spawnDrop(enemy.x, enemy.y)
         spawnExplosion(enemy.x + enemy.enemyWidth/2f, enemy.y + enemy.enemyHeight/2f, enemy.baseColor)
         delegate.triggerHaptic(if (wasBoss) HapticType.HEAVY else HapticType.MEDIUM)
+        delegate.playSFX(if (wasBoss) SFXType.BOSS_DEATH else SFXType.KILL)
 
         if (wasBoss) {
             bossActive = false
+            hitstop = 30
+            delegate.restoreLevelBGM()
             Gdx.app.postRunnable {
                 if (currentLevel < 10) completeLevel() else endGame(true)
             }

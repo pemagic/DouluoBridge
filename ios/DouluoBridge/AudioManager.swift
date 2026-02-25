@@ -1,6 +1,14 @@
 import AVFoundation
 import Foundation
 
+// MARK: - SFX Types
+enum SFXType {
+    case jump, attack, dash, hit, kill
+    case bossWarning, bossDeath, dropThrough
+    case skillFire, skillWhirlwind, skillShield, skillLightning, skillGhost
+    case uiClick
+}
+
 class AudioManager {
     
     // MARK: - Audio Engine
@@ -149,7 +157,20 @@ class AudioManager {
          ("E5", 2), ("G5", 2), ("A5", 2), ("B5", 2), ("D6", 4), ("rest", 2),
          ("E6", 2), ("D6", 2), ("B5", 2), ("A5", 2), ("G5", 4), ("E5", 4),
          ("D5", 2), ("E5", 2), ("G5", 4), ("A5", 2), ("G5", 2), ("E5", 4),
-         ("D5", 2), ("B4", 2), ("A4", 4), ("G4", 2), ("A4", 2), ("B4", 8)]
+         ("D5", 2), ("B4", 2), ("A4", 4), ("G4", 2), ("A4", 2), ("B4", 8)],
+
+        // Boss Battle: Intense, fast-paced combat melody (index 10, BPM 160)
+        [("G5", 1), ("E5", 1), ("G5", 1), ("A5", 1), ("G5", 2), ("E5", 1), ("D5", 1),
+         ("B4", 2), ("D5", 1), ("E5", 1), ("G5", 2), ("rest", 1),
+         ("A5", 1), ("G5", 1), ("E5", 1), ("D5", 1), ("B4", 1), ("A4", 2), ("G4", 2),
+         ("rest", 1), ("B4", 1), ("D5", 1), ("E5", 1), ("G5", 2), ("A5", 2),
+         ("G5", 1), ("E5", 1), ("D5", 2), ("B4", 1), ("A4", 1), ("G4", 2),
+         ("A4", 1), ("B4", 1), ("D5", 2), ("E5", 2), ("G5", 4),
+         ("A5", 1), ("G5", 1), ("E5", 1), ("D5", 1), ("B4", 2), ("A4", 1), ("B4", 1),
+         ("D5", 2), ("E5", 1), ("G5", 1), ("A5", 2), ("G5", 2),
+         ("E5", 1), ("D5", 1), ("B4", 2), ("A4", 2), ("G4", 4),
+         ("D5", 1), ("E5", 1), ("G5", 1), ("A5", 1), ("G5", 1), ("E5", 1), ("D5", 1), ("B4", 1),
+         ("A4", 2), ("B4", 2), ("D5", 2), ("E5", 2), ("G5", 8)]
     ]
     
     // MARK: - Init
@@ -248,6 +269,66 @@ class AudioManager {
         }
     }
     
+    // MARK: - Game SFX
+
+    func playSFX(_ type: SFXType) {
+        switch type {
+        case .jump:
+            playTone(frequency: 880, type: "sine", duration: 0.07, volume: 0.10)
+        case .attack:
+            playTone(frequency: 350, type: "sawtooth", duration: 0.05, volume: 0.09)
+        case .dash:
+            playTone(frequency: 200, type: "square", duration: 0.10, volume: 0.12)
+        case .hit:
+            playTone(frequency: 300, type: "triangle", duration: 0.04, volume: 0.07)
+        case .kill:
+            playTone(frequency: 550, type: "sine", duration: 0.12, volume: 0.14)
+        case .bossWarning:
+            // Deep ominous double-strike
+            playTone(frequency: 110, type: "square", duration: 0.4, volume: 0.20)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.playTone(frequency: 82, type: "square", duration: 0.6, volume: 0.22)
+            }
+        case .bossDeath:
+            playTone(frequency: 440, type: "sine", duration: 0.15, volume: 0.18)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                self.playTone(frequency: 660, type: "sine", duration: 0.15, volume: 0.16)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                self.playTone(frequency: 880, type: "sine", duration: 0.3, volume: 0.20)
+            }
+        case .dropThrough:
+            playTone(frequency: 440, type: "sine", duration: 0.05, volume: 0.06)
+        case .skillFire:
+            playTone(frequency: 500, type: "sawtooth", duration: 0.10, volume: 0.11)
+        case .skillWhirlwind:
+            playTone(frequency: 400, type: "sine", duration: 0.12, volume: 0.09)
+        case .skillShield:
+            playTone(frequency: 180, type: "triangle", duration: 0.10, volume: 0.11)
+        case .skillLightning:
+            playTone(frequency: 900, type: "square", duration: 0.06, volume: 0.11)
+        case .skillGhost:
+            playTone(frequency: 150, type: "sine", duration: 0.15, volume: 0.09)
+        case .uiClick:
+            playTone(frequency: 600, type: "sine", duration: 0.025, volume: 0.05)
+        }
+    }
+
+    // MARK: - Boss BGM
+
+    private var savedSongId: Int = 0
+    private var savedBpm: Float = 100
+
+    func startBossBGM() {
+        savedSongId = bgmSongId
+        savedBpm = bgmBpm
+        startBGM(songId: 10, bpm: 160)
+    }
+
+    func restoreLevelBGM() {
+        startBGM(songId: savedSongId, bpm: savedBpm)
+    }
+
     // MARK: - Guzheng Synthesis
     
     func playGuzheng(frequency: Float, duration: Float, volume: Float = 0.12) {
@@ -376,8 +457,22 @@ class AudioManager {
         bgmBeat += 1
     }
     
+    // MARK: - Combat SFX
+
+    func playHitSFX() {
+        let freq = Float.random(in: 800...1200)
+        playTone(frequency: freq, type: "square", duration: 0.04, volume: 0.08)
+    }
+
+    func playKillSFX() {
+        playTone(frequency: 600, type: "square", duration: 0.06, volume: 0.1)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+            self.playTone(frequency: 900, type: "square", duration: 0.08, volume: 0.1)
+        }
+    }
+
     // MARK: - Cleanup
-    
+
     deinit {
         stopBGM()
         engine.stop()
